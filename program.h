@@ -85,7 +85,8 @@ typedef struct {
 
 // A line of text
 typedef struct {
-  wchar_t *text; // the line's text
+  unsigned length; // the line's length
+  wchar_t *text;   // the line's text
   // Places in the line the font becomes...
   bitarr_t reg;    // regular
   bitarr_t bold;   // bold
@@ -132,6 +133,52 @@ extern request_t *requests;
 extern unsigned current;
 
 //
+// Macros
+//
+
+// Allocate memory for all members of a line of length len. Then, initialize its
+// length member to len, and its text member to an empty string.
+#define line_alloc(line, len)                                                  \
+  line.length = len;                                                           \
+  line.text = walloc(len);                                                     \
+  line.text[0] = '\0';                                                         \
+  if (len > 0) {                                                               \
+    line.reg = balloc(len);                                                    \
+    bclearall(line.reg, len);                                                  \
+    line.bold = balloc(len);                                                   \
+    bclearall(line.bold, len);                                                 \
+    line.italic = balloc(len);                                                 \
+    bclearall(line.italic, len);                                               \
+    line.uline = balloc(len);                                                  \
+    bclearall(line.uline, len);                                                \
+    line.lman = balloc(len);                                                   \
+    bclearall(line.lman, len);                                                 \
+    line.lhttp = balloc(len);                                                  \
+    bclearall(line.lhttp, len);                                                \
+    line.lmail = balloc(len);                                                  \
+    bclearall(line.lmail, len);                                                \
+  } else {                                                                     \
+    line.reg = NULL;                                                           \
+    line.bold = NULL;                                                          \
+    line.italic = NULL;                                                        \
+    line.uline = NULL;                                                         \
+    line.lman = NULL;                                                          \
+    line.lhttp = NULL;                                                         \
+    line.lmail = NULL;                                                         \
+  }
+
+// Free memory for all members of (line_t variable) line
+#define line_free(line)                                                        \
+  free(line.text);                                                             \
+  free(line.reg);                                                              \
+  free(line.bold);                                                             \
+  free(line.italic);                                                           \
+  free(line.uline);                                                            \
+  free(line.lman);                                                             \
+  free(line.lhttp);                                                            \
+  free(line.lmail);
+
+//
 // Functions (comments are in program.c)
 //
 
@@ -147,12 +194,15 @@ extern unsigned aprowhat(aprowhat_t **dst, aprowhat_cmd_t cmd,
 extern unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *buf,
                                   unsigned buf_len);
 
-extern void aprowhat_render(line_t *dst, const aprowhat_t *aw, unsigned aw_len,
-                            wchar_t *const *sc, unsigned sc_len,
-                            const wchar_t *key, const wchar_t *title,
-                            const wchar_t *ver, const wchar_t *date);
+extern unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
+                                unsigned aw_len, wchar_t *const *sc,
+                                unsigned sc_len, const wchar_t *key,
+                                const wchar_t *title, const wchar_t *ver,
+                                const wchar_t *date);
 
 extern void aprowhat_free(aprowhat_t *res, unsigned res_len);
+
+extern void lines_free(line_t *lines, unsigned lines_len);
 
 extern void winddown(int ec, const wchar_t *em);
 

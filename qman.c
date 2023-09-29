@@ -31,12 +31,14 @@ int main(int argc, char **argv) {
     // wprintf(L"%ls ", sc[i]);
   }
   // wprintf(L"\n");
-  for (unsigned i = 10; i < 160; i++) {
-    config.layout.width = i;
-    aprowhat_render(NULL, aw, aw_len, sc, sc_len, L"INDEX", L"Manual Pages Index", L"qman version 0.0", L"September 2023");
-  }
+  line_t *lines;
+  unsigned lines_len;
+  lines_len = aprowhat_render(&lines, aw, aw_len, sc, sc_len, L"INDEX", L"Manual Pages Index", L"qman version 0.0", L"September 2023");
+  for (unsigned i = 0; i < lines_len; i++)
+    wprintf(L"%ls\n", lines[i].text);
   aprowhat_free(aw, aw_len);
   wafree(sc, sc_len);
+  lines_free(lines, lines_len);
 
   bitarr_t ba = balloc(32);
   bset(ba, 2);

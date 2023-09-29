@@ -108,31 +108,32 @@ bool bget(bitarr_t ba, unsigned i) {
   return ba[seg] & mask;
 }
 
-// Set the the i'th bit in bit array ba
+// Set the the i'th bit of bit array ba
 void bset(bitarr_t ba, unsigned i) {
   unsigned seg = i / 8;
   unsigned mask = 1 << (i % 8);
 
-    ba[seg] = ba[seg] | mask;
+  ba[seg] = ba[seg] | mask;
 }
 
-// Set the the i'th bit in bit array ba
+// Clear the the i'th bit of bit array ba
 void bclear(bitarr_t ba, unsigned i) {
   unsigned seg = i / 8;
   unsigned mask = 1 << (i % 8);
 
-    ba[seg] = ba[seg] & (0xff - mask);
+  ba[seg] = ba[seg] & (0xff - mask);
 }
 
-// Set all bits of bit array ba to 0. ba_len is ba's size.
+// Clear all bits of ba. ba_len is ba's size.
 void bclearall(bitarr_t ba, unsigned ba_len) {
   unsigned ba_bytes = ba_len % 8 == 0 ? ba_len / 8 : 1 + ba_len / 8;
-  
+
   for (unsigned i = 0; i < ba_bytes; i++)
     ba[i] = 0;
 }
 
-// Free all memory in an array of (wide) strings
+// Free all memory in an array of (wide) strings buf. buf_len is the length of
+// buf.
 void wafree(wchar_t **buf, unsigned buf_len) {
   unsigned i;
 
@@ -142,7 +143,8 @@ void wafree(wchar_t **buf, unsigned buf_len) {
   free(buf);
 }
 
-// Free all memory in an array of (encoded) strings
+// Free all memory in an array of (encoded) strings buf. buf_len is the length
+// of buf.
 void safree(char **buf, unsigned buf_len) {
   unsigned i;
 
@@ -209,7 +211,8 @@ void wwrap(wchar_t *trgt, unsigned cols) {
   }
 }
 
-// Return true if needle is in array of strings hayst, false otherwise
+// Return true if needle is in array of (wide) strings hayst, false otherwise.
+// needle_length is the length of needle.
 bool wmemberof(wchar_t *const *hayst, const wchar_t *needle,
                unsigned needle_len) {
   unsigned i;
@@ -251,6 +254,17 @@ void wsort(wchar_t **trgt, unsigned trgt_len, bool rev) {
       }
     }
   }
+}
+
+// Return the length of the longest (wide) string in src. src_len holds the
+// length of src.
+unsigned wmaxlen(wchar_t *const *src, unsigned src_len) {
+  unsigned maxlen = 0, i;
+
+  for (i = 0; i < src_len; i++)
+    maxlen = MAX(maxlen, wcslen(src[i]));
+
+  return maxlen;
 }
 
 // Copy all data in source into trgt, line by line. Both source and target must

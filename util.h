@@ -101,6 +101,8 @@ extern bool wmemberof(wchar_t *const *hayst, const wchar_t *needle, unsigned nee
 
 extern void wsort(wchar_t **trgt, unsigned trgt_len, bool rev);
 
+extern unsigned wmaxlen(wchar_t *const *src, unsigned src_len);
+
 extern unsigned scopylines(FILE *source, FILE *target);
 
 extern int sreadline(char *str, unsigned size, FILE *fp);

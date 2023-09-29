@@ -35,40 +35,6 @@ request_t *requests = NULL;
 unsigned current;
 
 //
-// Macros
-//
-
-// Allocate memory for all members of line, so that it can hold a line of text
-// len bytes long
-#define _line_alloc(line, len)                                                 \
-  line.text = walloc(len);                                                     \
-  line.reg = balloc(len);                                                      \
-  bclearall(line.reg, len);                                                    \
-  line.bold = balloc(len);                                                     \
-  bclearall(line.bold, len);                                                   \
-  line.italic = balloc(len);                                                   \
-  bclearall(line.italic, len);                                                 \
-  line.uline = balloc(len);                                                    \
-  bclearall(line.uline, len);                                                  \
-  line.lman = balloc(len);                                                     \
-  bclearall(line.lman, len);                                                   \
-  line.lhttp = balloc(len);                                                    \
-  bclearall(line.lhttp, len);                                                  \
-  line.lmail = balloc(len);                                                    \
-  bclearall(line.lmail, len);
-
-// Free memory for all members of line
-#define _line_free(line)                                                       \
-  free(line.text);                                                             \
-  free(line.reg);                                                              \
-  free(line.bold);                                                             \
-  free(line.italic);                                                           \
-  free(line.uline);                                                            \
-  free(line.lman);                                                             \
-  free(line.lhttp);                                                            \
-  free(line.lmail);
-
-//
 // Functions
 //
 
@@ -298,11 +264,12 @@ unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *aw,
 
 // Render a result of aprowhat() aw (of length aw_len), and a result of
 // aprowhat_sections (of length aw_len) into dst, as an array of lines of text.
-// key, title, ver, and date are used for the header and footer.
-void aprowhat_render(line_t *dst, const aprowhat_t *aw, unsigned aw_len,
-                     wchar_t *const *sc, unsigned sc_len, const wchar_t *key,
-                     const wchar_t *title, const wchar_t *ver,
-                     const wchar_t *date) {
+// Return the number of lines. key, title, ver, and date are used for the header
+// and footer.
+unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
+                         wchar_t *const *sc, unsigned sc_len,
+                         const wchar_t *key, const wchar_t *title,
+                         const wchar_t *ver, const wchar_t *date) {
 
   // Text blocks widths
   unsigned line_width = MAX(60, config.layout.width);
@@ -316,33 +283,77 @@ void aprowhat_render(line_t *dst, const aprowhat_t *aw, unsigned aw_len,
   unsigned hfr_width =
       hfl_width + (main_width - hfc_width) % 2; // header/footer right area
 
-  dst = aalloc(aw_len + sc_len / 4 + 6, line_t);
+  unsigned ln;                       // current line number
+  unsigned i, j;                     // iterators
+  wchar_t *tmp = walloc(line_width); // temporary
+
+  line_t *res = aalloc(aw_len + sc_len / 4 + 6, line_t);
 
   // Header
-  _line_alloc(dst[0], line_width);
-  unsigned title_len = wcslen(title);
-  unsigned lts_len = (hfc_width - title_len) / 2 + (hfc_width - title_len) % 2;
-  unsigned rts_len = (hfc_width - title_len) / 2;
-  swprintf(dst[0].text, line_width, L"%*s%-*ls%*s%ls%*s%*ls%*s", //
-           lmargin_width, "",                                    //
-           hfl_width, key,                                       //
-           lts_len, "",                                          //
-           title,                                                //
-           rts_len, "",                                          //
-           hfr_width, key,                                       //
-           rmargin_width, ""                                     //
+  ln = 0;
+  line_alloc(res[ln], line_width);
+  unsigned title_len = wcslen(title); // title length
+  unsigned lts_len =
+      (hfc_width - title_len) / 2 +
+      (hfc_width - title_len) % 2; // length of space on the left of title
+  unsigned rts_len =
+      (hfc_width - title_len) / 2; // length of space on the right of title
+  swprintf(res[ln].text, line_width, L"%*s%-*ls%*s%ls%*s%*ls%*s", //
+           lmargin_width, "",                                     //
+           hfl_width, key,                                        //
+           lts_len, "",                                           //
+           title,                                                 //
+           rts_len, "",                                           //
+           hfr_width, key,                                        //
+           rmargin_width, ""                                      //
   );
-  bset(dst[0].uline, lmargin_width);
-  bset(dst[0].reg, lmargin_width + hfl_width);
-  bset(dst[0].uline, lmargin_width + hfl_width + hfc_width);
-  bset(dst[0].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
+  bset(res[ln].uline, lmargin_width);
+  bset(res[ln].reg, lmargin_width + hfl_width);
+  bset(res[ln].uline, lmargin_width + hfl_width + hfc_width);
+  bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
 
-  free(dst);
+  // Newline
+  ln++;
+  line_alloc(res[ln], 0);
+
+  // Section title for sections
+  ln++;
+  line_alloc(res[ln], line_width);
+  wcscpy(tmp, L"SECTIONS");
+  swprintf(res[ln].text, line_width, L"%*s%*ls", //
+           lmargin_width, "",                    //
+           wcslen(tmp), tmp);
+  bset(res[ln].bold, lmargin_width);
+  bset(res[ln].reg, lmargin_width + wcslen(tmp));
+
+  // Sections
+  unsigned sc_maxlen = wmaxlen(sc, sc_len); // length of longest section
+  unsigned sc_cols =
+      main_width / (4 + sc_maxlen);     // number of columns for sections
+  unsigned sc_lines = sc_len / sc_cols; // number of lines for sections
+  if (sc_len % sc_cols > 0)
+    sc_lines++;
+  for (i = 0; i < sc_lines; i++) {
+    ln++;
+    line_alloc(res[ln], line_width);
+    swprintf(res[ln].text, line_width, L"%*s", lmargin_width, "");
+    for (j = 0; j < sc_cols; j++) {
+      swprintf(tmp, sc_maxlen + 4, L"%-*ls    ", sc_maxlen, sc[i + j]);
+      wcscat(res[ln].text, tmp);
+      bset(res[ln].lman, j * (4 + sc_maxlen));
+      bset(res[ln].reg, j * (4 + sc_maxlen) + wcslen(sc[i + j]));
+    }
+  }
+
+  free(tmp);
+
+  *dst = res;
+  return ln + 1;
 }
 
 // Free the memory occupied by a result of aprowhat() aw (of length aw_len)
 void aprowhat_free(aprowhat_t *aw, unsigned aw_len) {
-  unsigned i = 0;
+  unsigned i;
 
   for (i = 0; i < aw_len; i++) {
     free(aw[i].page);
@@ -351,6 +362,16 @@ void aprowhat_free(aprowhat_t *aw, unsigned aw_len) {
   }
 
   free(aw);
+}
+
+void lines_free(line_t *lines, unsigned lines_len) {
+  unsigned i;
+
+  for (i = 0; i < lines_len; i++) {
+    line_free(lines[i]);
+  }
+
+  free(lines);
 }
 
 // Exit the program gracefully, with exit code ec. If em is not NULL, echo it
