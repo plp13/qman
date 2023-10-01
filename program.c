@@ -262,6 +262,12 @@ unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *aw,
   return res_i;
 }
 
+// Helper of aprowhat_render()
+#define inc_ln                                                                 \
+  if (ln >= res_len)                                                           \
+    res = reallocarray(res, 1024 + ln, sizeof(line_t));                        \
+  ln++;
+
 // Render a result of aprowhat() aw (of length aw_len), and a result of
 // aprowhat_sections (of length aw_len) into dst, as an array of lines of text.
 // Return the number of lines. key, title, ver, and date are used for the header
@@ -283,11 +289,13 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   unsigned hfr_width =
       hfl_width + (main_width - hfc_width) % 2; // header/footer right area
 
-  unsigned ln;                       // current line number
-  unsigned i, j;                     // iterators
-  wchar_t *tmp = walloc(line_width); // temporary
+  unsigned ln;                        // current line number
+  unsigned i, j;                      // iterators
+  wchar_t *tmp = walloca(line_width); // temporary
+  wchar_t *ltmp = walloca(BS_LINE);   // temporary (long size)
 
-  line_t *res = aalloc(aw_len + sc_len / 4 + 6, line_t);
+  unsigned res_len = 5 + aw_len + 3 * sc_len; // result buffer length
+  line_t *res = aalloc(res_len, line_t);      // result buffer
 
   // Header
   ln = 0;
@@ -313,39 +321,88 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
 
   // Newline
-  ln++;
+  inc_ln;
   line_alloc(res[ln], 0);
 
   // Section title for sections
-  ln++;
+  inc_ln;
   line_alloc(res[ln], line_width);
   wcscpy(tmp, L"SECTIONS");
-  swprintf(res[ln].text, line_width, L"%*s%*ls", //
-           lmargin_width, "",                    //
-           wcslen(tmp), tmp);
+  swprintf(res[ln].text, line_width, L"%*s%-*ls", //
+           lmargin_width, "",                     //
+           main_width, tmp);
   bset(res[ln].bold, lmargin_width);
   bset(res[ln].reg, lmargin_width + wcslen(tmp));
 
   // Sections
-  unsigned sc_maxlen = wmaxlen(sc, sc_len); // length of longest section
+  unsigned sc_maxwidth = wmaxlen(sc, sc_len); // length of longest section
   unsigned sc_cols =
-      main_width / (4 + sc_maxlen);     // number of columns for sections
+      main_width / (4 + sc_maxwidth);   // number of columns for sections
   unsigned sc_lines = sc_len / sc_cols; // number of lines for sections
   if (sc_len % sc_cols > 0)
     sc_lines++;
   for (i = 0; i < sc_lines; i++) {
-    ln++;
+    inc_ln;
     line_alloc(res[ln], line_width);
     swprintf(res[ln].text, line_width, L"%*s", lmargin_width, "");
     for (j = 0; j < sc_cols; j++) {
-      swprintf(tmp, sc_maxlen + 4, L"%-*ls    ", sc_maxlen, sc[i + j]);
-      wcscat(res[ln].text, tmp);
-      bset(res[ln].lman, j * (4 + sc_maxlen));
-      bset(res[ln].reg, j * (4 + sc_maxlen) + wcslen(sc[i + j]));
+      if (sc_cols * i + j < sc_len) {
+        swprintf(tmp, sc_maxwidth + 4, L"%-*ls    ", sc_maxwidth,
+                 sc[sc_cols * i + j]);
+        wcscat(res[ln].text, tmp);
+        bset(res[ln].lman, lmargin_width + j * (4 + sc_maxwidth));
+        bset(res[ln].reg, lmargin_width + j * (4 + sc_maxwidth) +
+                              wcslen(sc[sc_cols * i + j]));
+      }
     }
   }
 
-  free(tmp);
+  // Newline
+  inc_ln;
+  line_alloc(res[ln], 0);
+
+  // For each section...
+  for (i = 0; i < sc_len; i++) {
+    // Newline
+    inc_ln;
+    line_alloc(res[ln], 0);
+    // Section title
+    inc_ln;
+    line_alloc(res[ln], line_width);
+    swprintf(tmp, main_width, L"MANUAL PAGES IN SECTION '%ls'", sc[i]);
+    swprintf(res[ln].text, line_width, L"%*s%-*ls", //
+             lmargin_width, "",                     //
+             main_width, tmp);
+    bset(res[ln].bold, lmargin_width);
+    bset(res[ln].reg, lmargin_width + wcslen(tmp));
+    // For each manual page...
+    for (j = 0; j < aw_len; j++) {
+      // If manual page is in current section...
+      if (0 == wcscmp(aw[j].section, sc[i])) {
+        unsigned lc_width = main_width / 3;            // left column width
+        unsigned rc_width = main_width - lc_width - 1; // right column width
+        unsigned page_width = wcslen(aw[j].page) + wcslen(sc[i]) +
+                              2; // width of manual page name and section
+        unsigned descr_width =
+            wcslen(aw[j].descr); // width of manual page description
+        unsigned spcl_width =
+            MAX(line_width,
+                lmargin_width + page_width +
+                    rmargin_width); // used in place of line_width; might be
+                                    // longer, in which case we'll scroll
+        // Page name and section
+        inc_ln;
+        line_alloc(res[ln], spcl_width);
+        swprintf(res[ln].text, spcl_width, L"%*s%ls(%ls)", //
+                 lmargin_width, "",                        //
+                 aw[j].page, sc[i]);
+        bset(res[ln].lman, lmargin_width);
+        bset(res[ln].reg, lmargin_width + page_width);
+        // Description
+        wwrap(aw[j].descr, rc_width);
+      }
+    }
+  }
 
   *dst = res;
   return ln + 1;
