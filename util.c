@@ -24,15 +24,28 @@ void serror(wchar_t *dst, const wchar_t *s) {
 
 // Safely call calloc()
 void *xcalloc(size_t nmemb, size_t size) {
-  void *ptr = calloc(nmemb, size);
+  void *res = calloc(nmemb, size);
 
-  if (NULL == ptr) {
+  if (NULL == res) {
     wchar_t errmsg[BS_SHORT];
     serror(errmsg, L"Unable to calloc()");
     winddown(ES_OPER_ERROR, errmsg);
   }
 
-  return ptr;
+  return res;
+}
+
+// Safely call reallocarray()
+void *xreallocarray(void *ptr, size_t nmemb, size_t size) {
+  void *res = reallocarray(ptr, nmemb, size);
+
+  if (NULL == res) {
+    wchar_t errmsg[BS_SHORT];
+    serror(errmsg, L"Unable to reallocarray()");
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+
+  return res;
 }
 
 // Safely call popen()

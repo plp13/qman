@@ -33,7 +33,9 @@ int main(int argc, char **argv) {
   // wprintf(L"\n");
   line_t *lines;
   unsigned lines_len;
-  lines_len = aprowhat_render(&lines, aw, aw_len, sc, sc_len, L"INDEX", L"Manual Pages Index", L"qman version 0.0", L"September 2023");
+  lines_len = aprowhat_render(&lines, aw, aw_len, sc, sc_len, L"INDEX",
+                              L"Manual Pages Index", L"qman version 0.0",
+                              L"September 2023");
   for (unsigned i = 0; i < lines_len; i++)
     wprintf(L"%ls\n", lines[i].text);
   aprowhat_free(aw, aw_len);

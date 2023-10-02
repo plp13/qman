@@ -264,9 +264,11 @@ unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *aw,
 
 // Helper of aprowhat_render()
 #define inc_ln                                                                 \
-  if (ln >= res_len)                                                           \
-    res = reallocarray(res, 1024 + ln, sizeof(line_t));                        \
-  ln++;
+  ln++;                                                                        \
+  if (ln == res_len) {                                                         \
+    res_len += 1024;                                                           \
+    res = xreallocarray(res, res_len, sizeof(line_t));                         \
+  }
 
 // Render a result of aprowhat() aw (of length aw_len), and a result of
 // aprowhat_sections (of length aw_len) into dst, as an array of lines of text.
@@ -289,36 +291,36 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   unsigned hfr_width =
       hfl_width + (main_width - hfc_width) % 2; // header/footer right area
 
-  unsigned ln;                        // current line number
-  unsigned i, j;                      // iterators
-  wchar_t *tmp = walloca(line_width); // temporary
-  wchar_t *ltmp = walloca(BS_LINE);   // temporary (long size)
+  unsigned ln;                    // current line number
+  unsigned i, j;                  // iterators
+  wchar_t *tmp = walloc(BS_LINE); // temporary
 
-  unsigned res_len = 5 + aw_len + 3 * sc_len; // result buffer length
-  line_t *res = aalloc(res_len, line_t);      // result buffer
+  unsigned res_len = 1024;               // result buffer length
+  line_t *res = aalloc(res_len, line_t); // result buffer
 
   // Header
   ln = 0;
   line_alloc(res[ln], line_width);
   unsigned title_len = wcslen(title); // title length
+  unsigned key_len = wcslen(key);     // key length
   unsigned lts_len =
       (hfc_width - title_len) / 2 +
       (hfc_width - title_len) % 2; // length of space on the left of title
   unsigned rts_len =
       (hfc_width - title_len) / 2; // length of space on the right of title
-  swprintf(res[ln].text, line_width, L"%*s%-*ls%*s%ls%*s%*ls%*s", //
-           lmargin_width, "",                                     //
-           hfl_width, key,                                        //
-           lts_len, "",                                           //
-           title,                                                 //
-           rts_len, "",                                           //
-           hfr_width, key,                                        //
-           rmargin_width, ""                                      //
+  swprintf(res[ln].text, line_width + 1, L"%*s%-*ls%*s%ls%*s%*ls%*s", //
+           lmargin_width, "",                                         //
+           hfl_width, key,                                            //
+           lts_len, "",                                               //
+           title,                                                     //
+           rts_len, "",                                               //
+           hfr_width, key,                                            //
+           rmargin_width, ""                                          //
   );
   bset(res[ln].uline, lmargin_width);
-  bset(res[ln].reg, lmargin_width + hfl_width);
+  bset(res[ln].reg, lmargin_width + key_len);
   bset(res[ln].uline, lmargin_width + hfl_width + hfc_width);
-  bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
+  bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + key_len);
 
   // Newline
   inc_ln;
@@ -328,8 +330,8 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   inc_ln;
   line_alloc(res[ln], line_width);
   wcscpy(tmp, L"SECTIONS");
-  swprintf(res[ln].text, line_width, L"%*s%-*ls", //
-           lmargin_width, "",                     //
+  swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
+           lmargin_width, "",                         //
            main_width, tmp);
   bset(res[ln].bold, lmargin_width);
   bset(res[ln].reg, lmargin_width + wcslen(tmp));
@@ -344,10 +346,10 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   for (i = 0; i < sc_lines; i++) {
     inc_ln;
     line_alloc(res[ln], line_width);
-    swprintf(res[ln].text, line_width, L"%*s", lmargin_width, "");
+    swprintf(res[ln].text, line_width + 1, L"%*s", lmargin_width, "");
     for (j = 0; j < sc_cols; j++) {
       if (sc_cols * i + j < sc_len) {
-        swprintf(tmp, sc_maxwidth + 4, L"%-*ls    ", sc_maxwidth,
+        swprintf(tmp, sc_maxwidth + 5, L"%-*ls    ", sc_maxwidth,
                  sc[sc_cols * i + j]);
         wcscat(res[ln].text, tmp);
         bset(res[ln].lman, lmargin_width + j * (4 + sc_maxwidth));
@@ -369,9 +371,9 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
     // Section title
     inc_ln;
     line_alloc(res[ln], line_width);
-    swprintf(tmp, main_width, L"MANUAL PAGES IN SECTION '%ls'", sc[i]);
-    swprintf(res[ln].text, line_width, L"%*s%-*ls", //
-             lmargin_width, "",                     //
+    swprintf(tmp, main_width + 1, L"MANUAL PAGES IN SECTION '%ls'", sc[i]);
+    swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
+             lmargin_width, "",                         //
              main_width, tmp);
     bset(res[ln].bold, lmargin_width);
     bset(res[ln].reg, lmargin_width + wcslen(tmp));
@@ -379,9 +381,9 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
     for (j = 0; j < aw_len; j++) {
       // If manual page is in current section...
       if (0 == wcscmp(aw[j].section, sc[i])) {
-        unsigned lc_width = main_width / 3;            // left column width
-        unsigned rc_width = main_width - lc_width - 1; // right column width
-        unsigned page_width = wcslen(aw[j].page) + wcslen(sc[i]) +
+        unsigned lc_width = main_width / 3;        // left column width
+        unsigned rc_width = main_width - lc_width; // right column width
+        unsigned page_width = wcslen(aw[j].page) + wcslen(aw[j].section) +
                               2; // width of manual page name and section
         unsigned descr_width =
             wcslen(aw[j].descr); // width of manual page description
@@ -393,16 +395,62 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
         // Page name and section
         inc_ln;
         line_alloc(res[ln], spcl_width);
-        swprintf(res[ln].text, spcl_width, L"%*s%ls(%ls)", //
-                 lmargin_width, "",                        //
-                 aw[j].page, sc[i]);
+        swprintf(tmp, page_width + 1, L"%ls(%ls)", aw[j].page, aw[j].section);
+        swprintf(res[ln].text, spcl_width + 1, L"%*s%-*ls", //
+                 lmargin_width, "",                         //
+                 lc_width, tmp);
         bset(res[ln].lman, lmargin_width);
         bset(res[ln].reg, lmargin_width + page_width);
         // Description
-        wwrap(aw[j].descr, rc_width);
+        wcscpy(tmp, aw[j].descr);
+        wwrap(tmp, rc_width);
+        wchar_t *buf;
+        wchar_t *ptr = wcstok(tmp, L"\n", &buf);
+        if (NULL != ptr && page_width < lc_width) {
+          wcscat(res[ln].text, ptr);
+          ptr = wcstok(NULL, L"\n", &buf);
+        }
+        while (NULL != ptr) {
+          inc_ln;
+          line_alloc(res[ln], line_width);
+          swprintf(res[ln].text, line_width + 1, L"%*s%ls", //
+                   lmargin_width + lc_width, "",            //
+                   ptr);
+          ptr = wcstok(NULL, L"\n", &buf);
+        }
       }
     }
   }
+
+  // Newline
+  inc_ln;
+  line_alloc(res[ln], 0);
+
+  // Footer
+  inc_ln;
+  line_alloc(res[ln], line_width);
+  unsigned date_len = wcslen(date); // date length
+  unsigned ver_len = wcslen(ver);   // ver length
+  unsigned lds_len =
+      (hfc_width - date_len) / 2 +
+      (hfc_width - date_len) % 2; // length of space on the left of date
+  unsigned rds_len =
+      (hfc_width - date_len) / 2; // length of space on the right of date
+  swprintf(res[ln].text, line_width + 1, L"%*s%-*ls%*s%ls%*s%*ls%*s", //
+           lmargin_width, "",                                         //
+           hfl_width, ver,                                            //
+           lds_len, "",                                               //
+           date,                                                      //
+           rds_len, "",                                               //
+           hfr_width, key,                                            //
+           rmargin_width, ""                                          //
+  );
+  bset(res[ln].uline, lmargin_width);
+  bset(res[ln].reg, lmargin_width + ver_len);
+  bset(res[ln].uline, lmargin_width + hfl_width + hfc_width);
+  bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + key_len);
+
+  free(tmp);
 
   *dst = res;
   return ln + 1;

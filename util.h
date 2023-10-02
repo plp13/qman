@@ -68,6 +68,8 @@ void serror(wchar_t *dst, const wchar_t *s);
 
 extern void *xcalloc(size_t nmemb, size_t size);
 
+extern void *xreallocarray(void *ptr, size_t nmemb, size_t size);
+
 extern FILE *xpopen(const char *command, const char *type);
 
 extern int xpclose(FILE *stream);
