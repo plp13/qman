@@ -15,50 +15,12 @@ int main(int argc, char **argv) {
   int man_argc = argc - noopt_argc;
   char **man_argv = &argv[noopt_argc];
 
-  aprowhat_t *aw;
-  unsigned aw_len = aprowhat(&aw, AW_APROPOS, "''");
+  line_t *aw;
+  unsigned aw_len = aprowhat(&aw, AW_APROPOS, "clear", L"APROPOS", L"Search Results for 'clear'");
   for (unsigned i = 0; i < aw_len; i++) {
-    // wprintf(L"page=%ls\n", aw[i].page);
-    // wprintf(L"page=%ls\n", aw[i].section);
-    // wprintf(L"page=%ls\n\n", aw[i].descr);
-    i++;
+    wprintf(L"%ls\n", aw[i].text);
   }
-  // wprintf(L"Total lines: %d\n", aw_len);
-  wchar_t **sc;
-  unsigned sc_len = aprowhat_sections(&sc, aw, aw_len);
-  // wprintf(L"%d sections: ", sc_len);
-  for (unsigned i = 0; i < sc_len; i++) {
-    // wprintf(L"%ls ", sc[i]);
-  }
-  // wprintf(L"\n");
-  line_t *lines;
-  unsigned lines_len;
-  lines_len = aprowhat_render(&lines, aw, aw_len, sc, sc_len, L"INDEX",
-                              L"Manual Pages Index", L"qman version 0.0",
-                              L"September 2023");
-  for (unsigned i = 0; i < lines_len; i++)
-    wprintf(L"%ls\n", lines[i].text);
-  aprowhat_free(aw, aw_len);
-  wafree(sc, sc_len);
-  lines_free(lines, lines_len);
-
-  bitarr_t ba = balloc(32);
-  bset(ba, 2);
-  bclear(ba, 12);
-  bset(ba, 29);
-  bclear(ba, 0);
-  assert(bget(ba, 2));
-  assert(!bget(ba, 12));
-  assert(bget(ba, 29));
-  assert(!bget(ba, 0));
-  bset(ba, 0);
-  assert(bget(ba, 0));
-  bclearall(ba, 32);
-  assert(!bget(ba, 2));
-  assert(!bget(ba, 12));
-  assert(!bget(ba, 29));
-  assert(!bget(ba, 0));
-  free(ba);
-
+  lines_free(aw, aw_len);
+  
   winddown(ES_SUCCESS, NULL);
 }

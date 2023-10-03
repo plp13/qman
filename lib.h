@@ -19,5 +19,6 @@
 #include <locale.h>
 #include <string.h>
 #include <wchar.h>
+#include <time.h>
 
 #endif

@@ -38,7 +38,6 @@ unsigned current;
 // Functions
 //
 
-// Initialize the software
 void init() {
   // Use the system locale
   setlocale(LC_ALL, "");
@@ -52,6 +51,8 @@ void init() {
   config.layout.rmargin = 2;
   config.misc.program_name = walloc(BS_SHORT);
   wcscpy(config.misc.program_name, L"qman");
+  config.misc.program_version = walloc(BS_SHORT);
+  wcscpy(config.misc.program_version, L"qman nightly");
   config.misc.man_path = salloc(BS_SHORT);
   strcpy(config.misc.man_path, "/usr/bin/man");
   config.misc.whatis_path = salloc(BS_SHORT);
@@ -70,8 +71,6 @@ void init() {
   requests[current].section = NULL;
 }
 
-// Retrieve argc and argv from main() and parse the command line options.
-// Modify config and requests appropriately, and return optind
 int parse_options(int argc, char *const *argv) {
   // Initialize opstring and longopts arguments of getopt()
   char optstring[3 * asizeof(options)];
@@ -140,7 +139,6 @@ int parse_options(int argc, char *const *argv) {
   }
 }
 
-// Print usage information
 void usage() {
   // Header
   wprintf(L"Usage: %s [OPTION...] [SECTION] [PAGE]...\n\n",
@@ -175,10 +173,7 @@ void usage() {
           L"mandatory or optional\nfor any corresponding short options.\n");
 }
 
-// Execute apropos or whatis, and place their result in dst. Return the number
-// of entries found. Arguments cmd and args respectively specify the command to
-// run and its arguments.
-unsigned aprowhat(aprowhat_t **dst, aprowhat_cmd_t cmd, const char *args) {
+unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd, const char *args) {
   // Prepare apropos/whatis command
   char cmdstr[BS_SHORT];
   if (cmd == AW_WHATIS)
@@ -239,8 +234,6 @@ unsigned aprowhat(aprowhat_t **dst, aprowhat_cmd_t cmd, const char *args) {
   return lines;
 }
 
-// Given a result of aprowhat() in aw (of length aw_len), extract the names of
-// its manual sections into dst. Return the total number of sections found.
 unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *aw,
                            unsigned aw_len) {
   unsigned i;
@@ -262,7 +255,8 @@ unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *aw,
   return res_i;
 }
 
-// Helper of aprowhat_render()
+// Helper of aprowhat_render(). Increase ln, and reallocate res in memory, if ln
+// has exceeded its size.
 #define inc_ln                                                                 \
   ln++;                                                                        \
   if (ln == res_len) {                                                         \
@@ -270,10 +264,6 @@ unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *aw,
     res = xreallocarray(res, res_len, sizeof(line_t));                         \
   }
 
-// Render a result of aprowhat() aw (of length aw_len), and a result of
-// aprowhat_sections (of length aw_len) into dst, as an array of lines of text.
-// Return the number of lines. key, title, ver, and date are used for the header
-// and footer.
 unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
                          wchar_t *const *sc, unsigned sc_len,
                          const wchar_t *key, const wchar_t *title,
@@ -456,7 +446,52 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   return ln + 1;
 }
 
-// Free the memory occupied by a result of aprowhat() aw (of length aw_len)
+unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const char *args,
+                  const wchar_t *key, const wchar_t *title) {
+  aprowhat_t *aw;
+  unsigned aw_len = aprowhat_exec(&aw, cmd, args);
+  wchar_t **sc;
+  unsigned sc_len = aprowhat_sections(&sc, aw, aw_len);
+  time_t now = time(NULL);
+  wchar_t date[BS_SHORT];
+  wcsftime(date, BS_SHORT, L"%x", gmtime(&now));
+
+  line_t *res;
+  unsigned res_len = aprowhat_render(&res, aw, aw_len, sc, sc_len, key, title,
+                                     config.misc.program_version, date);
+
+  aprowhat_free(aw, aw_len);
+  wafree(sc, sc_len);
+
+  *dst = res;
+  return res_len;
+}
+
+unsigned man(line_t **dst, const char *args) {
+  unsigned ln;                    // current line number
+  unsigned i, j;                  // iterators
+  wchar_t *tmp = walloc(BS_LINE); // temporary
+  char *stmp = salloc(BS_SHORT);  // temporary
+
+  unsigned res_len = 1024;               // result buffer length
+  line_t *res = aalloc(res_len, line_t); // result buffer
+
+  // Set up the environment for man to create the output we want
+  sprintf(stmp, "%d",
+          config.layout.width - config.layout.lmargin - config.layout.rmargin);
+  setenv("MANWIDTH", stmp, true);
+  setenv("MAN_KEEP_FORMATTING", "1", true);
+
+  // Prepare man command
+  char cmdstr[BS_SHORT];
+  sprintf(cmdstr, "%s -l %s", config.misc.man_path, args);
+
+  free(tmp);
+
+  *dst = res;
+  return ln + 1;
+}
+
 void aprowhat_free(aprowhat_t *aw, unsigned aw_len) {
   unsigned i;
 
@@ -479,8 +514,6 @@ void lines_free(line_t *lines, unsigned lines_len) {
   free(lines);
 }
 
-// Exit the program gracefully, with exit code ec. If em is not NULL, echo it
-// on stdout before exiting.
 void winddown(int ec, const wchar_t *em) {
   // Deallocate memory
   unsigned i;
@@ -493,6 +526,8 @@ void winddown(int ec, const wchar_t *em) {
   free(requests);
   if (NULL != config.misc.program_name)
     free(config.misc.program_name);
+  if (NULL != config.misc.program_version)
+    free(config.misc.program_version);
   if (NULL != config.misc.config_path)
     free(config.misc.config_path);
   if (NULL != config.misc.man_path)

@@ -51,12 +51,13 @@ typedef struct {
 
 // program configuration: miscellaneous
 typedef struct {
-  wchar_t *program_name;  // this program's name
-  char *config_path;      // path to configuration file
-  char *man_path;         // path to 'man' command
-  char *whatis_path;      // path to 'whatis' command
-  char *apropos_path;     // path to 'apropos' command
-  unsigned requests_size; // size of page request history
+  wchar_t *program_name;    // this program's name
+  wchar_t *program_version; // version string
+  char *config_path;        // path to configuration file
+  char *man_path;           // path to 'man' command
+  char *whatis_path;        // path to 'whatis' command
+  char *apropos_path;       // path to 'apropos' command
+  unsigned requests_size;   // size of page request history
 } config_misc_t;
 
 // Program configuration (main)
@@ -179,31 +180,60 @@ extern unsigned current;
   free(line.lmail);
 
 //
-// Functions (comments are in program.c)
+// Functions
 //
 
+// Initialize the software
 extern void init();
 
+// Retrieve argc and argv from main() and parse the command line options.
+// Modify config and requests appropriately, and return optind
 extern int parse_options(int argc, char *const *argv);
 
+// Print usage information
 extern void usage();
 
-extern unsigned aprowhat(aprowhat_t **dst, aprowhat_cmd_t cmd,
-                         const char *args);
+// Execute apropos or whatis, and place their result in dst. Return the number
+// of entries found. Arguments cmd and args respectively specify the command to
+// run and its arguments.
+extern unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
+                              const char *args);
 
+// Given a result of aprowhat() in aw (of length aw_len), extract the names of
+// its manual sections into dst. Return the total number of sections found.
 extern unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *buf,
                                   unsigned buf_len);
 
+// Render a result of aprowhat() aw (of length aw_len), and a result of
+// aprowhat_sections() sc (of length aw_len) into dst, as an array of lines of
+// text. Return the number of lines. key, title, ver, and date are used for the
+// header and footer.
 extern unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
                                 unsigned aw_len, wchar_t *const *sc,
                                 unsigned sc_len, const wchar_t *key,
                                 const wchar_t *title, const wchar_t *ver,
                                 const wchar_t *date);
 
+// Execute apropos or whatis, and place the final rendered result in dst. Return
+// the number of lines in said output. Arguments cmd and args respectively
+// specify the command to run and its arguments. key and title specify a short
+// and long title respectively, to be inserted in the header and footer.
+extern unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const char *args,
+                         const wchar_t *key, const wchar_t *title);
+
+// Execute man, and place its final rendeered output in dst. Return the number
+// of lines in said output. args specifies the arguments for the man command.
+extern unsigned man(line_t **dst, const char *args);
+
+// Free the memory occupied by the result of aprowhat() aw (of length aw_len)
 extern void aprowhat_free(aprowhat_t *res, unsigned res_len);
 
+// Free the memory occupied by the result of aprowhat() or man() lines (of
+// length lines_len)
 extern void lines_free(line_t *lines, unsigned lines_len);
 
+// Exit the program gracefully, with exit code ec. If em is not NULL, echo it
+// on stdout before exiting.
 extern void winddown(int ec, const wchar_t *em);
 
 #endif

@@ -8,10 +8,6 @@
 // Functions
 //
 
-// Many of these functions call winddown() to fail gracefully in case of error
-
-// Perform the same function as perror() but, rather than printing the error
-// message, place a pointer to a string that contains it in dst
 void serror(wchar_t *dst, const wchar_t *s) {
   if (NULL != s && L'\0' != s[0])
     swprintf(dst, BS_SHORT, L"%ls: %s", s, strerror(errno));
@@ -19,10 +15,6 @@ void serror(wchar_t *dst, const wchar_t *s) {
     swprintf(dst, BS_SHORT, L"%s", strerror(errno));
 }
 
-// The arguments of all x...() functions are identical to those of the standard
-// functions they replace.
-
-// Safely call calloc()
 void *xcalloc(size_t nmemb, size_t size) {
   void *res = calloc(nmemb, size);
 
@@ -35,7 +27,6 @@ void *xcalloc(size_t nmemb, size_t size) {
   return res;
 }
 
-// Safely call reallocarray()
 void *xreallocarray(void *ptr, size_t nmemb, size_t size) {
   void *res = reallocarray(ptr, nmemb, size);
 
@@ -48,7 +39,6 @@ void *xreallocarray(void *ptr, size_t nmemb, size_t size) {
   return res;
 }
 
-// Safely call popen()
 FILE *xpopen(const char *command, const char *type) {
   FILE *pipe = popen(command, type);
 
@@ -61,7 +51,6 @@ FILE *xpopen(const char *command, const char *type) {
   return pipe;
 }
 
-// Safely call pclose()
 int xpclose(FILE *stream) {
   int status = pclose(stream);
 
@@ -74,7 +63,6 @@ int xpclose(FILE *stream) {
   return status;
 }
 
-// Safely call fopen()
 FILE *xfopen(const char *pathname, const char *mode) {
   FILE *file = fopen(pathname, mode);
 
@@ -87,7 +75,6 @@ FILE *xfopen(const char *pathname, const char *mode) {
   return file;
 }
 
-// Safely call fclose()
 int xfclose(FILE *stream) {
   int status = fclose(stream);
 
@@ -100,7 +87,6 @@ int xfclose(FILE *stream) {
   return status;
 }
 
-// Safely call tmpfile()
 FILE *xtmpfile() {
   FILE *file = tmpfile();
 
@@ -113,7 +99,6 @@ FILE *xtmpfile() {
   return file;
 }
 
-// Return the value of the i'th bit in bit array ba
 bool bget(bitarr_t ba, unsigned i) {
   unsigned seg = i / 8;
   unsigned mask = 1 << (i % 8);
@@ -121,7 +106,6 @@ bool bget(bitarr_t ba, unsigned i) {
   return ba[seg] & mask;
 }
 
-// Set the the i'th bit of bit array ba
 void bset(bitarr_t ba, unsigned i) {
   unsigned seg = i / 8;
   unsigned mask = 1 << (i % 8);
@@ -129,7 +113,6 @@ void bset(bitarr_t ba, unsigned i) {
   ba[seg] = ba[seg] | mask;
 }
 
-// Clear the the i'th bit of bit array ba
 void bclear(bitarr_t ba, unsigned i) {
   unsigned seg = i / 8;
   unsigned mask = 1 << (i % 8);
@@ -137,7 +120,6 @@ void bclear(bitarr_t ba, unsigned i) {
   ba[seg] = ba[seg] & (0xff - mask);
 }
 
-// Clear all bits of ba. ba_len is ba's size.
 void bclearall(bitarr_t ba, unsigned ba_len) {
   unsigned ba_bytes = ba_len % 8 == 0 ? ba_len / 8 : 1 + ba_len / 8;
 
@@ -145,8 +127,6 @@ void bclearall(bitarr_t ba, unsigned ba_len) {
     ba[i] = 0;
 }
 
-// Free all memory in an array of (wide) strings buf. buf_len is the length of
-// buf.
 void wafree(wchar_t **buf, unsigned buf_len) {
   unsigned i;
 
@@ -156,8 +136,6 @@ void wafree(wchar_t **buf, unsigned buf_len) {
   free(buf);
 }
 
-// Free all memory in an array of (encoded) strings buf. buf_len is the length
-// of buf.
 void safree(char **buf, unsigned buf_len) {
   unsigned i;
 
@@ -167,11 +145,6 @@ void safree(char **buf, unsigned buf_len) {
   free(buf);
 }
 
-// All w...() and s...() functions that place their result in an argument don't
-// do any memory allocation. Said argument must be a pointer to a buffer of
-// already allocated memory.
-
-// Return the number of uccurences of needle in hayst
 unsigned wccnt(const wchar_t *hayst, wchar_t needle) {
   unsigned cnt = 0;
 
@@ -184,8 +157,6 @@ unsigned wccnt(const wchar_t *hayst, wchar_t needle) {
   return cnt;
 }
 
-// Replace all occurences of needle in hayst with repl. Place the result in
-// dst.
 void wcrepl(wchar_t *dst, const wchar_t *hayst, wchar_t needle,
             const wchar_t *repl) {
   wchar_t *hayst_start = (wchar_t *)hayst;
@@ -206,8 +177,6 @@ void wcrepl(wchar_t *dst, const wchar_t *hayst, wchar_t needle,
   } while (NULL != hayst);
 }
 
-// Insert newlines in trgt so that it word-wraps before it reaches cols columns.
-// Each newline is inserted in the place of a space or tab.
 void wwrap(wchar_t *trgt, unsigned cols) {
   unsigned len = wcslen(trgt), line = 0, line_start = 0, line_end;
 
@@ -224,8 +193,6 @@ void wwrap(wchar_t *trgt, unsigned cols) {
   }
 }
 
-// Return true if needle is in array of (wide) strings hayst, false otherwise.
-// needle_length is the length of needle.
 bool wmemberof(wchar_t *const *hayst, const wchar_t *needle,
                unsigned needle_len) {
   unsigned i;
@@ -238,8 +205,6 @@ bool wmemberof(wchar_t *const *hayst, const wchar_t *needle,
   return false;
 }
 
-// Sort the strings in trgt alphanumerically. trgt_len is trgt's length. Setting
-// rev to true causes reverse sorting.
 void wsort(wchar_t **trgt, unsigned trgt_len, bool rev) {
   unsigned i;
   int cur_cmp;
@@ -269,8 +234,6 @@ void wsort(wchar_t **trgt, unsigned trgt_len, bool rev) {
   }
 }
 
-// Return the length of the longest (wide) string in src. src_len holds the
-// length of src.
 unsigned wmaxlen(wchar_t *const *src, unsigned src_len) {
   unsigned maxlen = 0, i;
 
@@ -280,8 +243,6 @@ unsigned wmaxlen(wchar_t *const *src, unsigned src_len) {
   return maxlen;
 }
 
-// Copy all data in source into trgt, line by line. Both source and target must
-// be text files. Return the number of lines copied.
 unsigned scopylines(FILE *source, FILE *trgt) {
   unsigned cnt = 0;
   char tmp[BS_LINE];
@@ -305,9 +266,6 @@ unsigned scopylines(FILE *source, FILE *trgt) {
   return cnt - 1;
 }
 
-// Read a line from file fp, and place the result in str (without the trailing
-// newline). If the read was succesful, return the resulting string's length.
-// Otherwise, return -1.
 int sreadline(char *str, unsigned size, FILE *fp) {
   fgets(str, BS_LINE, fp);
   if (feof(fp)) {
