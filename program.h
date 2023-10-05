@@ -84,20 +84,6 @@ typedef struct {
   wchar_t *section; // section (only applicable if request_type is RT_MAN)
 } request_t;
 
-// A line of text
-typedef struct {
-  unsigned length; // the line's length
-  wchar_t *text;   // the line's text
-  // Places in the line the font becomes...
-  bitarr_t reg;    // regular
-  bitarr_t bold;   // bold
-  bitarr_t italic; // italic
-  bitarr_t uline;  // underlined
-  bitarr_t lman;   // a manual page link
-  bitarr_t lhttp;  // an http or https link
-  bitarr_t lmail;  // an email link
-} line_t;
-
 // Choice between apropos and whatis
 typedef enum { AW_APROPOS, AW_WHATIS } aprowhat_cmd_t;
 
@@ -108,7 +94,34 @@ typedef struct {
   wchar_t *descr;   // Description
 } aprowhat_t;
 
-// An array of apropos results
+// Link type
+typedef enum {
+  LT_MAN,   // manual page
+  LT_HTTP,  // http(s) URL
+  LT_EMAIL, // email address
+  LT_LS     // local search: find trgt in the current document
+} link_type_t;
+
+// A link
+typedef struct {
+  unsigned start;   // character no. where the link starts
+  unsigned end;     // character no. the link ends
+  link_type_t type; // type of link
+  wchar_t *trgt;    // link target (e.g. "ls(1)" or "http://www.google.com/")
+} link_t;
+
+// A line of text
+typedef struct {
+  unsigned length;       // the line's length
+  wchar_t *text;         // the line's text
+  unsigned links_length; // number of links in line
+  link_t *links;         // links on the line
+  // Places in the line the font becomes...
+  bitarr_t reg;    // regular
+  bitarr_t bold;   // bold
+  bitarr_t italic; // italic
+  bitarr_t uline;  // underlined
+} line_t;
 
 //
 // Constants
@@ -143,6 +156,8 @@ extern unsigned current;
   line.length = len;                                                           \
   line.text = walloc(len);                                                     \
   line.text[0] = '\0';                                                         \
+  line.links_length = 0;                                                       \
+  line.links = NULL;                                                           \
   if (len > 0) {                                                               \
     line.reg = balloc(len);                                                    \
     bclearall(line.reg, len);                                                  \
@@ -152,32 +167,31 @@ extern unsigned current;
     bclearall(line.italic, len);                                               \
     line.uline = balloc(len);                                                  \
     bclearall(line.uline, len);                                                \
-    line.lman = balloc(len);                                                   \
-    bclearall(line.lman, len);                                                 \
-    line.lhttp = balloc(len);                                                  \
-    bclearall(line.lhttp, len);                                                \
-    line.lmail = balloc(len);                                                  \
-    bclearall(line.lmail, len);                                                \
   } else {                                                                     \
     line.reg = NULL;                                                           \
     line.bold = NULL;                                                          \
     line.italic = NULL;                                                        \
     line.uline = NULL;                                                         \
-    line.lman = NULL;                                                          \
-    line.lhttp = NULL;                                                         \
-    line.lmail = NULL;                                                         \
   }
+
+// Allocate memory for an extra link for line. trgt_length is the length of the
+// new link's trgt member.
+#define line_realloc_link(line, trgt_len)                                      \
+  line.links_length++;                                                         \
+  line.links = xreallocarray(line.links, line.links_length, sizeof(link_t));   \
+  line.links[line.links_length - 1].trgt = walloc(trgt_len);
 
 // Free memory for all members of (line_t variable) line
 #define line_free(line)                                                        \
   free(line.text);                                                             \
+  for (unsigned line_free_i = 0; line_free_i < line.links_length;              \
+       line_free_i++)                                                          \
+    free(line.links[line_free_i].trgt);                                        \
+  free(line.links);                                                            \
   free(line.reg);                                                              \
   free(line.bold);                                                             \
   free(line.italic);                                                           \
-  free(line.uline);                                                            \
-  free(line.lman);                                                             \
-  free(line.lhttp);                                                            \
-  free(line.lmail);
+  free(line.uline);
 
 //
 // Functions

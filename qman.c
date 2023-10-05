@@ -15,12 +15,19 @@ int main(int argc, char **argv) {
   int man_argc = argc - noopt_argc;
   char **man_argv = &argv[noopt_argc];
 
-  line_t *aw;
-  unsigned aw_len = aprowhat(&aw, AW_APROPOS, "clear", L"APROPOS", L"Search Results for 'clear'");
-  for (unsigned i = 0; i < aw_len; i++) {
-    wprintf(L"%ls\n", aw[i].text);
+  // line_t *aw;
+  // unsigned aw_len = aprowhat(&aw, AW_APROPOS, "clear", L"APROPOS", L"Search
+  // Results for 'clear'"); for (unsigned i = 0; i < aw_len; i++) {
+  //   wprintf(L"%ls\n", aw[i].text);
+  // }
+  // lines_free(aw, aw_len);
+
+  line_t *mn;
+  unsigned mn_len = man(&mn, "ls");
+  for (unsigned i = 0; i < mn_len; i++) {
+    wprintf(L"%ls\n", mn[i].text);
   }
-  lines_free(aw, aw_len);
-  
+  lines_free(mn, mn_len);
+
   winddown(ES_SUCCESS, NULL);
 }

@@ -99,6 +99,28 @@ FILE *xtmpfile() {
   return file;
 }
 
+char *xfgets(char *s, int size, FILE *stream) {
+  char *res = fgets(s, size, stream);
+  if (ferror(stream)) {
+    wchar_t errmsg[BS_SHORT];
+    serror(errmsg, L"Unable to fgets()");
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+
+  return res;
+}
+
+size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
+  size_t cnt = fwrite(ptr, size, nmemb, stream);
+  if (ferror(stream)) {
+    wchar_t errmsg[BS_SHORT];
+    serror(errmsg, L"Unable to write()");
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+
+  return cnt;
+}
+
 bool bget(bitarr_t ba, unsigned i) {
   unsigned seg = i / 8;
   unsigned mask = 1 << (i % 8);
@@ -248,33 +270,18 @@ unsigned scopylines(FILE *source, FILE *trgt) {
   char tmp[BS_LINE];
 
   for (cnt = 0; !feof(source); cnt++) {
-    fgets(tmp, BS_LINE, source);
-    if (ferror(source)) {
-      wchar_t errmsg[BS_LINE];
-      serror(errmsg, L"Unable to fgets()");
-      winddown(ES_OPER_ERROR, errmsg);
-    }
-
-    fwrite(tmp, sizeof(char), strlen(tmp), trgt);
-    if (ferror(trgt)) {
-      wchar_t errmsg[BS_LINE];
-      serror(errmsg, L"Unable to fwrite()");
-      winddown(ES_OPER_ERROR, errmsg);
-    }
+    xfgets(tmp, BS_LINE, source);
+    xfwrite(tmp, sizeof(char), strlen(tmp), trgt);
   }
 
   return cnt - 1;
 }
 
 int sreadline(char *str, unsigned size, FILE *fp) {
-  fgets(str, BS_LINE, fp);
+  xfgets(str, BS_LINE, fp);
   if (feof(fp)) {
     str[0] = L'\0';
     return -1;
-  } else if (ferror(fp)) {
-    wchar_t errmsg[BS_LINE];
-    serror(errmsg, L"Unable to fgets()");
-    winddown(ES_OPER_ERROR, errmsg);
   }
 
   char *nlc = strrchr(str, '\n');

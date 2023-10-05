@@ -35,6 +35,69 @@ request_t *requests = NULL;
 unsigned current;
 
 //
+// Helper macros and functions
+//
+
+// Helper of man() and aprowhat_render(). Increase ln, and reallocate res in
+// memory, if ln has exceeded its size.
+#define inc_ln                                                                 \
+  ln++;                                                                        \
+  if (ln == res_len) {                                                         \
+    res_len += 1024;                                                           \
+    res = xreallocarray(res, res_len, sizeof(line_t));                         \
+  }
+
+// Helper of man() and aprowhat_render(). Add a link to a line. Allocate memory
+// using line_realloc_link() to do so. Use start, end, type, and trgt to
+// populate the new link's members.
+void add_link(line_t *line, unsigned start, unsigned end, link_type_t type,
+              wchar_t *trgt) {
+  unsigned trgt_len = wcslen(trgt);
+
+  line_realloc_link((*line), trgt_len);
+  line->links[line->links_length - 1].start = start;
+  line->links[line->links_length - 1].end = end;
+  line->links[line->links_length - 1].type = LT_MAN;
+  wcscpy(line->links[line->links_length - 1].trgt, trgt);
+}
+
+// All got_... macros are helpers of man()
+
+// true if we tmpw[i] contains a 'bold' terminal escape sequence
+#define got_bold                                                               \
+  (i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&              \
+      (tmpw[i + 2] == L'1') && (tmpw[i + 3] == L'm')
+
+// true if we tmpw[i] contains a 'not bold bold' terminal escape sequence
+#define got_not_bold                                                           \
+  (i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&              \
+      (tmpw[i + 2] == L'0') && (tmpw[i + 3] == L'm')
+
+// true if we tmpw[i] contains a 'italic' terminal escape sequence
+#define got_italic                                                             \
+  (i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&              \
+      (tmpw[i + 2] == L'3') && (tmpw[i + 3] == L'm')
+
+// true if we tmpw[i] contains a 'not italic' terminal escape sequence
+#define got_not_italic                                                         \
+  (i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&              \
+      (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'3') && (tmpw[i + 4] == L'm')
+
+// true if we tmpw[i] contains a 'underline' terminal escape sequence
+#define got_uline                                                              \
+  (i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&              \
+      (tmpw[i + 2] == L'4') && (tmpw[i + 3] == L'm')
+
+// true if we tmpw[i] contains a 'not underline' terminal escape sequence
+#define got_not_uline                                                          \
+  (i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&              \
+      (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'4') && (tmpw[i + 4] == L'm')
+
+// true if we tmpw[i] contains any terminal escape sequence that resets it to
+// normal text
+#define got_reg got_not_bold || got_not_italic || got_not_uline
+
+//
 // Functions
 //
 
@@ -255,15 +318,6 @@ unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *aw,
   return res_i;
 }
 
-// Helper of aprowhat_render(). Increase ln, and reallocate res in memory, if ln
-// has exceeded its size.
-#define inc_ln                                                                 \
-  ln++;                                                                        \
-  if (ln == res_len) {                                                         \
-    res_len += 1024;                                                           \
-    res = xreallocarray(res, res_len, sizeof(line_t));                         \
-  }
-
 unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
                          wchar_t *const *sc, unsigned sc_len,
                          const wchar_t *key, const wchar_t *title,
@@ -281,7 +335,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   unsigned hfr_width =
       hfl_width + (main_width - hfc_width) % 2; // header/footer right area
 
-  unsigned ln;                    // current line number
+  unsigned ln = 0;                // current line number
   unsigned i, j;                  // iterators
   wchar_t *tmp = walloc(BS_LINE); // temporary
 
@@ -289,7 +343,6 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   line_t *res = aalloc(res_len, line_t); // result buffer
 
   // Header
-  ln = 0;
   line_alloc(res[ln], line_width);
   unsigned title_len = wcslen(title); // title length
   unsigned key_len = wcslen(key);     // key length
@@ -342,9 +395,6 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
         swprintf(tmp, sc_maxwidth + 5, L"%-*ls    ", sc_maxwidth,
                  sc[sc_cols * i + j]);
         wcscat(res[ln].text, tmp);
-        bset(res[ln].lman, lmargin_width + j * (4 + sc_maxwidth));
-        bset(res[ln].reg, lmargin_width + j * (4 + sc_maxwidth) +
-                              wcslen(sc[sc_cols * i + j]));
       }
     }
   }
@@ -389,8 +439,8 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
         swprintf(res[ln].text, spcl_width + 1, L"%*s%-*ls", //
                  lmargin_width, "",                         //
                  lc_width, tmp);
-        bset(res[ln].lman, lmargin_width);
-        bset(res[ln].reg, lmargin_width + page_width);
+        add_link(&res[ln], lmargin_width, lmargin_width + wcslen(tmp), LT_MAN,
+                 tmp);
         // Description
         wcscpy(tmp, aw[j].descr);
         wwrap(tmp, rc_width);
@@ -468,28 +518,65 @@ unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const char *args,
 }
 
 unsigned man(line_t **dst, const char *args) {
-  unsigned ln;                    // current line number
-  unsigned i, j;                  // iterators
-  wchar_t *tmp = walloc(BS_LINE); // temporary
-  char *stmp = salloc(BS_SHORT);  // temporary
+  unsigned ln = 0;                 // current line number
+  unsigned len;                    // length of current line text
+  unsigned i, j;                   // iterators
+  wchar_t *tmpw = walloc(BS_LINE); // temporary
+  char *tmps = salloc(BS_LINE);    // temporary
 
   unsigned res_len = 1024;               // result buffer length
   line_t *res = aalloc(res_len, line_t); // result buffer
 
-  // Set up the environment for man to create the output we want
-  sprintf(stmp, "%d",
+  // Set up the environment for man to create its output as we want it
+  char *old_term = getenv("TERM");
+  setenv("TERM", "xterm", true);
+  sprintf(tmps, "%d",
           config.layout.width - config.layout.lmargin - config.layout.rmargin);
-  setenv("MANWIDTH", stmp, true);
+  setenv("MANWIDTH", tmps, true);
   setenv("MAN_KEEP_FORMATTING", "1", true);
 
   // Prepare man command
   char cmdstr[BS_SHORT];
-  sprintf(cmdstr, "%s -l %s", config.misc.man_path, args);
+  sprintf(cmdstr, "%s %s", config.misc.man_path, args);
 
-  free(tmp);
+  // Execute man and, read its output, and process it into res
+  FILE *pp = xpopen(cmdstr, "r");
+  xfgets(tmps, BS_LINE, pp);
+  while (!feof(pp)) {
+    len = mbstowcs(tmpw, tmps, BS_LINE);
+    line_alloc(res[ln], len);
+    j = 0;
+    for (i = 0; i < len; i++) {
+      if (got_reg) {
+        bset(res[ln].reg, j);
+        i += 4;
+      } else if (got_bold) {
+        bset(res[ln].bold, j);
+        i += 3;
+      } else if (got_italic) {
+        bset(res[ln].italic, j);
+        i += 3;
+      } else if (got_uline) {
+        bset(res[ln].uline, j);
+        i += 3;
+      } else if (tmpw[i] != '\n') {
+        res[ln].text[j] = tmpw[i];
+        j++;
+      }
+    }
+    inc_ln;
+    xfgets(tmps, BS_LINE, pp);
+  }
+
+  // Restore the environment
+  setenv("TERM", old_term, true);
+
+  xpclose(pp);
+  free(tmpw);
+  free(tmps);
 
   *dst = res;
-  return ln + 1;
+  return ln;
 }
 
 void aprowhat_free(aprowhat_t *aw, unsigned aw_len) {
