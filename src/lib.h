@@ -20,5 +20,6 @@
 #include <string.h>
 #include <wchar.h>
 #include <time.h>
+#include <curses.h>
 
 #endif

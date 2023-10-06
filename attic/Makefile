@@ -1,9 +1,9 @@
 # Configurable variables
-CC=gcc -O0 -g
+CC=gcc
 
-COMPILER_CMD=$(CC)
-LINKER_CMD=$(CC)
-ONESTEP_CMD=$(CC)
+COMPILER_CMD=$(CC) `pkg-config --cflags ncursesw` -O0 -g
+LINKER_CMD=$(CC) `pkg-config --libs ncursesw` -O0 -g
+ONESTEP_CMD=$(CC) `pkg-config --cflags --libs ncursesw` -O0 -g
 
 all: qman
 

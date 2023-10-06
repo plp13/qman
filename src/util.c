@@ -200,7 +200,7 @@ void wcrepl(wchar_t *dst, const wchar_t *hayst, wchar_t needle,
 }
 
 void wwrap(wchar_t *trgt, unsigned cols) {
-  unsigned len = wcslen(trgt), line = 0, line_start = 0, line_end;
+  unsigned len = wcslen(trgt), line_start = 0, line_end;
 
   while (len > line_start + cols) {
     for (line_end = line_start + cols;

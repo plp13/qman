@@ -3,12 +3,12 @@
 #include "program.h"
 #include "lib.h"
 #include "util.h"
+#include <curses.h>
 
 //
 // Global variables
 //
 
-// Program options
 option_t options[] = {
     {"index", 'n',
      L"Show all manual pages (default behaviour if no PAGE has been specified)",
@@ -25,14 +25,17 @@ option_t options[] = {
     {"help", 'h', L"Display this help message", OA_NONE, true},
     {0, 0, 0, 0, false}};
 
-// Program configuration
 config_t config;
 
-// History of page requests
-request_t *requests = NULL;
+request_t *requests;
 
-// Location of current request in requests array
-unsigned current;
+unsigned cur_request;
+
+line_t *lines;
+
+unsigned lines_len;
+
+unsigned top_line = 0;
 
 //
 // Helper macros and functions
@@ -65,37 +68,42 @@ void add_link(line_t *line, unsigned start, unsigned end, link_type_t type,
 
 // true if we tmpw[i] contains a 'bold' terminal escape sequence
 #define got_bold                                                               \
-  (i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&              \
-      (tmpw[i + 2] == L'1') && (tmpw[i + 3] == L'm')
+  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 2] == L'1') && (tmpw[i + 3] == L'm'))
 
 // true if we tmpw[i] contains a 'not bold bold' terminal escape sequence
 #define got_not_bold                                                           \
-  (i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&              \
-      (tmpw[i + 2] == L'0') && (tmpw[i + 3] == L'm')
+  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 2] == L'0') && (tmpw[i + 3] == L'm'))
 
 // true if we tmpw[i] contains a 'italic' terminal escape sequence
 #define got_italic                                                             \
-  (i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&              \
-      (tmpw[i + 2] == L'3') && (tmpw[i + 3] == L'm')
+  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 2] == L'3') && (tmpw[i + 3] == L'm'))
 
 // true if we tmpw[i] contains a 'not italic' terminal escape sequence
 #define got_not_italic                                                         \
-  (i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&              \
-      (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'3') && (tmpw[i + 4] == L'm')
+  ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'3') && (tmpw[i + 4] == L'm'))
 
 // true if we tmpw[i] contains a 'underline' terminal escape sequence
 #define got_uline                                                              \
-  (i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&              \
-      (tmpw[i + 2] == L'4') && (tmpw[i + 3] == L'm')
+  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 2] == L'4') && (tmpw[i + 3] == L'm'))
 
 // true if we tmpw[i] contains a 'not underline' terminal escape sequence
 #define got_not_uline                                                          \
-  (i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&              \
-      (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'4') && (tmpw[i + 4] == L'm')
+  ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'4') && (tmpw[i + 4] == L'm'))
+
+// true if we tmpw[i] contains a 'normal / not dim' terminal escape sequence
+#define got_normal                                                             \
+  ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'2') && (tmpw[i + 4] == L'm'))
 
 // true if we tmpw[i] contains any terminal escape sequence that resets it to
 // normal text
-#define got_reg got_not_bold || got_not_italic || got_not_uline
+#define got_reg (got_not_bold || got_not_italic || got_not_uline || got_normal)
 
 //
 // Functions
@@ -126,12 +134,21 @@ void init() {
   strcpy(config.misc.config_path, "~/qman.conf");
   config.misc.requests_size = 256;
 
-  // Initialize requests and current
-  current = 0;
+  // Initialize globals
+  cur_request = 0;
   requests = aalloc(config.misc.requests_size, request_t);
-  requests[current].request_type = RT_INDEX;
-  requests[current].page = NULL;
-  requests[current].section = NULL;
+  requests[cur_request].request_type = RT_INDEX;
+  requests[cur_request].page = NULL;
+  requests[cur_request].section = NULL;
+  top_line = 0;
+  lines = NULL;
+
+  // Initialize ncurses
+  initscr();
+  raw();
+  keypad(stdscr, TRUE);
+  noecho();
+  curs_set(1);
 }
 
 int parse_options(int argc, char *const *argv) {
@@ -208,7 +225,7 @@ void usage() {
           config.misc.program_name);
 
   // Command-line options
-  unsigned i = 0, j;
+  unsigned i = 0;
   wchar_t short_opt_str[BS_SHORT];
   wchar_t long_opt_str[BS_SHORT];
   wchar_t help_text_str[BS_LINE];
@@ -261,11 +278,11 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd, const char *args) {
   char *word;             // used by strtok() to compile descr
   char descr[BS_LINE];    // current page description
 
-  unsigned len, page_len, section_len, descr_len, i;
+  unsigned page_len, section_len, descr_len, i;
 
   // For each line returned by apropos...
   for (i = 0; i < lines; i++) {
-    len = sreadline(line, BS_LINE, fp);
+    sreadline(line, BS_LINE, fp);
 
     // Extract page, section, and descr, together with their lengths
     strcpy(page, strtok(line, " ("));
@@ -362,8 +379,8 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   );
   bset(res[ln].uline, lmargin_width);
   bset(res[ln].reg, lmargin_width + key_len);
-  bset(res[ln].uline, lmargin_width + hfl_width + hfc_width);
-  bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + key_len);
+  bset(res[ln].uline, lmargin_width + hfl_width + hfc_width + hfr_width - key_len);
+  bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
 
   // Newline
   inc_ln;
@@ -425,13 +442,12 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
         unsigned rc_width = main_width - lc_width; // right column width
         unsigned page_width = wcslen(aw[j].page) + wcslen(aw[j].section) +
                               2; // width of manual page name and section
-        unsigned descr_width =
-            wcslen(aw[j].descr); // width of manual page description
         unsigned spcl_width =
             MAX(line_width,
                 lmargin_width + page_width +
                     rmargin_width); // used in place of line_width; might be
                                     // longer, in which case we'll scroll
+
         // Page name and section
         inc_ln;
         line_alloc(res[ln], spcl_width);
@@ -441,6 +457,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
                  lc_width, tmp);
         add_link(&res[ln], lmargin_width, lmargin_width + wcslen(tmp), LT_MAN,
                  tmp);
+
         // Description
         wcscpy(tmp, aw[j].descr);
         wwrap(tmp, rc_width);
@@ -487,8 +504,8 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   );
   bset(res[ln].uline, lmargin_width);
   bset(res[ln].reg, lmargin_width + ver_len);
-  bset(res[ln].uline, lmargin_width + hfl_width + hfc_width);
-  bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + key_len);
+  bset(res[ln].uline, lmargin_width + hfl_width + hfc_width + hfr_width - key_len);
+  bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
 
   free(tmp);
 
@@ -579,6 +596,55 @@ unsigned man(line_t **dst, const char *args) {
   return ln;
 }
 
+bool termsize_changed() {
+  int width = getmaxx(stdscr);
+  int height = getmaxy(stdscr);
+
+  if (width != config.layout.width || height != config.layout.height) {
+    config.layout.width = width;
+    config.layout.height = height;
+
+    return true;
+  }
+
+  return false;
+}
+
+void draw_page(line_t *lines, unsigned lines_len, unsigned top_line) {
+  clear();
+  attrset(A_NORMAL);
+
+  unsigned y;  // current terminal row
+  unsigned ly; // current line
+  unsigned x;  // current column (in both line and terminal)
+
+  // For each terminal row...
+  for (y = 0; y < config.layout.height - 1; y++) {
+    ly = top_line + y;
+    if (ly >= lines_len)
+      break;
+
+    // For each terminal column...
+    for (x = 0; x < config.layout.width; x++) {
+      if (x >= lines[ly].length)
+        break;
+
+      // Set text attributes
+      if (bget(lines[ly].reg, x))
+        attrset(A_NORMAL);
+      if (bget(lines[ly].bold, x))
+        attrset(A_BOLD);
+      if (bget(lines[ly].italic, x))
+        attrset(A_STANDOUT);
+      if (bget(lines[ly].uline, x))
+        attrset(A_UNDERLINE);
+        
+      // Place character on screen
+      mvaddnwstr(y, x, &lines[ly].text[x], 1);
+    }
+  }
+}
+
 void aprowhat_free(aprowhat_t *aw, unsigned aw_len) {
   unsigned i;
 
@@ -602,9 +668,12 @@ void lines_free(line_t *lines, unsigned lines_len) {
 }
 
 void winddown(int ec, const wchar_t *em) {
+  // Wind down ncurses
+  endwin();
+
   // Deallocate memory
   unsigned i;
-  for (i = 0; i <= current; i++) {
+  for (i = 0; i <= cur_request; i++) {
     if (NULL != requests[i].page)
       free(requests[i].page);
     if (NULL != requests[i].section)

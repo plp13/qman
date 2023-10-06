@@ -116,7 +116,7 @@ typedef struct {
   wchar_t *text;         // the line's text
   unsigned links_length; // number of links in line
   link_t *links;         // links on the line
-  // Places in the line the font becomes...
+  // Places in the line the text becomes...
   bitarr_t reg;    // regular
   bitarr_t bold;   // bold
   bitarr_t italic; // italic
@@ -135,16 +135,29 @@ typedef struct {
 #define ES_NOT_FOUND 16  // manual page(s) not found
 
 //
-// Global variables (comments are in program.c)
+// Global variables
 //
 
+// Program options
 extern option_t options[];
 
+// Program configuration
 extern config_t config;
 
+// History of page requests
 extern request_t *requests;
 
-extern unsigned current;
+// Location of current request in requests array
+extern unsigned cur_request;
+
+// Current page being displayed
+extern line_t *lines;
+
+// Size of lines
+extern unsigned lines_len;
+
+// Line no. at which the portion of lines displayed to the user starts
+extern unsigned top_line;
 
 //
 // Macros
@@ -238,6 +251,14 @@ extern unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const char *args,
 // Execute man, and place its final rendeered output in dst. Return the number
 // of lines in said output. args specifies the arguments for the man command.
 extern unsigned man(line_t **dst, const char *args);
+
+// If terminal width and/or height have changed, update config.layout and return
+// true. Otherwise, return false.
+extern bool termsize_changed();
+
+// Draw the portion of a page the user is supposed to see. lines, lines_len, and
+// top_line have the same meaning as their global counterparts.
+extern void draw_page(line_t *lines, unsigned lines_len, unsigned top_line);
 
 // Free the memory occupied by the result of aprowhat() aw (of length aw_len)
 extern void aprowhat_free(aprowhat_t *res, unsigned res_len);
