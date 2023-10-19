@@ -1,7 +1,7 @@
 // Utility infrastructure, not program-specific (implementation)
 
-#include "util.h"
 #include "lib.h"
+#include "util.h"
 #include "program.h"
 
 //

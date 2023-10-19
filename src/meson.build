@@ -1,4 +1,4 @@
 project('qman', 'c')
-src = ['qman.c', 'program.c', 'util.c']
+src = ['util.c', 'program.c', 'tui.c', 'qman.c']
 deps = [dependency('ncursesw')]
 executable('qman', sources: src, dependencies: deps)

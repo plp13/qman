@@ -27,10 +27,28 @@ typedef struct {
   bool _cont;         // when false, indicates end of array
 } option_t;
 
-// Program configuration: colors
+// A colour
 typedef struct {
+  short fg;   // foreground colour no.
+  bool bold;  // true if foreground colour is bold, false otherwise
+  short bg;   // background colour no.
+  short pair; // pair no.
+} colour_t;
 
-} config_colors_t;
+// Program configuration: colours
+typedef struct {
+  colour_t text;        // normal text
+  colour_t search;      // highlighted search results
+  colour_t link_man;    // links to manual pages
+  colour_t link_http;   // links to http(s) URLs
+  colour_t link_email;  // links to email addresses
+  colour_t link_ls;     // links to local searches
+  colour_t sb_line;     // scrollbar line
+  colour_t sb_block;    // scrollbar indicator block
+  colour_t stat_indic1; // status bar indicator line (primary colour)
+  colour_t stat_indic2; // status bar indicator line (secondary colour)
+  colour_t stat_input;  // status bar input line
+} config_colours_t;
 
 // Program configuration: keyboard mappings
 typedef struct {
@@ -43,6 +61,7 @@ typedef struct {
                     // to stdout instead
   bool fixedwidth;  // if true, don't change the width to match the current
                     // terminal width
+  bool sb;          // if true, show the scrollbar
   unsigned width;   // current terminal width
   unsigned height;  // current terminal height
   unsigned lmargin; // size of left margin
@@ -57,12 +76,12 @@ typedef struct {
   char *man_path;           // path to 'man' command
   char *whatis_path;        // path to 'whatis' command
   char *apropos_path;       // path to 'apropos' command
-  unsigned requests_size;   // size of page request history
+  unsigned history_size;    // size of page request history
 } config_misc_t;
 
 // Program configuration (main)
 typedef struct {
-  config_colors_t colors;
+  config_colours_t colours;
   config_keys_t keys;
   config_layout_t layout;
   config_misc_t misc;
@@ -115,7 +134,7 @@ typedef struct {
   unsigned length;       // the line's length
   wchar_t *text;         // the line's text
   unsigned links_length; // number of links in line
-  link_t *links;         // links on the line
+  link_t *links;         // links in line
   // Places in the line the text becomes...
   bitarr_t reg;    // regular
   bitarr_t bold;   // bold
@@ -144,20 +163,24 @@ extern option_t options[];
 // Program configuration
 extern config_t config;
 
-// History of page requests
-extern request_t *requests;
+// historyory of page requests
+extern request_t *history;
 
-// Location of current request in requests array
-extern unsigned cur_request;
+// Location of current request in history array
+extern unsigned history_cur;
+
+// Location of top request in history array (i.e. the last page inserted in
+// history)
+extern unsigned history_top;
 
 // Current page being displayed
-extern line_t *lines;
+extern line_t *page;
 
-// Size of lines
-extern unsigned lines_len;
+// Number of lines in page
+extern unsigned page_len;
 
-// Line no. at which the portion of lines displayed to the user starts
-extern unsigned top_line;
+// Line where the portion of page displayed to the user begins
+extern unsigned page_top;
 
 //
 // Macros
@@ -210,7 +233,7 @@ extern unsigned top_line;
 // Functions
 //
 
-// Initialize the software
+// Initialize all program components, except ncurses
 extern void init();
 
 // Retrieve argc and argv from main() and parse the command line options.
@@ -251,14 +274,6 @@ extern unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const char *args,
 // Execute man, and place its final rendeered output in dst. Return the number
 // of lines in said output. args specifies the arguments for the man command.
 extern unsigned man(line_t **dst, const char *args);
-
-// If terminal width and/or height have changed, update config.layout and return
-// true. Otherwise, return false.
-extern bool termsize_changed();
-
-// Draw the portion of a page the user is supposed to see. lines, lines_len, and
-// top_line have the same meaning as their global counterparts.
-extern void draw_page(line_t *lines, unsigned lines_len, unsigned top_line);
 
 // Free the memory occupied by the result of aprowhat() aw (of length aw_len)
 extern void aprowhat_free(aprowhat_t *res, unsigned res_len);

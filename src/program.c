@@ -2,8 +2,8 @@
 
 #include "program.h"
 #include "lib.h"
+#include "tui.h"
 #include "util.h"
-#include <curses.h>
 
 //
 // Global variables
@@ -27,15 +27,17 @@ option_t options[] = {
 
 config_t config;
 
-request_t *requests;
+request_t *history = NULL;
 
-unsigned cur_request;
+unsigned history_cur = 0;
 
-line_t *lines;
+unsigned history_top = 0;
 
-unsigned lines_len;
+line_t *page = NULL;
 
-unsigned top_line = 0;
+unsigned page_len = 0;
+
+unsigned page_top = 0;
 
 //
 // Helper macros and functions
@@ -71,7 +73,7 @@ void add_link(line_t *line, unsigned start, unsigned end, link_type_t type,
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'1') && (tmpw[i + 3] == L'm'))
 
-// true if we tmpw[i] contains a 'not bold bold' terminal escape sequence
+// true if we tmpw[i] contains a 'not bold' terminal escape sequence
 #define got_not_bold                                                           \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'0') && (tmpw[i + 3] == L'm'))
@@ -114,12 +116,57 @@ void init() {
   setlocale(LC_ALL, "");
 
   // Initialize config with sane defaults
+  config.colours.text.fg = COLOR_WHITE;
+  config.colours.text.bold = false;
+  config.colours.text.bg = COLOR_BLACK;
+  config.colours.text.pair = 10;
+  config.colours.search.fg = COLOR_BLACK;
+  config.colours.search.bold = false;
+  config.colours.search.bg = COLOR_WHITE;
+  config.colours.search.pair = 11;
+  config.colours.link_man.fg = COLOR_BLACK;
+  config.colours.link_man.bold = false;
+  config.colours.link_man.bg = COLOR_GREEN;
+  config.colours.link_man.pair = 20;
+  config.colours.link_http.fg = COLOR_BLACK;
+  config.colours.link_http.bold = false;
+  config.colours.link_http.bg = COLOR_GREEN;
+  config.colours.link_http.pair = 21;
+  config.colours.link_email.fg = COLOR_BLACK;
+  config.colours.link_email.bold = false;
+  config.colours.link_email.bg = COLOR_GREEN;
+  config.colours.link_email.pair = 22;
+  config.colours.link_ls.fg = COLOR_BLACK;
+  config.colours.link_ls.bold = false;
+  config.colours.link_ls.bg = COLOR_GREEN;
+  config.colours.link_ls.pair = 23;
+  config.colours.sb_line.fg = COLOR_YELLOW;
+  config.colours.sb_line.bold = false;
+  config.colours.sb_line.bg = COLOR_BLACK;
+  config.colours.sb_line.pair = 30;
+  config.colours.sb_block.fg = COLOR_YELLOW;
+  config.colours.sb_block.bold = false;
+  config.colours.sb_block.bg = COLOR_BLACK;
+  config.colours.sb_block.pair = 31;
+  config.colours.stat_indic1.fg = COLOR_YELLOW;
+  config.colours.stat_indic1.bold = true;
+  config.colours.stat_indic1.bg = COLOR_BLUE;
+  config.colours.stat_indic1.pair = 40;
+  config.colours.stat_indic2.fg = COLOR_WHITE;
+  config.colours.stat_indic2.bold = true;
+  config.colours.stat_indic2.bg = COLOR_BLUE;
+  config.colours.stat_indic2.pair = 41;
+  config.colours.stat_input.fg = COLOR_WHITE;
+  config.colours.stat_input.bold = false;
+  config.colours.stat_input.bg = COLOR_BLACK;
+  config.colours.stat_input.pair = 42;
   config.layout.tui = false;
   config.layout.fixedwidth = false;
+  config.layout.sb = true;
   config.layout.width = 80;
   config.layout.height = 25;
   config.layout.lmargin = 2;
-  config.layout.rmargin = 2;
+  config.layout.rmargin = 3;
   config.misc.program_name = walloc(BS_SHORT);
   wcscpy(config.misc.program_name, L"qman");
   config.misc.program_version = walloc(BS_SHORT);
@@ -132,23 +179,15 @@ void init() {
   strcpy(config.misc.apropos_path, "/usr/bin/apropos");
   config.misc.config_path = salloc(BS_SHORT);
   strcpy(config.misc.config_path, "~/qman.conf");
-  config.misc.requests_size = 256;
+  config.misc.history_size = 256;
 
-  // Initialize globals
-  cur_request = 0;
-  requests = aalloc(config.misc.requests_size, request_t);
-  requests[cur_request].request_type = RT_INDEX;
-  requests[cur_request].page = NULL;
-  requests[cur_request].section = NULL;
-  top_line = 0;
-  lines = NULL;
-
-  // Initialize ncurses
-  initscr();
-  raw();
-  keypad(stdscr, TRUE);
-  noecho();
-  curs_set(1);
+  // Initialize history
+  history_cur = 0;
+  history_top = 0;
+  history = aalloc(config.misc.history_size, request_t);
+  history[0].request_type = RT_INDEX;
+  history[0].page = NULL;
+  history[0].section = NULL;
 }
 
 int parse_options(int argc, char *const *argv) {
@@ -190,13 +229,13 @@ int parse_options(int argc, char *const *argv) {
       return optind;
       break;
     case 'n': {
-      requests[0].request_type = RT_INDEX;
+      history[0].request_type = RT_INDEX;
     } break;
     case 'k': {
-      requests[0].request_type = RT_WHATIS;
+      history[0].request_type = RT_WHATIS;
     } break;
     case 'f': {
-      requests[0].request_type = RT_APROPOS;
+      history[0].request_type = RT_APROPOS;
     } break;
     case 'T': {
       config.layout.tui = false;
@@ -379,7 +418,8 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   );
   bset(res[ln].uline, lmargin_width);
   bset(res[ln].reg, lmargin_width + key_len);
-  bset(res[ln].uline, lmargin_width + hfl_width + hfc_width + hfr_width - key_len);
+  bset(res[ln].uline,
+       lmargin_width + hfl_width + hfc_width + hfr_width - key_len);
   bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
 
   // Newline
@@ -504,7 +544,8 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   );
   bset(res[ln].uline, lmargin_width);
   bset(res[ln].reg, lmargin_width + ver_len);
-  bset(res[ln].uline, lmargin_width + hfl_width + hfc_width + hfr_width - key_len);
+  bset(res[ln].uline,
+       lmargin_width + hfl_width + hfc_width + hfr_width - key_len);
   bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
 
   free(tmp);
@@ -596,55 +637,6 @@ unsigned man(line_t **dst, const char *args) {
   return ln;
 }
 
-bool termsize_changed() {
-  int width = getmaxx(stdscr);
-  int height = getmaxy(stdscr);
-
-  if (width != config.layout.width || height != config.layout.height) {
-    config.layout.width = width;
-    config.layout.height = height;
-
-    return true;
-  }
-
-  return false;
-}
-
-void draw_page(line_t *lines, unsigned lines_len, unsigned top_line) {
-  clear();
-  attrset(A_NORMAL);
-
-  unsigned y;  // current terminal row
-  unsigned ly; // current line
-  unsigned x;  // current column (in both line and terminal)
-
-  // For each terminal row...
-  for (y = 0; y < config.layout.height - 1; y++) {
-    ly = top_line + y;
-    if (ly >= lines_len)
-      break;
-
-    // For each terminal column...
-    for (x = 0; x < config.layout.width; x++) {
-      if (x >= lines[ly].length)
-        break;
-
-      // Set text attributes
-      if (bget(lines[ly].reg, x))
-        attrset(A_NORMAL);
-      if (bget(lines[ly].bold, x))
-        attrset(A_BOLD);
-      if (bget(lines[ly].italic, x))
-        attrset(A_STANDOUT);
-      if (bget(lines[ly].uline, x))
-        attrset(A_UNDERLINE);
-        
-      // Place character on screen
-      mvaddnwstr(y, x, &lines[ly].text[x], 1);
-    }
-  }
-}
-
 void aprowhat_free(aprowhat_t *aw, unsigned aw_len) {
   unsigned i;
 
@@ -668,18 +660,10 @@ void lines_free(line_t *lines, unsigned lines_len) {
 }
 
 void winddown(int ec, const wchar_t *em) {
-  // Wind down ncurses
-  endwin();
+  // Shut ncurses down
+  winddown_tui();
 
-  // Deallocate memory
-  unsigned i;
-  for (i = 0; i <= cur_request; i++) {
-    if (NULL != requests[i].page)
-      free(requests[i].page);
-    if (NULL != requests[i].section)
-      free(requests[i].section);
-  }
-  free(requests);
+  // Deallocate memory used by config global
   if (NULL != config.misc.program_name)
     free(config.misc.program_name);
   if (NULL != config.misc.program_version)
@@ -692,6 +676,19 @@ void winddown(int ec, const wchar_t *em) {
     free(config.misc.whatis_path);
   if (NULL != config.misc.apropos_path)
     free(config.misc.apropos_path);
+
+  // Deallocate memory used by history global
+  unsigned i;
+  for (i = 0; i <= history_top; i++) {
+    if (NULL != history[i].page)
+      free(history[i].page);
+    if (NULL != history[i].section)
+      free(history[i].section);
+  }
+  free(history);
+
+  // Deallocate memory used by page global
+  lines_free(page, page_len);
 
   // (Optionally) print em and exit
   if (NULL != em)
