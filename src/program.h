@@ -37,17 +37,21 @@ typedef struct {
 
 // Program configuration: colours
 typedef struct {
-  colour_t text;        // normal text
-  colour_t search;      // highlighted search results
-  colour_t link_man;    // links to manual pages
-  colour_t link_http;   // links to http(s) URLs
-  colour_t link_email;  // links to email addresses
-  colour_t link_ls;     // links to local searches
-  colour_t sb_line;     // scrollbar line
-  colour_t sb_block;    // scrollbar indicator block
-  colour_t stat_indic1; // status bar indicator line (primary colour)
-  colour_t stat_indic2; // status bar indicator line (secondary colour)
-  colour_t stat_input;  // status bar input line
+  colour_t text;         // normal text
+  colour_t search;       // highlighted search results
+  colour_t link_man;     // links to manual pages
+  colour_t link_man_f;   // links to manual pages (focused)
+  colour_t link_http;    // links to http(s) URLs
+  colour_t link_http_f;  // links to http(s) URLs (focused)
+  colour_t link_email;   // links to email addresses
+  colour_t link_email_f; // links to email addresses (focused)
+  colour_t link_ls;      // links to local searches
+  colour_t link_ls_f;    // links to local searches (focused)
+  colour_t sb_line;      // scrollbar line
+  colour_t sb_block;     // scrollbar indicator block
+  colour_t stat_indic1;  // status bar indicator line (primary colour)
+  colour_t stat_indic2;  // status bar indicator line (secondary colour)
+  colour_t stat_input;   // status bar input line
 } config_colours_t;
 
 // Program configuration: keyboard mappings
@@ -57,15 +61,17 @@ typedef struct {
 
 // Program configuration: screen layout
 typedef struct {
-  bool tui;         // true if we're displaying the TUI, false if we're printing
-                    // to stdout instead
-  bool fixedwidth;  // if true, don't change the width to match the current
-                    // terminal width
-  bool sb;          // if true, show the scrollbar
-  unsigned width;   // current terminal width
-  unsigned height;  // current terminal height
-  unsigned lmargin; // size of left margin
-  unsigned rmargin; // size of right margin
+  bool tui;        // true if we're displaying the TUI, false if we're printing
+                   // to stdout instead
+  bool fixedwidth; // if true, don't change the width to match the current
+                   // terminal width
+  bool sb;         // if true, show the scrollbar
+  unsigned width;  // current terminal width
+  unsigned height; // current terminal height
+  unsigned sb_width;    // scrollbar width
+  unsigned stat_height; // status bar height
+  unsigned lmargin;     // size of left margin
+  unsigned rmargin;     // size of right margin
 } config_layout_t;
 
 // program configuration: miscellaneous
@@ -173,6 +179,18 @@ extern unsigned history_cur;
 // history)
 extern unsigned history_top;
 
+// All manual pages on this system
+extern aprowhat_t *aw_all;
+
+// Number of entries in aw_all
+extern unsigned aw_all_len;
+
+// All manual sections on this system
+extern wchar_t **sc_all;
+
+// Number of entries in sc_all
+extern unsigned sc_all_len;
+
 // Current page being displayed
 extern line_t *page;
 
@@ -181,6 +199,11 @@ extern unsigned page_len;
 
 // Line where the portion of page displayed to the user begins
 extern unsigned page_top;
+
+// Regular expressions for links to a...
+extern full_regex_t re_man, // manual page
+    re_url,                 // http(s) URL
+    re_email;               // email address
 
 //
 // Macros
@@ -263,6 +286,9 @@ extern unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
                                 unsigned sc_len, const wchar_t *key,
                                 const wchar_t *title, const wchar_t *ver,
                                 const wchar_t *date);
+
+// Render a page that contains an index of all manual pages in dst
+extern unsigned index_page(line_t **dst);
 
 // Execute apropos or whatis, and place the final rendered result in dst. Return
 // the number of lines in said output. Arguments cmd and args respectively

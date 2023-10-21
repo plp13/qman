@@ -28,8 +28,8 @@ extern WINDOW *wstat;
 // True if the terminal supports at least 8 colours
 #define COLOUR (has_colors() && COLORS >= 8)
 
-// Set the colour for window win to col (a variable of type colour_t)
-#define set_colour(win, col)                                                   \
+// Change the colour for window win to col (a variable of type colour_t)
+#define change_colour(win, col)                                                \
   if (COLOUR) {                                                                \
     if (col.bold)                                                              \
       wattr_set(win, WA_BOLD, col.pair, NULL);                                 \
@@ -37,6 +37,14 @@ extern WINDOW *wstat;
       wattr_set(win, WA_NORMAL, col.pair, NULL);                               \
   }
 
+// Apply colour col to n characters, starting at location (y, x) in window w
+#define apply_colour(win, y, x, n, col)                                        \
+  if (COLOUR) {                                                                \
+    if (col.bold)                                                              \
+      mvwchgat(win, y, x, n, WA_BOLD, col.pair, NULL);                         \
+    else                                                                       \
+      mvwchgat(win, y, x, n, WA_NORMAL, col.pair, NULL);                       \
+  }
 //
 // Functions
 //

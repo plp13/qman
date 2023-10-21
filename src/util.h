@@ -19,6 +19,19 @@ typedef enum {
 // Array of bits
 typedef char *bitarr_t;
 
+// A full regular expression, i.e. one that is represented both as a string and
+// a regex_t
+typedef struct {
+  char *str;  // string version
+  regex_t re; // regex_t version
+} full_regex_t;
+
+// A range
+typedef struct {
+  unsigned beg; // beginning
+  unsigned end; // end
+} range_t;
+
 //
 // Constants
 //
@@ -32,7 +45,10 @@ typedef char *bitarr_t;
 //
 
 // Swap two numerical values a and b (without using a third variable)
-#define swap(a, b) a = a ^ b; b = a ^ b; a = a ^ b;
+#define swap(a, b)                                                             \
+  a = a ^ b;                                                                   \
+  b = a ^ b;                                                                   \
+  a = a ^ b;
 // Return the size of array arr
 #define asizeof(arr) (sizeof(arr) / sizeof(arr[0]))
 
@@ -46,7 +62,7 @@ typedef char *bitarr_t;
 #define walloc(len) xcalloc(len + 1, sizeof(wchar_t))
 
 // Allocate heap memory for a bit array bitarr_t that is len bits long
-#define balloc(len) xcalloc(len % 8 == 0 ? len / 8: 1 + len / 8, 1)
+#define balloc(len) xcalloc(len % 8 == 0 ? len / 8 : 1 + len / 8, 1)
 
 // Allocate stack memory for an array of type artp that is len elements long
 #define aalloca(len, artp) alloca(len * sizeof(artp));
@@ -61,13 +77,13 @@ typedef char *bitarr_t;
 #define balloca(len) alloca(len % 8 == 0 ? len / 8 : 1 + len / 8)
 
 //
-// Functions (comments are in util.c)
+// Functions
 //
 
 // Many of these functions call winddown() to fail gracefully in case of error
 
 // Perform the same function as perror() but, rather than printing the error
-// message, place a pointer to a string that contains it in dst
+// message, place it in dst
 void serror(wchar_t *dst, const wchar_t *s);
 
 // The arguments of all x...() functions are identical to those of the standard
@@ -138,7 +154,8 @@ extern void wwrap(wchar_t *trgt, unsigned cols);
 
 // Return true if needle is in array of (wide) strings hayst, false otherwise.
 // needle_length is the length of needle.
-extern bool wmemberof(wchar_t *const *hayst, const wchar_t *needle, unsigned needle_len);
+extern bool wmemberof(wchar_t *const *hayst, const wchar_t *needle,
+                      unsigned needle_len);
 
 // Sort the strings in trgt alphanumerically. trgt_len is trgt's length. Setting
 // rev to true causes reverse sorting.
@@ -156,5 +173,13 @@ extern unsigned scopylines(FILE *source, FILE *target);
 // newline). If the read was succesful, return the resulting string's length.
 // Otherwise, return -1.
 extern int sreadline(char *str, unsigned size, FILE *fp);
+
+// Initialize full regular expression re, using str
+extern void fr_init(full_regex_t *re, char *str);
+
+// Search src for a string matching re. If found, return its location in src as
+// a range_t. If not, return { 0, 0 }. This function uses libc regular
+// expressions, and has plumbing to make it work on wchar_t* strings.
+extern range_t fr_search(const full_regex_t *re, wchar_t *src);
 
 #endif

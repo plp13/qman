@@ -60,15 +60,19 @@ void init_tui() {
 void init_windows() {
   if (NULL != wmain)
     delwin(wmain);
-  wmain = newwin(config.layout.height - 2, config.layout.width - 1, 0, 0);
+  wmain = newwin(config.layout.height - config.layout.stat_height,
+                 config.layout.width - config.layout.sb_width, 0, 0);
 
   if (NULL != wsbar)
     delwin(wsbar);
-  wsbar = newwin(config.layout.height - 2, 1, 0, config.layout.width - 1);
+  wsbar = newwin(config.layout.height - config.layout.stat_height,
+                 config.layout.sb_width, 0,
+                 config.layout.width - config.layout.sb_width);
 
   if (NULL != wstat)
     delwin(wstat);
-  wstat = newwin(2, config.layout.width, config.layout.height - 2, 0);
+  wstat = newwin(config.layout.stat_height, config.layout.width,
+                 config.layout.height - config.layout.stat_height, 0);
 
   wnoutrefresh(stdscr);
 }
@@ -89,12 +93,13 @@ bool termsize_changed() {
 
 void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top) {
   wclear(wmain);
-  set_colour(wmain, config.colours.text);
+  change_colour(wmain, config.colours.text);
   wattrset(wmain, WA_NORMAL);
 
   unsigned y;  // current terminal row
   unsigned ly; // current line
   unsigned x;  // current column (in both line and terminal)
+  unsigned i;  // current link
 
   // For each terminal row...
   for (y = 0; y < getmaxy(wmain); y++) {
@@ -120,23 +125,49 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top) {
       // Place character on screen
       mvwaddnwstr(wmain, y, x, &lines[ly].text[x], 1);
     }
+
+    // For each link...
+    for (i = 0; i < lines[ly].links_length; i++) {
+      link_t link = lines[ly].links[i];
+
+      // Colourise the the affected text
+      colour_t col;
+      switch (link.type) {
+      case LT_MAN:
+        col = config.colours.link_man;
+        break;
+      case LT_HTTP:
+        col = config.colours.link_http;
+        break;
+      case LT_EMAIL:
+        col = config.colours.link_email;
+        break;
+      case LT_LS:
+      default:
+        col = config.colours.link_ls;
+      }
+      apply_colour(wmain, y, link.start, link.end - link.start, col);
+    }
   }
 
   wnoutrefresh(wmain);
 }
 
 void draw_sbar(unsigned lines_len, unsigned lines_top) {
-  unsigned height = getmaxy(wsbar);                        // scrollbar height
-  unsigned block_pos = ((height * lines_top) / lines_len); // block position
+  unsigned height = getmaxy(wsbar); // scrollbar height
+  unsigned block_pos =
+      1 + (((height - 2) * lines_top) / lines_len); // block position
 
   wclear(wsbar);
 
   // Draw vertical line
-  set_colour(wsbar, config.colours.sb_line);
-  mvwvline_set(wsbar, 0, 0, WACS_VLINE, height);
+  change_colour(wsbar, config.colours.sb_line);
+  mvwvline_set(wsbar, 0, 0, WACS_BTTT, 1);
+  mvwvline_set(wsbar, 1, 0, WACS_T_VLINE, height - 2);
+  mvwvline_set(wsbar, height - 1, 0, WACS_TTBT, 1);
 
   // Draw the block
-  set_colour(wsbar, config.colours.sb_block);
+  change_colour(wsbar, config.colours.sb_block);
   mvwaddnwstr(wsbar, block_pos, 0, L"█", -1);
 
   wnoutrefresh(wsbar);
@@ -153,17 +184,17 @@ void draw_stat(unsigned lines_len, unsigned lines_pos, wchar_t *help,
   swprintf(tmp, BS_SHORT, L"%d:%d", lines_len, lines_pos);
   wchar_t *indic2 = walloca(width);
   swprintf(indic2, width + 1, L"%*ls ", width - 1, tmp);
-  set_colour(wstat, config.colours.stat_indic2);
+  change_colour(wstat, config.colours.stat_indic2);
   mvwaddnwstr(wstat, 0, 0, indic2, -1);
 
   // Draw the help text on the indicator line (primary colour)
-  set_colour(wstat, config.colours.stat_indic1);
+  change_colour(wstat, config.colours.stat_indic1);
   mvwaddnwstr(wstat, 0, 0, help, -1);
 
   // Draw the input line
   wchar_t *input = walloca(width);
   swprintf(input, width + 1, L"%-*ls", width, prompt);
-  set_colour(wstat, config.colours.stat_input);
+  change_colour(wstat, config.colours.stat_input);
   mvwaddnwstr(wstat, 1, 0, input, -1);
   wmove(wstat, 1, wcslen(prompt));
 
@@ -177,5 +208,8 @@ void winddown_tui() {
     delwin(wsbar);
   if (NULL != wstat)
     delwin(wstat);
+
+  reset_color_pairs();
   endwin();
+  // _nc_freeall();
 }

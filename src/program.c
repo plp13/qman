@@ -4,6 +4,7 @@
 #include "lib.h"
 #include "tui.h"
 #include "util.h"
+#include <regex.h>
 
 //
 // Global variables
@@ -33,11 +34,21 @@ unsigned history_cur = 0;
 
 unsigned history_top = 0;
 
+aprowhat_t *aw_all = NULL;
+
+unsigned aw_all_len = 0;
+
+wchar_t **sc_all = NULL;
+
+unsigned sc_all_len = 0;
+
 line_t *page = NULL;
 
 unsigned page_len = 0;
 
 unsigned page_top = 0;
+
+full_regex_t re_man, re_http, re_email;
 
 //
 // Helper macros and functions
@@ -124,49 +135,67 @@ void init() {
   config.colours.search.bold = false;
   config.colours.search.bg = COLOR_WHITE;
   config.colours.search.pair = 11;
-  config.colours.link_man.fg = COLOR_BLACK;
+  config.colours.link_man.fg = COLOR_GREEN;
   config.colours.link_man.bold = false;
-  config.colours.link_man.bg = COLOR_GREEN;
+  config.colours.link_man.bg = COLOR_BLACK;
   config.colours.link_man.pair = 20;
-  config.colours.link_http.fg = COLOR_BLACK;
+  config.colours.link_man_f.fg = COLOR_BLACK;
+  config.colours.link_man_f.bold = false;
+  config.colours.link_man_f.bg = COLOR_GREEN;
+  config.colours.link_man_f.pair = 30;
+  config.colours.link_http.fg = COLOR_GREEN;
   config.colours.link_http.bold = false;
-  config.colours.link_http.bg = COLOR_GREEN;
+  config.colours.link_http.bg = COLOR_BLACK;
   config.colours.link_http.pair = 21;
-  config.colours.link_email.fg = COLOR_BLACK;
+  config.colours.link_http_f.fg = COLOR_BLACK;
+  config.colours.link_http_f.bold = false;
+  config.colours.link_http_f.bg = COLOR_GREEN;
+  config.colours.link_http_f.pair = 31;
+  config.colours.link_email.fg = COLOR_GREEN;
   config.colours.link_email.bold = false;
-  config.colours.link_email.bg = COLOR_GREEN;
+  config.colours.link_email.bg = COLOR_BLACK;
   config.colours.link_email.pair = 22;
-  config.colours.link_ls.fg = COLOR_BLACK;
+  config.colours.link_email_f.fg = COLOR_BLACK;
+  config.colours.link_email_f.bold = false;
+  config.colours.link_email_f.bg = COLOR_GREEN;
+  config.colours.link_email_f.pair = 32;
+  config.colours.link_ls.fg = COLOR_GREEN;
   config.colours.link_ls.bold = false;
-  config.colours.link_ls.bg = COLOR_GREEN;
+  config.colours.link_ls.bg = COLOR_BLACK;
   config.colours.link_ls.pair = 23;
+  config.colours.link_ls_f.fg = COLOR_BLACK;
+  config.colours.link_ls_f.bold = false;
+  config.colours.link_ls_f.bg = COLOR_GREEN;
+  config.colours.link_ls_f.pair = 33;
   config.colours.sb_line.fg = COLOR_YELLOW;
   config.colours.sb_line.bold = false;
   config.colours.sb_line.bg = COLOR_BLACK;
-  config.colours.sb_line.pair = 30;
+  config.colours.sb_line.pair = 40;
   config.colours.sb_block.fg = COLOR_YELLOW;
   config.colours.sb_block.bold = false;
   config.colours.sb_block.bg = COLOR_BLACK;
-  config.colours.sb_block.pair = 31;
+  config.colours.sb_block.pair = 41;
   config.colours.stat_indic1.fg = COLOR_YELLOW;
   config.colours.stat_indic1.bold = true;
   config.colours.stat_indic1.bg = COLOR_BLUE;
-  config.colours.stat_indic1.pair = 40;
+  config.colours.stat_indic1.pair = 50;
   config.colours.stat_indic2.fg = COLOR_WHITE;
   config.colours.stat_indic2.bold = true;
   config.colours.stat_indic2.bg = COLOR_BLUE;
-  config.colours.stat_indic2.pair = 41;
+  config.colours.stat_indic2.pair = 51;
   config.colours.stat_input.fg = COLOR_WHITE;
   config.colours.stat_input.bold = false;
   config.colours.stat_input.bg = COLOR_BLACK;
-  config.colours.stat_input.pair = 42;
+  config.colours.stat_input.pair = 52;
   config.layout.tui = false;
   config.layout.fixedwidth = false;
   config.layout.sb = true;
   config.layout.width = 80;
   config.layout.height = 25;
+  config.layout.sb_width = 1;
+  config.layout.stat_height = 2;
   config.layout.lmargin = 2;
-  config.layout.rmargin = 3;
+  config.layout.rmargin = 2;
   config.misc.program_name = walloc(BS_SHORT);
   wcscpy(config.misc.program_name, L"qman");
   config.misc.program_version = walloc(BS_SHORT);
@@ -188,6 +217,17 @@ void init() {
   history[0].request_type = RT_INDEX;
   history[0].page = NULL;
   history[0].section = NULL;
+
+  // Initialize aw_all and sc_all
+  aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, "''");
+  sc_all_len = aprowhat_sections(&sc_all, aw_all, aw_all_len);
+
+  // initialize regular expressions
+  fr_init(&re_man, "[a-zA-Z0-9\\.\\:@_+]+\\([a-zA-Z0-9]+\\)");
+  fr_init(&re_http, "https?:\\/\\/[a-zA-Z0-9\\.\\[\\]\\/\\?\\+:@_#%-]+");
+  fr_init(&re_email, "[a-zA-Z0-9\\.\\$\\*\\+\\?\\^\\|!#%&'/"
+                     "=_`{}~-][a-zA-Z0-9\\.\\$\\*\\+\\?\\^\\|\\.!#%&'/"
+                     "=_`{}~-]*@[a-zA-Z0-9-][a-zA-Z0-9\\.-]*");
 }
 
 int parse_options(int argc, char *const *argv) {
@@ -380,7 +420,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
                          const wchar_t *ver, const wchar_t *date) {
 
   // Text blocks widths
-  unsigned line_width = MAX(60, config.layout.width);
+  unsigned line_width = MAX(60, config.layout.width - config.layout.sb_width);
   unsigned lmargin_width = config.layout.lmargin; // left margin
   unsigned rmargin_width = config.layout.rmargin; // right margin
   unsigned main_width =
@@ -441,17 +481,24 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   unsigned sc_cols =
       main_width / (4 + sc_maxwidth);   // number of columns for sections
   unsigned sc_lines = sc_len / sc_cols; // number of lines for sections
+  unsigned sc_i;                        // index of current section
   if (sc_len % sc_cols > 0)
     sc_lines++;
   for (i = 0; i < sc_lines; i++) {
     inc_ln;
-    line_alloc(res[ln], line_width);
+    line_alloc(res[ln], line_width + 1); // +1 because of wcscat()
     swprintf(res[ln].text, line_width + 1, L"%*s", lmargin_width, "");
     for (j = 0; j < sc_cols; j++) {
-      if (sc_cols * i + j < sc_len) {
-        swprintf(tmp, sc_maxwidth + 5, L"%-*ls    ", sc_maxwidth,
-                 sc[sc_cols * i + j]);
+      sc_i = sc_cols * i + j;
+      if (sc_i < sc_len) {
+        swprintf(tmp, sc_maxwidth + 5, L"%-*ls", sc_maxwidth + 4, sc[sc_i]);
         wcscat(res[ln].text, tmp);
+        swprintf(tmp, BS_LINE, L"MANUAL PAGES IN SECTION '%ls'", sc[sc_i]);
+        add_link(&res[ln],                                                 //
+                 lmargin_width + j * (sc_maxwidth + 4),                    //
+                 lmargin_width + j * (sc_maxwidth + 4) + wcslen(sc[sc_i]), //
+                 LT_LS,                                                    //
+                 tmp);
       }
     }
   }
@@ -554,6 +601,22 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   return ln + 1;
 }
 
+unsigned index_page(line_t **dst) {
+  wchar_t key[] = L"INDEX";
+  wchar_t title[] = L"All Manual Pages";
+  time_t now = time(NULL);
+  wchar_t date[BS_SHORT];
+  wcsftime(date, BS_SHORT, L"%x", gmtime(&now));
+
+  line_t *res;
+  unsigned res_len =
+      aprowhat_render(&res, aw_all, aw_all_len, sc_all, sc_all_len, key, title,
+                      config.misc.program_version, date);
+
+  *dst = res;
+  return res_len;
+}
+
 unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const char *args,
                   const wchar_t *key, const wchar_t *title) {
   aprowhat_t *aw;
@@ -576,8 +639,10 @@ unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const char *args,
 }
 
 unsigned man(line_t **dst, const char *args) {
-  unsigned ln = 0;                 // current line number
-  unsigned len;                    // length of current line text
+  unsigned ln = 0; // current line number
+  unsigned len;    // length of current line text
+  range_t lrng;    // location of a link found in current line
+  unsigned loff;
   unsigned i, j;                   // iterators
   wchar_t *tmpw = walloc(BS_LINE); // temporary
   char *tmps = salloc(BS_LINE);    // temporary
@@ -589,7 +654,8 @@ unsigned man(line_t **dst, const char *args) {
   char *old_term = getenv("TERM");
   setenv("TERM", "xterm", true);
   sprintf(tmps, "%d",
-          config.layout.width - config.layout.lmargin - config.layout.rmargin);
+          config.layout.width - config.layout.sb_width - config.layout.lmargin -
+              config.layout.rmargin);
   setenv("MANWIDTH", tmps, true);
   setenv("MAN_KEEP_FORMATTING", "1", true);
 
@@ -599,8 +665,11 @@ unsigned man(line_t **dst, const char *args) {
 
   // Execute man and, read its output, and process it into res
   FILE *pp = xpopen(cmdstr, "r");
+
+  // For each line...
   xfgets(tmps, BS_LINE, pp);
   while (!feof(pp)) {
+    // Process text and formatting attirbutes
     len = mbstowcs(tmpw, tmps, BS_LINE);
     line_alloc(res[ln], len);
     j = 0;
@@ -622,7 +691,29 @@ unsigned man(line_t **dst, const char *args) {
         j++;
       }
     }
+
+    // Process links
+    // Look for a link starting at the beginning of line
+    loff = 0;
+    lrng = fr_search(&re_man, &res[ln].text[loff]);
+    while (lrng.beg != lrng.end) {
+      // While a link has been found, add it to the page
+      wcsncpy(tmpw, &res[ln].text[loff + lrng.beg], lrng.end - lrng.beg);
+      tmpw[lrng.end - lrng.beg] = L'\0';
+      add_link(&res[ln], loff + lrng.beg, loff + lrng.end, LT_MAN, tmpw);
+      loff += lrng.end;
+      if (loff < res[ln].length) {
+        // Link wasn't at the very end of line; look for another link after it
+        lrng = fr_search(&re_man, &res[ln].text[loff]);
+      } else {
+        // Link was at the very end of line; exit the loop
+        lrng.beg = 0;
+        lrng.end = 0;
+      }
+    }
+
     inc_ln;
+
     xfgets(tmps, BS_LINE, pp);
   }
 
@@ -685,10 +776,25 @@ void winddown(int ec, const wchar_t *em) {
     if (NULL != history[i].section)
       free(history[i].section);
   }
-  free(history);
+  if (NULL != history)
+    free(history);
+
+  // Deallocate memory used by aw_all global
+  if (NULL != aw_all && aw_all_len > 0)
+    aprowhat_free(aw_all, aw_all_len);
+
+  // Deallocate memory used by sc_all global
+  if (NULL != sc_all && sc_all_len > 0)
+    wafree(sc_all, sc_all_len);
 
   // Deallocate memory used by page global
-  lines_free(page, page_len);
+  if (NULL != page && page_len > 0)
+    lines_free(page, page_len);
+
+  // Deallocate memory used by re_... regular expression globals
+  regfree(&re_man.re);
+  regfree(&re_http.re);
+  regfree(&re_email.re);
 
   // (Optionally) print em and exit
   if (NULL != em)

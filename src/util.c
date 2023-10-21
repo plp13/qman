@@ -1,8 +1,9 @@
 // Utility infrastructure, not program-specific (implementation)
 
-#include "lib.h"
 #include "util.h"
+#include "lib.h"
 #include "program.h"
+#include <regex.h>
 
 //
 // Functions
@@ -289,4 +290,53 @@ int sreadline(char *str, unsigned size, FILE *fp) {
     *nlc = '\0';
 
   return nlc - str;
+}
+
+void fr_init(full_regex_t *re, char *str) {
+  re->str = str;
+  int err = regcomp(&re->re, str, REG_EXTENDED);
+
+  if (0 != err) {
+    wchar_t errmsg[BS_SHORT];
+    char err_str[BS_SHORT];
+    regerror(err, NULL, err_str, BS_SHORT);
+    swprintf(errmsg, BS_SHORT, L"Unable to regcomp(): %s", err_str);
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+}
+
+range_t fr_search(const full_regex_t *re, wchar_t *src) {
+  char *ssrc = salloca(BS_LINE); // char* version of src
+  wcstombs(ssrc, src, BS_LINE);
+  regmatch_t pmatch[1]; // regex match
+  range_t res;          // return value
+
+  // Try to find a match in ssrc
+  int err = regexec(&re->re, ssrc, 1, pmatch, 0);
+
+  if (0 == err) {
+    // A match was found in ssrc
+    regoff_t sbeg = pmatch[0].rm_so; // match begin offset (in ssrc)
+    regoff_t send = pmatch[0].rm_eo; // match end offset (in ssrc)
+    regoff_t slen = send - sbeg;     // match length (in ssrc)
+    wchar_t *wmatch = walloca(slen); // the match as a wchar_t*
+    unsigned wlen = mbstowcs(wmatch, &ssrc[sbeg], slen); // wmatch length
+    wmatch[wlen] = L'\0';
+    wchar_t *wptr = wcsstr(src, wmatch); // match begin memory location (in src)
+    if (NULL == wptr) {
+      // Cannot replicate match in src; return {0, 0}
+      res.beg = 0;
+      res.end = 0;
+    } else {
+      // Match found in src; return its location
+      res.beg = wptr - src;
+      res.end = res.beg + wlen;
+    }
+  } else {
+    // No match found, or an error has occured; return {0, 0}
+    res.beg = 0;
+    res.end = 0;
+  }
+
+  return res;
 }
