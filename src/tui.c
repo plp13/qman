@@ -38,12 +38,20 @@ void init_tui() {
               config.colours.search.bg);
     init_pair(config.colours.link_man.pair, config.colours.link_man.fg,
               config.colours.link_man.bg);
+    init_pair(config.colours.link_man_f.pair, config.colours.link_man_f.fg,
+              config.colours.link_man_f.bg);
     init_pair(config.colours.link_http.pair, config.colours.link_http.fg,
               config.colours.link_http.bg);
+    init_pair(config.colours.link_http_f.pair, config.colours.link_http_f.fg,
+              config.colours.link_http_f.bg);
     init_pair(config.colours.link_email.pair, config.colours.link_email.fg,
               config.colours.link_email.bg);
+    init_pair(config.colours.link_email_f.pair, config.colours.link_email_f.fg,
+              config.colours.link_email_f.bg);
     init_pair(config.colours.link_ls.pair, config.colours.link_ls.fg,
               config.colours.link_ls.bg);
+    init_pair(config.colours.link_ls_f.pair, config.colours.link_ls_f.fg,
+              config.colours.link_ls_f.bg);
     init_pair(config.colours.sb_line.pair, config.colours.sb_line.fg,
               config.colours.sb_line.bg);
     init_pair(config.colours.sb_block.pair, config.colours.sb_block.fg,
@@ -107,7 +115,8 @@ bool termsize_changed() {
   return false;
 }
 
-void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top) {
+void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
+               link_loc_t flink) {
   wclear(wmain);
   change_colour(wmain, config.colours.text);
   wattrset(wmain, WA_NORMAL);
@@ -146,22 +155,44 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top) {
     for (i = 0; i < lines[ly].links_length; i++) {
       link_t link = lines[ly].links[i];
 
-      // Colourise the the affected text
+      // Choose the the appropriate colour, based on link type and whether the
+      // link is focused
       colour_t col;
-      switch (link.type) {
-      case LT_MAN:
-        col = config.colours.link_man;
-        break;
-      case LT_HTTP:
-        col = config.colours.link_http;
-        break;
-      case LT_EMAIL:
-        col = config.colours.link_email;
-        break;
-      case LT_LS:
-      default:
-        col = config.colours.link_ls;
+      if (flink.ok && flink.line == ly && flink.link == i) {
+        // Current link is the focused link
+        switch (link.type) {
+        case LT_MAN:
+          col = config.colours.link_man_f;
+          break;
+        case LT_HTTP:
+          col = config.colours.link_http_f;
+          break;
+        case LT_EMAIL:
+          col = config.colours.link_email_f;
+          break;
+        case LT_LS:
+        default:
+          col = config.colours.link_ls_f;
+        }
+      } else {
+        // Current link is not the focused link
+        switch (link.type) {
+        case LT_MAN:
+          col = config.colours.link_man;
+          break;
+        case LT_HTTP:
+          col = config.colours.link_http;
+          break;
+        case LT_EMAIL:
+          col = config.colours.link_email;
+          break;
+        case LT_LS:
+        default:
+          col = config.colours.link_ls;
+        }
       }
+
+      // Apply said colour
       apply_colour(wmain, y, link.start, link.end - link.start, col);
     }
   }
@@ -172,8 +203,8 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top) {
 void draw_sbar(unsigned lines_len, unsigned lines_top) {
   unsigned height = getmaxy(wsbar); // scrollbar height
   unsigned block_pos =
-      1 + (((height - 2) * lines_top) / lines_len); // block position
-  unsigned i;                                       // iterator
+      1 + (height - 2) * lines_top / (lines_len - height + 1); // block position
+  unsigned i;                                                  // iterator
 
   wclear(wsbar);
 

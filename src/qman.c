@@ -19,24 +19,30 @@ int main(int argc, char **argv) {
 
   init_tui();
   termsize_changed();
-  
+
   page_len = index_page(&page);
 
   init_windows();
-  
-  // draw_page(page, page_len, 0);
-  line_t *manpage;
-  unsigned manpage_len = man(&manpage, "doupdate");
-  draw_page(manpage, manpage_len, 0);
 
+  link_loc_t flink = {true, 0, 0};
+  flink = next_link(page, page_len, flink);
+  draw_page(page, page_len, 0, flink);
   draw_sbar(page_len, 0);
-  draw_stat(L"MAN", L"curs_refresh(3X)", page_len, 0, L":", L"Press 'h' for help or 'q' to quit");
-  
+  draw_stat(L"MAN", L"curs_refresh(3X)", page_len, 0, L":",
+            L"Press 'h' for help or 'q' to quit");
+
+  // line_t *manpage;
+  // unsigned manpage_len = man(&manpage, "doupdate");
+  // draw_page(manpage, manpage_len, 44);
+  // draw_sbar(manpage_len, 44);
+  // draw_stat(L"MAN", L"curs_refresh(3X)", manpage_len, 60, L":", L"Press 'h'
+  // for help or 'q' to quit");
+
   doupdate();
-  
+
   get_wch(NULL);
-  
-  lines_free(manpage, manpage_len);
+
+  // lines_free(manpage, manpage_len);
 
   winddown(ES_SUCCESS, NULL);
 }

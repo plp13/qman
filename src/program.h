@@ -72,7 +72,6 @@ typedef struct {
 
 // Program configuration: keyboard mappings
 typedef struct {
-
 } config_keys_t;
 
 // Program configuration: screen layout
@@ -164,6 +163,13 @@ typedef struct {
   bitarr_t italic; // italic
   bitarr_t uline;  // underlined
 } line_t;
+
+// Location of a link in an array of lines
+typedef struct {
+  bool ok;       // true if the location exists, false otherwise
+  unsigned line; // line number
+  unsigned link; // link number
+} link_loc_t;
 
 //
 // Constants
@@ -260,14 +266,17 @@ extern full_regex_t re_man, // manual page
 // Free memory for all members of (line_t variable) line
 #define line_free(line)                                                        \
   free(line.text);                                                             \
-  for (unsigned line_free_i = 0; line_free_i < line.links_length;              \
-       line_free_i++)                                                          \
-    free(line.links[line_free_i].trgt);                                        \
-  free(line.links);                                                            \
+  links_free(line.links, line.links_length);                                   \
   free(line.reg);                                                              \
   free(line.bold);                                                             \
   free(line.italic);                                                           \
   free(line.uline);
+
+// Free memory for all members of (array of link_t) links
+#define links_free(links, links_len)                                           \
+  for (unsigned link_free_i = 0; link_free_i < links_len; link_free_i++)       \
+    free(links[link_free_i].trgt);                                             \
+  free(links);
 
 //
 // Functions
@@ -318,11 +327,15 @@ extern unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const char *args,
 // of lines in said output. args specifies the arguments for the man command.
 extern unsigned man(line_t **dst, const char *args);
 
-// Free the memory occupied by the result of aprowhat() aw (of length aw_len)
+// Find the next link in lines (of length lines_len), starting at location
+// start. Return said link's location.
+extern link_loc_t next_link(line_t *lines, unsigned lines_len,
+                            link_loc_t start);
+
+// Free the memory occupied by aw (of length aw_len)
 extern void aprowhat_free(aprowhat_t *res, unsigned res_len);
 
-// Free the memory occupied by the result of aprowhat() or man() lines (of
-// length lines_len)
+// Free the memory occupied by lines (of length lines_len)
 extern void lines_free(line_t *lines, unsigned lines_len);
 
 // Exit the program gracefully, with exit code ec. If em is not NULL, echo it

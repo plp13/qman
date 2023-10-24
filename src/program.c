@@ -487,6 +487,8 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
 
   // Header
   line_alloc(res[ln], line_width);
+  inc_ln;
+  line_alloc(res[ln], line_width);
   unsigned title_len = wcslen(title); // title length
   unsigned key_len = wcslen(key);     // key length
   unsigned lts_len =
@@ -740,14 +742,16 @@ unsigned man(line_t **dst, const char *args) {
       }
     }
 
-    // Discover and add links
-    discover_links(&re_man, &res[ln]);
-    discover_links(&re_http, &res[ln]);
-    discover_links(&re_email, &res[ln]);
+    xfgets(tmps, BS_LINE, pp);
+
+    // Discover and add links (skipping the first two lines, and the last line)
+    if (ln > 1 && !feof(pp)) {
+      discover_links(&re_man, &res[ln]);
+      discover_links(&re_http, &res[ln]);
+      discover_links(&re_email, &res[ln]);
+    }
 
     inc_ln;
-
-    xfgets(tmps, BS_LINE, pp);
   }
 
   // Restore the environment
@@ -759,6 +763,40 @@ unsigned man(line_t **dst, const char *args) {
 
   *dst = res;
   return ln;
+}
+
+link_loc_t next_link(line_t *lines, unsigned lines_len, link_loc_t start) {
+  unsigned i;
+  link_loc_t res;
+
+  // If line no. start.line is longer than lines_len, return not found
+  if (start.line >= lines_len) {
+    res.ok = FALSE;
+    return res;
+  }
+
+  // If line no. start.line has a link after start.link, return that link
+  if (lines[start.line].links_length > start.link + 1) {
+    res.ok = TRUE;
+    res.line = start.line;
+    res.link = start.link + 1;
+    return res;
+  }
+
+  // Otherwise, return the first link of the first line after line no.
+  // start.line that has links
+  for (i = start.line + 1; i < lines_len; i++) {
+    if (lines[i].links_length > 0) {
+      res.ok = TRUE;
+      res.line = i;
+      res.link = 0;
+      return res;
+    }
+  }
+
+  // Return not found if that fails
+  res.ok = FALSE;
+  return res;
 }
 
 void aprowhat_free(aprowhat_t *aw, unsigned aw_len) {

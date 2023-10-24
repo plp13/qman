@@ -67,8 +67,9 @@ extern bool termsize_changed();
 
 // Draw the portion of a page the user is supposed to see in wmain. The page is
 // contained in lines and is lines_len long. lines_top specifies the line where
-// the portion begins.
-extern void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top);
+// the portion begins. flink indicates the location of the focused link.
+extern void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
+                      link_loc_t flink);
 
 // Draw the scrollbar in wsbar. lines_len is total number of lines in the page
 // being displayed, and lines_top the line number where the visible portion of
