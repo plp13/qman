@@ -152,6 +152,13 @@ void init() {
   setlocale(LC_ALL, "");
 
   // Initialize config with sane defaults
+  config.chars.sbar_top = L"┳";
+  config.chars.sbar_vline = L"┃";
+  config.chars.sbar_bottom = L"┻";
+  config.chars.sbar_block = L"█";
+  config.chars.trans_mode_name = L"┇";
+  config.chars.trans_name_loc = L"┇";
+  config.chars.trans_prompt_help = L"┇";
   config.colours.text.fg = COLOR_WHITE;
   config.colours.text.bold = false;
   config.colours.text.bg = COLOR_BLACK;

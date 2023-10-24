@@ -173,18 +173,20 @@ void draw_sbar(unsigned lines_len, unsigned lines_top) {
   unsigned height = getmaxy(wsbar); // scrollbar height
   unsigned block_pos =
       1 + (((height - 2) * lines_top) / lines_len); // block position
+  unsigned i;                                       // iterator
 
   wclear(wsbar);
 
   // Draw vertical line
   change_colour(wsbar, config.colours.sb_line);
-  mvwvline_set(wsbar, 0, 0, WACS_BTTT, 1);
-  mvwvline_set(wsbar, 1, 0, WACS_T_VLINE, height - 2);
-  mvwvline_set(wsbar, height - 1, 0, WACS_TTBT, 1);
+  mvwaddnwstr(wsbar, 0, 0, config.chars.sbar_top, 1);
+  for (i = 1; i < height - 1; i++)
+    mvwaddnwstr(wsbar, i, 0, config.chars.sbar_vline, 1);
+  mvwaddnwstr(wsbar, height - 1, 0, config.chars.sbar_bottom, 1);
 
-  // Draw the block
+  // Draw the drag block
   change_colour(wsbar, config.colours.sb_block);
-  mvwaddnwstr(wsbar, block_pos, 0, L"█", -1);
+  mvwaddnwstr(wsbar, block_pos, 0, config.chars.sbar_block, -1);
 
   wnoutrefresh(wsbar);
 }
@@ -215,9 +217,9 @@ void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
   change_colour(wstat, config.colours.stat_indic_loc);
   mvwaddnwstr(wstat, 0, loc_col, tmp, loc_width);
   wattr_set(wstat, WA_NORMAL, config.colours.trans_mode_name, NULL);
-  mvwaddnwstr(wstat, 0, name_col - 1, L"┇", 1);
+  mvwaddnwstr(wstat, 0, name_col - 1, config.chars.trans_mode_name, 1);
   wattr_set(wstat, WA_NORMAL, config.colours.trans_name_loc, NULL);
-  mvwaddnwstr(wstat, 0, loc_col - 1, L"┇", 1);
+  mvwaddnwstr(wstat, 0, loc_col - 1, config.chars.trans_name_loc, 1);
 
   // Draw the input line
   swprintf(tmp, BS_SHORT, L"%*ls ", help_width - 1, help);
@@ -225,7 +227,7 @@ void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
   mvwaddnwstr(wstat, 1, help_col, tmp, help_width);
   swprintf(tmp, BS_SHORT, L"%ls", prompt);
   wattr_set(wstat, WA_NORMAL, config.colours.trans_prompt_help, NULL);
-  mvwaddnwstr(wstat, 1, help_col - 1, L"┇", 1);
+  mvwaddnwstr(wstat, 1, help_col - 1, config.chars.trans_prompt_help, 1);
   change_colour(wstat, config.colours.stat_input_prompt);
   mvwaddnwstr(wstat, 1, prompt_col, tmp, prompt_width);
 

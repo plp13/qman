@@ -35,6 +35,17 @@ typedef struct {
   short pair; // pair no.
 } colour_t;
 
+// Characters used for drawing the TUI
+typedef struct {
+  wchar_t *sbar_top;          // status bar top
+  wchar_t *sbar_vline;        // status bar vertical line
+  wchar_t *sbar_bottom;       // status bar bottom
+  wchar_t *sbar_block;        // status bar drag block
+  wchar_t *trans_mode_name;   // mode to name transition (on indicator line)
+  wchar_t *trans_name_loc;    // name to location transition (on indicator line)
+  wchar_t *trans_prompt_help; // prompt to help transition (on input line)
+} config_chars_t;
+
 // Program configuration: colours
 typedef struct {
   colour_t text;              // normal text
@@ -92,6 +103,7 @@ typedef struct {
 
 // Program configuration (main)
 typedef struct {
+  config_chars_t chars;
   config_colours_t colours;
   config_keys_t keys;
   config_layout_t layout;
