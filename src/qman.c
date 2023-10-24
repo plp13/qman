@@ -26,11 +26,11 @@ int main(int argc, char **argv) {
   
   // draw_page(page, page_len, 0);
   line_t *manpage;
-  unsigned manpage_len = man(&manpage, "malloc");
+  unsigned manpage_len = man(&manpage, "doupdate");
   draw_page(manpage, manpage_len, 0);
 
   draw_sbar(page_len, 0);
-  draw_stat(page_len, 0, L"Press 'h' for help or 'q' to quit", L":");
+  draw_stat(L"MAN", L"doupdate(3)", page_len, 0, L":", L"Press 'h' for help or 'q' to quit");
   
   doupdate();
   

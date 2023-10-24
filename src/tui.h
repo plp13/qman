@@ -45,6 +45,7 @@ extern WINDOW *wstat;
     else                                                                       \
       mvwchgat(win, y, x, n, WA_NORMAL, col.pair, NULL);                       \
   }
+
 //
 // Functions
 //
@@ -69,16 +70,20 @@ extern bool termsize_changed();
 // the portion begins.
 extern void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top);
 
-// Draw the scrollbar in wsbar. lines_len indicates the total number of lines in
-// the page being displayed, and lines_top the line number where the visible
-// portion of said page begins.
+// Draw the scrollbar in wsbar. lines_len is total number of lines in the page
+// being displayed, and lines_top the line number where the visible portion of
+// said page begins.
 extern void draw_sbar(unsigned lines_len, unsigned lines_top);
 
-// Draw the status bar in wstat. lines_len indicates the total number of lines
-// in the page being displayed, and lines_cur the line number currently in
-// focus. help and prompt are respectively the help text and prompt strings.
-extern void draw_stat(unsigned lines_len, unsigned lines_pos, wchar_t *help,
-                      wchar_t *prompt);
+// Draw the status bar in wstat:
+// mode -- current mode of operation (INDEX, MAN, APROPOS, WHATIS, etc.)
+// name -- current page name
+// lines_len -- total number of lines in page
+// lines_pos -- focused line number in page
+// prompt -- cursor prompt
+// help -- help text
+extern void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
+                      unsigned lines_pos, wchar_t *prompt, wchar_t *help);
 
 // Delete all windows and wind down ncurses. No need to call this function
 // normally, as it's called by winddown().

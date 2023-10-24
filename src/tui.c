@@ -48,12 +48,28 @@ void init_tui() {
               config.colours.sb_line.bg);
     init_pair(config.colours.sb_block.pair, config.colours.sb_block.fg,
               config.colours.sb_block.bg);
-    init_pair(config.colours.stat_indic1.pair, config.colours.stat_indic1.fg,
-              config.colours.stat_indic1.bg);
-    init_pair(config.colours.stat_indic2.pair, config.colours.stat_indic2.fg,
-              config.colours.stat_indic2.bg);
-    init_pair(config.colours.stat_input.pair, config.colours.stat_input.fg,
-              config.colours.stat_input.bg);
+    init_pair(config.colours.stat_indic_mode.pair,
+              config.colours.stat_indic_mode.fg,
+              config.colours.stat_indic_mode.bg);
+    init_pair(config.colours.stat_indic_name.pair,
+              config.colours.stat_indic_name.fg,
+              config.colours.stat_indic_name.bg);
+    init_pair(config.colours.stat_indic_loc.pair,
+              config.colours.stat_indic_loc.fg,
+              config.colours.stat_indic_loc.bg);
+    init_pair(config.colours.stat_input_prompt.pair,
+              config.colours.stat_input_prompt.fg,
+              config.colours.stat_input_prompt.bg);
+    init_pair(config.colours.stat_input_help.pair,
+              config.colours.stat_input_help.fg,
+              config.colours.stat_input_help.bg);
+    init_pair(config.colours.trans_mode_name, config.colours.stat_indic_mode.bg,
+              config.colours.stat_indic_name.bg);
+    init_pair(config.colours.trans_name_loc, config.colours.stat_indic_name.bg,
+              config.colours.stat_indic_loc.bg);
+    init_pair(config.colours.trans_prompt_help,
+              config.colours.stat_input_prompt.bg,
+              config.colours.stat_input_help.bg);
   }
 }
 
@@ -173,30 +189,45 @@ void draw_sbar(unsigned lines_len, unsigned lines_top) {
   wnoutrefresh(wsbar);
 }
 
-void draw_stat(unsigned lines_len, unsigned lines_pos, wchar_t *help,
-               wchar_t *prompt) {
+void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
+               unsigned lines_pos, wchar_t *prompt, wchar_t *help) {
   wclear(wstat);
 
-  unsigned width = getmaxx(wstat); // status lines width
+  unsigned width = getmaxx(wstat); // width of both status lines
 
-  // Draw no. of lines and position on the indicator line (secondary colour)
-  wchar_t tmp[BS_SHORT];
-  swprintf(tmp, BS_SHORT, L"%d:%d", lines_len, lines_pos);
-  wchar_t *indic2 = walloca(width);
-  swprintf(indic2, width + 1, L"%*ls ", width - 1, tmp);
-  change_colour(wstat, config.colours.stat_indic2);
-  mvwaddnwstr(wstat, 0, 0, indic2, -1);
+  // Starting columns and widths of the various sections
+  unsigned mode_col = 0, mode_width = 10, name_col = 10,
+           name_width = width - 24, loc_col = width - 14, loc_width = 14,
+           prompt_col = 0, prompt_width = width / 2, help_col = prompt_width,
+           help_width = width - prompt_width;
 
-  // Draw the help text on the indicator line (primary colour)
-  change_colour(wstat, config.colours.stat_indic1);
-  mvwaddnwstr(wstat, 0, 0, help, -1);
+  wchar_t tmp[BS_SHORT], tmp2[BS_SHORT];
+
+  // Draw the indicator line
+  swprintf(tmp, BS_SHORT, L" %-*ls", mode_width - 1, mode);
+  change_colour(wstat, config.colours.stat_indic_mode);
+  mvwaddnwstr(wstat, 0, mode_col, tmp, mode_width);
+  swprintf(tmp, BS_SHORT, L" %-*ls", name_width - 1, name);
+  change_colour(wstat, config.colours.stat_indic_name);
+  mvwaddnwstr(wstat, 0, name_col, tmp, name_width);
+  swprintf(tmp2, BS_SHORT, L"%d:%d", lines_len, lines_pos);
+  swprintf(tmp, BS_SHORT, L"%*ls ", loc_width - 1, tmp2);
+  change_colour(wstat, config.colours.stat_indic_loc);
+  mvwaddnwstr(wstat, 0, loc_col, tmp, loc_width);
+  wattr_set(wstat, WA_NORMAL, config.colours.trans_mode_name, NULL);
+  mvwaddnwstr(wstat, 0, name_col - 1, L"┇", 1);
+  wattr_set(wstat, WA_NORMAL, config.colours.trans_name_loc, NULL);
+  mvwaddnwstr(wstat, 0, loc_col - 1, L"┇", 1);
 
   // Draw the input line
-  wchar_t *input = walloca(width);
-  swprintf(input, width + 1, L"%-*ls", width, prompt);
-  change_colour(wstat, config.colours.stat_input);
-  mvwaddnwstr(wstat, 1, 0, input, -1);
-  wmove(wstat, 1, wcslen(prompt));
+  swprintf(tmp, BS_SHORT, L"%*ls ", help_width - 1, help);
+  change_colour(wstat, config.colours.stat_input_help);
+  mvwaddnwstr(wstat, 1, help_col, tmp, help_width);
+  swprintf(tmp, BS_SHORT, L"%ls", prompt);
+  wattr_set(wstat, WA_NORMAL, config.colours.trans_prompt_help, NULL);
+  mvwaddnwstr(wstat, 1, help_col - 1, L"┇", 1);
+  change_colour(wstat, config.colours.stat_input_prompt);
+  mvwaddnwstr(wstat, 1, prompt_col, tmp, prompt_width);
 
   wnoutrefresh(wstat);
 }

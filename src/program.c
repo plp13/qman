@@ -77,6 +77,31 @@ void add_link(line_t *line, unsigned start, unsigned end, link_type_t type,
   wcscpy(line->links[line->links_length - 1].trgt, trgt);
 }
 
+// Helper of man(). Discover links that match in the text of line, and add them
+// to said line.
+void discover_links(const full_regex_t *re, line_t *line) {
+  unsigned loff = 0; // offset (in line text) to start searching for links
+  range_t lrng =
+      fr_search(&re_man, &line->text[loff]); // location of link in line
+  wchar_t *tmp = walloca(BS_LINE);           // temporary
+
+  while (lrng.beg != lrng.end) {
+    // While a link has been found, add it to the line
+    wcsncpy(tmp, &line->text[loff + lrng.beg], lrng.end - lrng.beg);
+    tmp[lrng.end - lrng.beg] = L'\0';
+    add_link(line, loff + lrng.beg, loff + lrng.end, LT_MAN, tmp);
+    loff += lrng.end;
+    if (loff < line->length) {
+      // Link wasn't at the very end of line; look for another link after it
+      lrng = fr_search(&re_man, &line->text[loff]);
+    } else {
+      // Link was at the very end of line; exit the loop
+      lrng.beg = 0;
+      lrng.end = 0;
+    }
+  }
+}
+
 // All got_... macros are helpers of man()
 
 // true if we tmpw[i] contains a 'bold' terminal escape sequence
@@ -175,18 +200,33 @@ void init() {
   config.colours.sb_block.bold = false;
   config.colours.sb_block.bg = COLOR_BLACK;
   config.colours.sb_block.pair = 41;
-  config.colours.stat_indic1.fg = COLOR_YELLOW;
-  config.colours.stat_indic1.bold = true;
-  config.colours.stat_indic1.bg = COLOR_BLUE;
-  config.colours.stat_indic1.pair = 50;
-  config.colours.stat_indic2.fg = COLOR_WHITE;
-  config.colours.stat_indic2.bold = true;
-  config.colours.stat_indic2.bg = COLOR_BLUE;
-  config.colours.stat_indic2.pair = 51;
-  config.colours.stat_input.fg = COLOR_WHITE;
-  config.colours.stat_input.bold = false;
-  config.colours.stat_input.bg = COLOR_BLACK;
-  config.colours.stat_input.pair = 52;
+  config.colours.stat_indic_mode.fg = COLOR_YELLOW;
+  config.colours.stat_indic_mode.bold = true;
+  config.colours.stat_indic_mode.bg = COLOR_RED;
+  config.colours.stat_indic_mode.pair = 50;
+  config.colours.stat_indic_name.fg = COLOR_WHITE;
+  config.colours.stat_indic_name.bold = true;
+  config.colours.stat_indic_name.bg = COLOR_BLUE;
+  config.colours.stat_indic_name.pair = 51;
+  config.colours.stat_indic_loc.fg = COLOR_BLACK;
+  config.colours.stat_indic_loc.bold = false;
+  config.colours.stat_indic_loc.bg = COLOR_WHITE;
+  config.colours.stat_indic_loc.pair = 52;
+  config.colours.stat_input_prompt.fg = COLOR_WHITE;
+  config.colours.stat_input_prompt.bold = false;
+  config.colours.stat_input_prompt.bg = COLOR_BLACK;
+  config.colours.stat_input_prompt.pair = 53;
+  config.colours.stat_input_help.fg = COLOR_YELLOW;
+  config.colours.stat_input_help.bold = true;
+  config.colours.stat_input_help.bg = COLOR_BLACK;
+  config.colours.stat_input_help.pair = 54;
+  config.colours.trans_mode_name = 100 * config.colours.stat_indic_mode.pair +
+                                   config.colours.stat_indic_name.pair;
+  config.colours.trans_name_loc = 100 * config.colours.stat_indic_name.pair +
+                                  config.colours.stat_indic_loc.pair;
+  config.colours.trans_prompt_help =
+      100 * config.colours.stat_input_prompt.pair +
+      config.colours.stat_input_help.pair;
   config.layout.tui = false;
   config.layout.fixedwidth = false;
   config.layout.sb = true;
@@ -223,7 +263,7 @@ void init() {
   sc_all_len = aprowhat_sections(&sc_all, aw_all, aw_all_len);
 
   // initialize regular expressions
-  fr_init(&re_man, "[a-zA-Z0-9\\.\\:@_+]+\\([a-zA-Z0-9]+\\)");
+  fr_init(&re_man, "[a-zA-Z0-9\\.:@_-]+\\([a-zA-Z0-9]+\\)");
   fr_init(&re_http, "https?:\\/\\/[a-zA-Z0-9\\.\\[\\]\\/\\?\\+:@_#%-]+");
   fr_init(&re_email, "[a-zA-Z0-9\\.\\$\\*\\+\\?\\^\\|!#%&'/"
                      "=_`{}~-][a-zA-Z0-9\\.\\$\\*\\+\\?\\^\\|\\.!#%&'/"
@@ -641,8 +681,8 @@ unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const char *args,
 unsigned man(line_t **dst, const char *args) {
   unsigned ln = 0; // current line number
   unsigned len;    // length of current line text
-  range_t lrng;    // location of a link found in current line
-  unsigned loff;
+  // range_t lrng;    // location of a link found in current line
+  // unsigned loff;
   unsigned i, j;                   // iterators
   wchar_t *tmpw = walloc(BS_LINE); // temporary
   char *tmps = salloc(BS_LINE);    // temporary
@@ -654,8 +694,8 @@ unsigned man(line_t **dst, const char *args) {
   char *old_term = getenv("TERM");
   setenv("TERM", "xterm", true);
   sprintf(tmps, "%d",
-          config.layout.width - config.layout.sb_width - config.layout.lmargin -
-              config.layout.rmargin);
+          4 + config.layout.width - config.layout.sb_width -
+              config.layout.lmargin - config.layout.rmargin);
   setenv("MANWIDTH", tmps, true);
   setenv("MAN_KEEP_FORMATTING", "1", true);
 
@@ -671,8 +711,9 @@ unsigned man(line_t **dst, const char *args) {
   while (!feof(pp)) {
     // Process text and formatting attirbutes
     len = mbstowcs(tmpw, tmps, BS_LINE);
-    line_alloc(res[ln], len);
-    j = 0;
+    line_alloc(res[ln], config.layout.lmargin + len);
+    for (j = 0; j < config.layout.lmargin; j++)
+      res[ln].text[j] = L' ';
     for (i = 0; i < len; i++) {
       if (got_reg) {
         bset(res[ln].reg, j);
@@ -692,25 +733,10 @@ unsigned man(line_t **dst, const char *args) {
       }
     }
 
-    // Process links
-    // Look for a link starting at the beginning of line
-    loff = 0;
-    lrng = fr_search(&re_man, &res[ln].text[loff]);
-    while (lrng.beg != lrng.end) {
-      // While a link has been found, add it to the page
-      wcsncpy(tmpw, &res[ln].text[loff + lrng.beg], lrng.end - lrng.beg);
-      tmpw[lrng.end - lrng.beg] = L'\0';
-      add_link(&res[ln], loff + lrng.beg, loff + lrng.end, LT_MAN, tmpw);
-      loff += lrng.end;
-      if (loff < res[ln].length) {
-        // Link wasn't at the very end of line; look for another link after it
-        lrng = fr_search(&re_man, &res[ln].text[loff]);
-      } else {
-        // Link was at the very end of line; exit the loop
-        lrng.beg = 0;
-        lrng.end = 0;
-      }
-    }
+    // Discover and add links
+    discover_links(&re_man, &res[ln]);
+    discover_links(&re_http, &res[ln]);
+    discover_links(&re_email, &res[ln]);
 
     inc_ln;
 

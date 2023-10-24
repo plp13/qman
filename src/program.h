@@ -37,21 +37,26 @@ typedef struct {
 
 // Program configuration: colours
 typedef struct {
-  colour_t text;         // normal text
-  colour_t search;       // highlighted search results
-  colour_t link_man;     // links to manual pages
-  colour_t link_man_f;   // links to manual pages (focused)
-  colour_t link_http;    // links to http(s) URLs
-  colour_t link_http_f;  // links to http(s) URLs (focused)
-  colour_t link_email;   // links to email addresses
-  colour_t link_email_f; // links to email addresses (focused)
-  colour_t link_ls;      // links to local searches
-  colour_t link_ls_f;    // links to local searches (focused)
-  colour_t sb_line;      // scrollbar line
-  colour_t sb_block;     // scrollbar indicator block
-  colour_t stat_indic1;  // status bar indicator line (primary colour)
-  colour_t stat_indic2;  // status bar indicator line (secondary colour)
-  colour_t stat_input;   // status bar input line
+  colour_t text;              // normal text
+  colour_t search;            // highlighted search results
+  colour_t link_man;          // links to manual pages
+  colour_t link_man_f;        // links to manual pages (focused)
+  colour_t link_http;         // links to http(s) URLs
+  colour_t link_http_f;       // links to http(s) URLs (focused)
+  colour_t link_email;        // links to email addresses
+  colour_t link_email_f;      // links to email addresses (focused)
+  colour_t link_ls;           // links to local searches
+  colour_t link_ls_f;         // links to local searches (focused)
+  colour_t sb_line;           // scrollbar line
+  colour_t sb_block;          // scrollbar indicator block
+  colour_t stat_indic_mode;   // mode section of status bar indicator line
+  colour_t stat_indic_name;   // name section of status bar indicator line
+  colour_t stat_indic_loc;    // location section of status bar indicator line
+  colour_t stat_input_prompt; // prompt section of status bar input line
+  colour_t stat_input_help;   // help section of status bar input line
+  unsigned trans_mode_name;   // colour pair for mode to name transition
+  unsigned trans_name_loc;    // colour pair for name to location transition
+  unsigned trans_prompt_help; // colour pair for prompt to help transition
 } config_colours_t;
 
 // Program configuration: keyboard mappings
