@@ -70,8 +70,12 @@ typedef struct {
   unsigned trans_prompt_help; // colour pair for prompt to help transition
 } config_colours_t;
 
-// Program configuration: keyboard mappings
+// Program configuration: program action to key character mappings
 typedef struct {
+  int *up;   // PA_UP
+  int *down; // PA_DOWN
+  int *help; // PA_HELP
+  int *quit; // PA_QUIT
 } config_keys_t;
 
 // Program configuration: screen layout
@@ -83,8 +87,10 @@ typedef struct {
   bool sb;         // if true, show the scrollbar
   unsigned width;  // current terminal width
   unsigned height; // current terminal height
-  unsigned sb_width;    // scrollbar width
+  unsigned sbar_width;  // scrollbar width
   unsigned stat_height; // status bar height
+  unsigned main_width;  // main window width
+  unsigned main_height; // main window height
   unsigned lmargin;     // size of left margin
   unsigned rmargin;     // size of right margin
 } config_layout_t;
@@ -120,9 +126,7 @@ typedef enum {
 // A page request
 typedef struct {
   request_type_t request_type;
-  wchar_t
-      *page; // manual page (or apropos/whatis query, depending on request_type)
-  wchar_t *section; // section (only applicable if request_type is RT_MAN)
+  wchar_t *args; // arguments for the man/apropos/whatis command
 } request_t;
 
 // Choice between apropos and whatis
@@ -182,6 +186,12 @@ typedef struct {
 #define ES_CHILD_ERROR 3 // child process error
 #define ES_NOT_FOUND 16  // manual page(s) not found
 
+// Program actions
+#define PA_UP 0   // focus on previous link, or scroll up one line
+#define PA_DOWN 1 // focus on next link, or scroll down one line
+#define PA_HELP 2 // get help
+#define PA_QUIT 3 // exit the program
+
 //
 // Global variables
 //
@@ -222,6 +232,9 @@ extern unsigned page_len;
 
 // Line where the portion of page displayed to the user begins
 extern unsigned page_top;
+
+// Column where the portion of page displayed to the user begins
+extern unsigned page_left;
 
 // Regular expressions for links to a...
 extern full_regex_t re_man, // manual page
@@ -286,8 +299,13 @@ extern full_regex_t re_man, // manual page
 extern void init();
 
 // Retrieve argc and argv from main() and parse the command line options.
-// Modify config and requests appropriately, and return optind
+// Modify config and history appropriately, and return optind. Exit in case of
+// usage error.
 extern int parse_options(int argc, char *const *argv);
+
+// Retrieve argc and argv without the command line options, and modify history
+// appropriately. Exit in case of usage error.
+extern void parse_args(int argc, char *const *argv);
 
 // Print usage information
 extern void usage();

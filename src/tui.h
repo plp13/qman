@@ -15,6 +15,9 @@
 // Main window where the current page is displayed
 extern WINDOW *wmain;
 
+// Width and height of the main window
+extern unsigned wmain_width, wmain_height;
+
 // Scrollbar window
 extern WINDOW *wsbar;
 
@@ -85,6 +88,10 @@ extern void draw_sbar(unsigned lines_len, unsigned lines_top);
 // help -- help text
 extern void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
                       unsigned lines_pos, wchar_t *prompt, wchar_t *help);
+
+// Return the program action number that corresponds to input character chr. If
+// no such action, return -1.
+extern int action(int chr);
 
 // Delete all windows and wind down ncurses. No need to call this function
 // normally, as it's called by winddown().

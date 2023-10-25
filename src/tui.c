@@ -16,6 +16,19 @@ WINDOW *wsbar = NULL;
 
 WINDOW *wstat = NULL;
 
+// 
+// Helper functions and macros
+//
+
+// Helper of action(). Return act if chr is in null-terminated array map.
+#define ret_act_if_chr_in_map(map, chr, act)                                   \
+  i = 0;                                                              \
+  while (0 != map[i]) {                                                        \
+    if (chr == map[i])                                                         \
+      return act;                                                              \
+    i++;                                                                       \
+  }
+
 //
 // Functions
 //
@@ -84,19 +97,17 @@ void init_tui() {
 void init_windows() {
   if (NULL != wmain)
     delwin(wmain);
-  wmain = newwin(config.layout.height - config.layout.stat_height,
-                 config.layout.width - config.layout.sb_width, 0, 0);
+  wmain = newwin(config.layout.main_height, config.layout.main_width, 0, 0);
 
   if (NULL != wsbar)
     delwin(wsbar);
-  wsbar = newwin(config.layout.height - config.layout.stat_height,
-                 config.layout.sb_width, 0,
-                 config.layout.width - config.layout.sb_width);
+  wsbar = newwin(config.layout.main_height, config.layout.sbar_width, 0,
+                 config.layout.main_width);
 
   if (NULL != wstat)
     delwin(wstat);
   wstat = newwin(config.layout.stat_height, config.layout.width,
-                 config.layout.height - config.layout.stat_height, 0);
+                 config.layout.main_height, 0);
 
   wnoutrefresh(stdscr);
 }
@@ -108,6 +119,8 @@ bool termsize_changed() {
   if (width != config.layout.width || height != config.layout.height) {
     config.layout.width = width;
     config.layout.height = height;
+    config.layout.main_width = width - config.layout.sbar_width;
+    config.layout.main_height = height - config.layout.stat_height;
 
     return true;
   }
@@ -203,8 +216,9 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
 void draw_sbar(unsigned lines_len, unsigned lines_top) {
   unsigned height = getmaxy(wsbar); // scrollbar height
   unsigned block_pos =
-      1 + (height - 2) * lines_top / (lines_len - height + 1); // block position
-  unsigned i;                                                  // iterator
+      MIN(height - 2, 1 + (height - 2) * lines_top /
+                              (lines_len - height + 1)); // block position
+  unsigned i;                                            // iterator
 
   wclear(wsbar);
 
@@ -243,7 +257,7 @@ void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
   swprintf(tmp, BS_SHORT, L" %-*ls", name_width - 1, name);
   change_colour(wstat, config.colours.stat_indic_name);
   mvwaddnwstr(wstat, 0, name_col, tmp, name_width);
-  swprintf(tmp2, BS_SHORT, L"%d:%d", lines_len, lines_pos);
+  swprintf(tmp2, BS_SHORT, L"%d:%d", lines_pos, lines_len);
   swprintf(tmp, BS_SHORT, L"%*ls ", loc_width - 1, tmp2);
   change_colour(wstat, config.colours.stat_indic_loc);
   mvwaddnwstr(wstat, 0, loc_col, tmp, loc_width);
@@ -263,6 +277,17 @@ void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
   mvwaddnwstr(wstat, 1, prompt_col, tmp, prompt_width);
 
   wnoutrefresh(wstat);
+}
+
+int action(int chr) {
+  unsigned i;
+
+  ret_act_if_chr_in_map(config.keys.up, chr, PA_UP);
+  ret_act_if_chr_in_map(config.keys.down, chr, PA_DOWN);
+  ret_act_if_chr_in_map(config.keys.help, chr, PA_HELP);
+  ret_act_if_chr_in_map(config.keys.quit, chr, PA_QUIT);
+
+  return -1;
 }
 
 void winddown_tui() {

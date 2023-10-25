@@ -5,6 +5,8 @@
 #include "tui.h"
 #include "util.h"
 #include <regex.h>
+#include <stdlib.h>
+#include <wchar.h>
 
 //
 // Global variables
@@ -48,11 +50,30 @@ unsigned page_len = 0;
 
 unsigned page_top = 0;
 
+unsigned page_left = 0;
+
 full_regex_t re_man, re_http, re_email;
 
 //
 // Helper macros and functions
 //
+
+// Helper of parse_args(). Surround all arguments of argv with  single quotes,
+// and place them in tmp.
+#define flatten_args                                                           \
+  tmp_len = 0;                                                                 \
+  wcscpy(tmp, L"");                                                            \
+  for (i = 1; i < argc; i++) {                                                 \
+    swprintf(tmp2, BS_SHORT, L"'%s'", argv[i]);                                \
+    if (tmp_len + wcslen(tmp2) < BS_LINE) {                                    \
+      wcscat(tmp, tmp2);                                                       \
+      tmp_len += wcslen(tmp2);                                                 \
+    }                                                                          \
+    if (i < argc - 1 && tmp_len + 1 < BS_LINE) {                               \
+      wcscat(tmp, L" ");                                                       \
+      tmp_len++;                                                               \
+    }                                                                          \
+  }
 
 // Helper of man() and aprowhat_render(). Increase ln, and reallocate res in
 // memory, if ln has exceeded its size.
@@ -234,13 +255,19 @@ void init() {
   config.colours.trans_prompt_help =
       100 * config.colours.stat_input_prompt.pair +
       config.colours.stat_input_help.pair;
+  config.keys.up = (int[]){KEY_UP, KEY_BACKSPACE, 'y', 'k', 0};
+  config.keys.down = (int[]){KEY_DOWN, KEY_ENTER, 'e', 'j', 0};
+  config.keys.help = (int[]){'h', '?', 0};
+  config.keys.quit = (int[]){'q', KEY_BREAK, 0};
   config.layout.tui = false;
   config.layout.fixedwidth = false;
   config.layout.sb = true;
   config.layout.width = 80;
   config.layout.height = 25;
-  config.layout.sb_width = 1;
+  config.layout.sbar_width = 1;
   config.layout.stat_height = 2;
+  config.layout.main_width = 79;
+  config.layout.main_height = 23;
   config.layout.lmargin = 2;
   config.layout.rmargin = 2;
   config.misc.program_name = walloc(BS_SHORT);
@@ -262,8 +289,7 @@ void init() {
   history_top = 0;
   history = aalloc(config.misc.history_size, request_t);
   history[0].request_type = RT_INDEX;
-  history[0].page = NULL;
-  history[0].section = NULL;
+  history[0].args = NULL;
 
   // Initialize aw_all and sc_all
   aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, "''");
@@ -342,6 +368,42 @@ int parse_options(int argc, char *const *argv) {
       winddown(ES_USAGE_ERROR, msg);
     } break;
     }
+  }
+}
+
+void parse_args(int argc, char *const *argv) {
+  unsigned i;                           // iterator
+  wchar_t tmp[BS_LINE], tmp2[BS_SHORT]; // temporary
+  unsigned tmp_len; // length of tmp (used to guard against buffer overflows)
+
+  // If the user has specified at least an argument, try to show a manual page
+  // rather than the index page
+  if (argc >= 2 && RT_INDEX == history[history_top].request_type)
+    history[history_top].request_type = RT_MAN;
+
+  // If we are showing a manual, apropos, or whatis page...
+  if (history[history_top].request_type != RT_INDEX) {
+    // But the user hasn't specified an argument...
+    if (argc < 2) {
+      // Exit with error message
+      switch (history[history_top].request_type) {
+      case RT_MAN:
+        winddown(ES_USAGE_ERROR, L"What manual page do you want?");
+        break;
+      case RT_APROPOS:
+        winddown(ES_USAGE_ERROR, L"Apropos what?");
+        break;
+      case RT_WHATIS:
+      default:
+        winddown(ES_USAGE_ERROR, L"Whatis what?");
+        break;
+      }
+    }
+
+    // Flatten all arguments into history[history_top].args
+    flatten_args;
+    history[history_top].args = walloc(wcslen(tmp));
+    wcscpy(history[history_top].args, tmp);
   }
 }
 
@@ -467,7 +529,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
                          const wchar_t *ver, const wchar_t *date) {
 
   // Text blocks widths
-  unsigned line_width = MAX(60, config.layout.width - config.layout.sb_width);
+  unsigned line_width = MAX(60, config.layout.width - config.layout.sbar_width);
   unsigned lmargin_width = config.layout.lmargin; // left margin
   unsigned rmargin_width = config.layout.rmargin; // right margin
   unsigned main_width =
@@ -703,7 +765,7 @@ unsigned man(line_t **dst, const char *args) {
   char *old_term = getenv("TERM");
   setenv("TERM", "xterm", true);
   sprintf(tmps, "%d",
-          4 + config.layout.width - config.layout.sb_width -
+          4 + config.layout.width - config.layout.sbar_width -
               config.layout.lmargin - config.layout.rmargin);
   setenv("MANWIDTH", tmps, true);
   setenv("MAN_KEEP_FORMATTING", "1", true);
@@ -842,10 +904,8 @@ void winddown(int ec, const wchar_t *em) {
   // Deallocate memory used by history global
   unsigned i;
   for (i = 0; i <= history_top; i++) {
-    if (NULL != history[i].page)
-      free(history[i].page);
-    if (NULL != history[i].section)
-      free(history[i].section);
+    if (NULL != history[i].args)
+      free(history[i].args);
   }
   if (NULL != history)
     free(history);
