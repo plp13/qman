@@ -6,7 +6,6 @@
 
 #include "lib.h"
 #include "program.h"
-#include "util.h"
 
 //
 // Global variables
@@ -23,6 +22,8 @@ extern WINDOW *wsbar;
 
 // Status bar window
 extern WINDOW *wstat;
+
+extern int action;
 
 //
 // Macros
@@ -91,7 +92,7 @@ extern void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
 
 // Return the program action number that corresponds to input character chr. If
 // no such action, return -1.
-extern int action(int chr);
+extern int get_action(int chr);
 
 // Delete all windows and wind down ncurses. No need to call this function
 // normally, as it's called by winddown().

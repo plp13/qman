@@ -1,12 +1,8 @@
 // Program-specific infrastructure (implementation)
 
-#include "program.h"
 #include "lib.h"
+#include "program.h"
 #include "tui.h"
-#include "util.h"
-#include <regex.h>
-#include <stdlib.h>
-#include <wchar.h>
 
 //
 // Global variables
@@ -48,6 +44,8 @@ line_t *page = NULL;
 
 unsigned page_len = 0;
 
+link_loc_t page_flink = {true, 0, 0};
+
 unsigned page_top = 0;
 
 unsigned page_left = 0;
@@ -63,7 +61,7 @@ full_regex_t re_man, re_http, re_email;
 #define flatten_args                                                           \
   tmp_len = 0;                                                                 \
   wcscpy(tmp, L"");                                                            \
-  for (i = 1; i < argc; i++) {                                                 \
+  for (i = 0; i < argc; i++) {                                                 \
     swprintf(tmp2, BS_SHORT, L"'%s'", argv[i]);                                \
     if (tmp_len + wcslen(tmp2) < BS_LINE) {                                    \
       wcscat(tmp, tmp2);                                                       \
@@ -259,9 +257,9 @@ void init() {
   config.keys.down = (int[]){KEY_DOWN, KEY_ENTER, 'e', 'j', 0};
   config.keys.help = (int[]){'h', '?', 0};
   config.keys.quit = (int[]){'q', KEY_BREAK, 0};
-  config.layout.tui = false;
+  config.layout.tui = true;
   config.layout.fixedwidth = false;
-  config.layout.sb = true;
+  config.layout.sbar = true;
   config.layout.width = 80;
   config.layout.height = 25;
   config.layout.sbar_width = 1;
@@ -288,11 +286,11 @@ void init() {
   history_cur = 0;
   history_top = 0;
   history = aalloc(config.misc.history_size, request_t);
-  history[0].request_type = RT_INDEX;
-  history[0].args = NULL;
+  history[history_cur].request_type = RT_INDEX;
+  history[history_cur].args = NULL;
 
   // Initialize aw_all and sc_all
-  aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, "''");
+  aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"''");
   sc_all_len = aprowhat_sections(&sc_all, aw_all, aw_all_len);
 
   // initialize regular expressions
@@ -332,7 +330,7 @@ int parse_options(int argc, char *const *argv) {
   optstring[optstring_i] = '\0';
   longopts[i] = (struct option){0, 0, 0, 0};
 
-  // Parse the options and modify config and requests
+  // Parse the options and modify config and history
   while (true) {
     int cur_i;
     char cur = getopt_long(argc, argv, optstring, longopts, &cur_i);
@@ -341,32 +339,38 @@ int parse_options(int argc, char *const *argv) {
       free(longopts);
       return optind;
       break;
-    case 'n': {
-      history[0].request_type = RT_INDEX;
-    } break;
-    case 'k': {
-      history[0].request_type = RT_WHATIS;
-    } break;
-    case 'f': {
-      history[0].request_type = RT_APROPOS;
-    } break;
-    case 'T': {
+    case 'n':
+      // -n or --index was passed; show index page
+      history[history_cur].request_type = RT_INDEX;
+      break;
+    case 'k':
+      // -k or --apropos was passed; try to show apropos results
+      history[history_cur].request_type = RT_APROPOS;
+      break;
+    case 'f':
+      // -f or --whatis was passed; try to show whatis results
+      history[history_cur].request_type = RT_WHATIS;
+      break;
+    case 'T':
+      // -T or --cli was passed; do not launch the TUI
       config.layout.tui = false;
-    } break;
-    case 'C': {
-      unsigned optarg_len = strlen(optarg);
-      config.misc.config_path = walloc(optarg_len);
+      break;
+    case 'C':
+      // -C or --config-path was passed; read from a different config file
+      config.misc.config_path = walloc(strlen(optarg));
       strcpy(config.misc.config_path, optarg);
-    } break;
-    case 'h': {
+      break;
+    case 'h':
+      // -h or --help was passed; print usage and exit
       usage();
       winddown(ES_SUCCESS, NULL);
-    } break;
-    case '?': {
+      break;
+    case '?':
+      // an unknown option was passed; error out
       free(longopts);
       wchar_t *msg = L"Unable to parse program arguments";
       winddown(ES_USAGE_ERROR, msg);
-    } break;
+      break;
     }
   }
 }
@@ -376,15 +380,15 @@ void parse_args(int argc, char *const *argv) {
   wchar_t tmp[BS_LINE], tmp2[BS_SHORT]; // temporary
   unsigned tmp_len; // length of tmp (used to guard against buffer overflows)
 
-  // If the user has specified at least an argument, try to show a manual page
+  // If the user has specified at least one argument, try to show a manual page
   // rather than the index page
-  if (argc >= 2 && RT_INDEX == history[history_top].request_type)
-    history[history_top].request_type = RT_MAN;
+  if (RT_INDEX == history[history_cur].request_type && argc >= 1)
+    history[history_cur].request_type = RT_MAN;
 
   // If we are showing a manual, apropos, or whatis page...
-  if (history[history_top].request_type != RT_INDEX) {
+  if (RT_INDEX != history[history_cur].request_type) {
     // But the user hasn't specified an argument...
-    if (argc < 2) {
+    if (0 == argc) {
       // Exit with error message
       switch (history[history_top].request_type) {
       case RT_MAN:
@@ -400,10 +404,10 @@ void parse_args(int argc, char *const *argv) {
       }
     }
 
-    // Flatten all arguments into history[history_top].args
+    // Flatten all arguments into history[history_cur].args
     flatten_args;
-    history[history_top].args = walloc(wcslen(tmp));
-    wcscpy(history[history_top].args, tmp);
+    history[history_cur].args = walloc(wcslen(tmp));
+    wcscpy(history[history_cur].args, tmp);
   }
 }
 
@@ -441,13 +445,14 @@ void usage() {
           L"mandatory or optional\nfor any corresponding short options.\n");
 }
 
-unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd, const char *args) {
+unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
+                       const wchar_t *args) {
   // Prepare apropos/whatis command
   char cmdstr[BS_SHORT];
   if (cmd == AW_WHATIS)
-    sprintf(cmdstr, "%s -l %s", config.misc.whatis_path, args);
+    sprintf(cmdstr, "%s -l %ls", config.misc.whatis_path, args);
   else
-    sprintf(cmdstr, "%s -l %s", config.misc.apropos_path, args);
+    sprintf(cmdstr, "%s -l %ls", config.misc.apropos_path, args);
 
   // Execute apropos, and enter its result into a temporary file. lines becomes
   // the total number of lines copied.
@@ -529,16 +534,16 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
                          const wchar_t *ver, const wchar_t *date) {
 
   // Text blocks widths
-  unsigned line_width = MAX(60, config.layout.width - config.layout.sbar_width);
+  unsigned line_width = MAX(60, config.layout.main_width);
   unsigned lmargin_width = config.layout.lmargin; // left margin
   unsigned rmargin_width = config.layout.rmargin; // right margin
-  unsigned main_width =
+  unsigned text_width =
       line_width - lmargin_width - rmargin_width; // main text area
   unsigned hfc_width =
-      main_width / 2 + main_width % 2; // header/footer centre area
-  unsigned hfl_width = (main_width - hfc_width) / 2; // header/footer left area
+      text_width / 2 + text_width % 2; // header/footer centre area
+  unsigned hfl_width = (text_width - hfc_width) / 2; // header/footer left area
   unsigned hfr_width =
-      hfl_width + (main_width - hfc_width) % 2; // header/footer right area
+      hfl_width + (text_width - hfc_width) % 2; // header/footer right area
 
   unsigned ln = 0;                // current line number
   unsigned i, j;                  // iterators
@@ -548,7 +553,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   line_t *res = aalloc(res_len, line_t); // result buffer
 
   // Header
-  line_alloc(res[ln], line_width);
+  line_alloc(res[ln], 0);
   inc_ln;
   line_alloc(res[ln], line_width);
   unsigned title_len = wcslen(title); // title length
@@ -583,14 +588,14 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   wcscpy(tmp, L"SECTIONS");
   swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
            lmargin_width, "",                         //
-           main_width, tmp);
+           text_width, tmp);
   bset(res[ln].bold, lmargin_width);
   bset(res[ln].reg, lmargin_width + wcslen(tmp));
 
   // Sections
   unsigned sc_maxwidth = wmaxlen(sc, sc_len); // length of longest section
   unsigned sc_cols =
-      main_width / (4 + sc_maxwidth);   // number of columns for sections
+      text_width / (4 + sc_maxwidth);   // number of columns for sections
   unsigned sc_lines = sc_len / sc_cols; // number of lines for sections
   unsigned sc_i;                        // index of current section
   if (sc_len % sc_cols > 0)
@@ -614,10 +619,6 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
     }
   }
 
-  // Newline
-  inc_ln;
-  line_alloc(res[ln], 0);
-
   // For each section...
   for (i = 0; i < sc_len; i++) {
     // Newline
@@ -626,18 +627,18 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
     // Section title
     inc_ln;
     line_alloc(res[ln], line_width);
-    swprintf(tmp, main_width + 1, L"MANUAL PAGES IN SECTION '%ls'", sc[i]);
+    swprintf(tmp, text_width + 1, L"MANUAL PAGES IN SECTION '%ls'", sc[i]);
     swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
              lmargin_width, "",                         //
-             main_width, tmp);
+             text_width, tmp);
     bset(res[ln].bold, lmargin_width);
     bset(res[ln].reg, lmargin_width + wcslen(tmp));
     // For each manual page...
     for (j = 0; j < aw_len; j++) {
       // If manual page is in current section...
       if (0 == wcscmp(aw[j].section, sc[i])) {
-        unsigned lc_width = main_width / 3;        // left column width
-        unsigned rc_width = main_width - lc_width; // right column width
+        unsigned lc_width = text_width / 3;        // left column width
+        unsigned rc_width = text_width - lc_width; // right column width
         unsigned page_width = wcslen(aw[j].page) + wcslen(aw[j].section) +
                               2; // width of manual page name and section
         unsigned spcl_width =
@@ -685,7 +686,6 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   inc_ln;
   line_alloc(res[ln], line_width);
   unsigned date_len = wcslen(date); // date length
-  unsigned ver_len = wcslen(ver);   // ver length
   unsigned lds_len =
       (hfc_width - date_len) / 2 +
       (hfc_width - date_len) % 2; // length of space on the left of date
@@ -700,8 +700,6 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
            hfr_width, key,                                            //
            rmargin_width, ""                                          //
   );
-  bset(res[ln].uline, lmargin_width);
-  bset(res[ln].reg, lmargin_width + ver_len);
   bset(res[ln].uline,
        lmargin_width + hfl_width + hfc_width + hfr_width - key_len);
   bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
@@ -728,7 +726,7 @@ unsigned index_page(line_t **dst) {
   return res_len;
 }
 
-unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const char *args,
+unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const wchar_t *args,
                   const wchar_t *key, const wchar_t *title) {
   aprowhat_t *aw;
   unsigned aw_len = aprowhat_exec(&aw, cmd, args);
@@ -749,7 +747,7 @@ unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const char *args,
   return res_len;
 }
 
-unsigned man(line_t **dst, const char *args) {
+unsigned man(line_t **dst, const wchar_t *args) {
   unsigned ln = 0; // current line number
   unsigned len;    // length of current line text
   // range_t lrng;    // location of a link found in current line
@@ -765,14 +763,14 @@ unsigned man(line_t **dst, const char *args) {
   char *old_term = getenv("TERM");
   setenv("TERM", "xterm", true);
   sprintf(tmps, "%d",
-          4 + config.layout.width - config.layout.sbar_width -
-              config.layout.lmargin - config.layout.rmargin);
+          4 + config.layout.main_width - config.layout.lmargin -
+              config.layout.rmargin);
   setenv("MANWIDTH", tmps, true);
   setenv("MAN_KEEP_FORMATTING", "1", true);
 
   // Prepare man command
   char cmdstr[BS_SHORT];
-  sprintf(cmdstr, "%s %s", config.misc.man_path, args);
+  sprintf(cmdstr, "%s --warnings='!all' %ls", config.misc.man_path, args);
 
   // Execute man and, read its output, and process it into res
   FILE *pp = xpopen(cmdstr, "r");
@@ -833,13 +831,13 @@ link_loc_t next_link(line_t *lines, unsigned lines_len, link_loc_t start) {
 
   // If line no. start.line is longer than lines_len, return not found
   if (start.line >= lines_len) {
-    res.ok = FALSE;
+    res.ok = false;
     return res;
   }
 
   // If line no. start.line has a link after start.link, return that link
   if (lines[start.line].links_length > start.link + 1) {
-    res.ok = TRUE;
+    res.ok = true;
     res.line = start.line;
     res.link = start.link + 1;
     return res;
@@ -849,7 +847,7 @@ link_loc_t next_link(line_t *lines, unsigned lines_len, link_loc_t start) {
   // start.line that has links
   for (i = start.line + 1; i < lines_len; i++) {
     if (lines[i].links_length > 0) {
-      res.ok = TRUE;
+      res.ok = true;
       res.line = i;
       res.link = 0;
       return res;
@@ -857,8 +855,35 @@ link_loc_t next_link(line_t *lines, unsigned lines_len, link_loc_t start) {
   }
 
   // Return not found if that fails
-  res.ok = FALSE;
+  res.ok = false;
   return res;
+}
+
+void populate() {
+  wchar_t *tmp = walloca(BS_SHORT);  // temporary
+  link_loc_t pstart = {false, 0, 0}; // first column of first line in a page
+
+  switch (history[history_cur].request_type) {
+  case RT_INDEX:
+    page_len = index_page(&page);
+    break;
+  case RT_MAN:
+    page_len = man(&page, history[history_cur].args);
+    break;
+  case RT_APROPOS:
+    swprintf(tmp, BS_SHORT, L"Apropos for: %ls", history[history_cur].args);
+    page_len =
+        aprowhat(&page, AW_APROPOS, history[history_cur].args, L"APROPOS", tmp);
+    break;
+  case RT_WHATIS:
+    swprintf(tmp, BS_SHORT, L"Whatis for: %ls", history[history_cur].args);
+    page_len =
+        aprowhat(&page, AW_WHATIS, history[history_cur].args, L"WHATIS", tmp);
+  }
+
+  page_flink = next_link(page, page_len, pstart);
+  page_top = 0;
+  page_left = 0;
 }
 
 void aprowhat_free(aprowhat_t *aw, unsigned aw_len) {

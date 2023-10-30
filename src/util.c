@@ -1,9 +1,7 @@
 // Utility infrastructure, not program-specific (implementation)
 
-#include "util.h"
 #include "lib.h"
 #include "program.h"
-#include <regex.h>
 
 //
 // Functions
@@ -120,6 +118,14 @@ size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
   }
 
   return cnt;
+}
+
+int getenvi(const char *name) {
+  char *val = getenv(name);
+  if (NULL == val)
+    return 0;
+  else
+    return atoi(val);
 }
 
 bool bget(bitarr_t ba, unsigned i) {

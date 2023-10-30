@@ -116,6 +116,10 @@ extern char *xfgets(char *s, int size, FILE *stream);
 // Safely call fwrite()
 extern size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 
+// Return the value of environment variable name as an integer. Return 0 in case
+// of error.
+extern int getenvi(const char *name);
+
 // Return the value of the i'th bit in bit array ba
 extern bool bget(bitarr_t ba, unsigned i);
 

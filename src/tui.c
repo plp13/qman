@@ -1,10 +1,7 @@
 // Text user interface (implementation)
 
-#include "tui.h"
 #include "lib.h"
-#include "program.h"
-#include "util.h"
-#include <curses.h>
+#include "tui.h"
 
 //
 // Global variables
@@ -16,13 +13,13 @@ WINDOW *wsbar = NULL;
 
 WINDOW *wstat = NULL;
 
-// 
+//
 // Helper functions and macros
 //
 
 // Helper of action(). Return act if chr is in null-terminated array map.
 #define ret_act_if_chr_in_map(map, chr, act)                                   \
-  i = 0;                                                              \
+  i = 0;                                                                       \
   while (0 != map[i]) {                                                        \
     if (chr == map[i])                                                         \
       return act;                                                              \
@@ -37,7 +34,7 @@ void init_tui() {
   // Initialize ncurses
   initscr();
   raw();
-  keypad(stdscr, TRUE);
+  keypad(stdscr, true);
   noecho();
   curs_set(1);
 
@@ -279,7 +276,7 @@ void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
   wnoutrefresh(wstat);
 }
 
-int action(int chr) {
+int get_action(int chr) {
   unsigned i;
 
   ret_act_if_chr_in_map(config.keys.up, chr, PA_UP);
@@ -300,5 +297,4 @@ void winddown_tui() {
 
   reset_color_pairs();
   endwin();
-  // _nc_freeall();
 }

@@ -84,7 +84,7 @@ typedef struct {
                    // to stdout instead
   bool fixedwidth; // if true, don't change the width to match the current
                    // terminal width
-  bool sb;         // if true, show the scrollbar
+  bool sbar;       // if true, show the scrollbar
   unsigned width;  // current terminal width
   unsigned height; // current terminal height
   unsigned sbar_width;  // scrollbar width
@@ -230,6 +230,9 @@ extern line_t *page;
 // Number of lines in page
 extern unsigned page_len;
 
+// Focused link in page
+extern link_loc_t page_flink;
+
 // Line where the portion of page displayed to the user begins
 extern unsigned page_top;
 
@@ -314,7 +317,7 @@ extern void usage();
 // of entries found. Arguments cmd and args respectively specify the command to
 // run and its arguments.
 extern unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
-                              const char *args);
+                              const wchar_t *args);
 
 // Given a result of aprowhat() in aw (of length aw_len), extract the names of
 // its manual sections into dst. Return the total number of sections found.
@@ -338,17 +341,21 @@ extern unsigned index_page(line_t **dst);
 // the number of lines in said output. Arguments cmd and args respectively
 // specify the command to run and its arguments. key and title specify a short
 // and long title respectively, to be inserted in the header and footer.
-extern unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const char *args,
+extern unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const wchar_t *args,
                          const wchar_t *key, const wchar_t *title);
 
 // Execute man, and place its final rendeered output in dst. Return the number
 // of lines in said output. args specifies the arguments for the man command.
-extern unsigned man(line_t **dst, const char *args);
+extern unsigned man(line_t **dst, const wchar_t *args);
 
 // Find the next link in lines (of length lines_len), starting at location
 // start. Return said link's location.
 extern link_loc_t next_link(line_t *lines, unsigned lines_len,
                             link_loc_t start);
+
+// Populate page, page_len, page_flink, page_top, and page_left, based on the
+// contents of history[history_cur]
+extern void populate();
 
 // Free the memory occupied by aw (of length aw_len)
 extern void aprowhat_free(aprowhat_t *res, unsigned res_len);
