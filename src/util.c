@@ -222,11 +222,23 @@ void wwrap(wchar_t *trgt, unsigned cols) {
   }
 }
 
-bool wmemberof(wchar_t *const *hayst, const wchar_t *needle,
-               unsigned needle_len) {
+bool wcasememberof(wchar_t *const *hayst, const wchar_t *needle,
+                   unsigned hayst_len) {
   unsigned i;
 
-  for (i = 0; i < needle_len; i++) {
+  for (i = 0; i < hayst_len; i++) {
+    if (0 == wcscasecmp(hayst[i], needle))
+      return true;
+  }
+
+  return false;
+}
+
+bool wmemberof(wchar_t *const *hayst, const wchar_t *needle,
+               unsigned hayst_len) {
+  unsigned i;
+
+  for (i = 0; i < hayst_len; i++) {
     if (0 == wcscmp(hayst[i], needle))
       return true;
   }
@@ -239,6 +251,9 @@ void wsort(wchar_t **trgt, unsigned trgt_len, bool rev) {
   int cur_cmp;
   bool sorted = false;
   wchar_t *tmp;
+
+  if (0 == trgt_len)
+    return;
 
   while (!sorted) {
     sorted = true;

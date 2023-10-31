@@ -13,17 +13,21 @@ WINDOW *wsbar = NULL;
 
 WINDOW *wstat = NULL;
 
+unsigned action = PA_NULL;
+
 //
 // Helper functions and macros
 //
 
 // Helper of action(). Return act if chr is in null-terminated array map.
 #define ret_act_if_chr_in_map(map, chr, act)                                   \
-  i = 0;                                                                       \
-  while (0 != map[i]) {                                                        \
-    if (chr == map[i])                                                         \
-      return act;                                                              \
-    i++;                                                                       \
+  {                                                                            \
+    unsigned i = 0;                                                            \
+    while (0 != map[i]) {                                                      \
+      if (chr == map[i])                                                       \
+        return act;                                                            \
+      i++;                                                                     \
+    }                                                                          \
   }
 
 //
@@ -127,7 +131,7 @@ bool termsize_changed() {
 
 void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
                link_loc_t flink) {
-  wclear(wmain);
+  werase(wmain);
   change_colour(wmain, config.colours.text);
   wattrset(wmain, WA_NORMAL);
 
@@ -217,7 +221,7 @@ void draw_sbar(unsigned lines_len, unsigned lines_top) {
                               (lines_len - height + 1)); // block position
   unsigned i;                                            // iterator
 
-  wclear(wsbar);
+  werase(wsbar);
 
   // Draw vertical line
   change_colour(wsbar, config.colours.sb_line);
@@ -235,7 +239,7 @@ void draw_sbar(unsigned lines_len, unsigned lines_top) {
 
 void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
                unsigned lines_pos, wchar_t *prompt, wchar_t *help) {
-  wclear(wstat);
+  werase(wstat);
 
   unsigned width = getmaxx(wstat); // width of both status lines
 
@@ -276,15 +280,18 @@ void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
   wnoutrefresh(wstat);
 }
 
-int get_action(int chr) {
-  unsigned i;
-
+unsigned get_action(int chr) {
   ret_act_if_chr_in_map(config.keys.up, chr, PA_UP);
   ret_act_if_chr_in_map(config.keys.down, chr, PA_DOWN);
   ret_act_if_chr_in_map(config.keys.help, chr, PA_HELP);
   ret_act_if_chr_in_map(config.keys.quit, chr, PA_QUIT);
 
-  return -1;
+  return PA_NULL;
+}
+
+void cbeep() {
+  if (config.layout.beep)
+    beep();
 }
 
 void winddown_tui() {

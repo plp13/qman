@@ -42,6 +42,8 @@ unsigned sc_all_len = 0;
 
 line_t *page = NULL;
 
+wchar_t page_title[BS_SHORT];
+
 unsigned page_len = 0;
 
 link_loc_t page_flink = {true, 0, 0};
@@ -62,7 +64,7 @@ full_regex_t re_man, re_http, re_email;
   tmp_len = 0;                                                                 \
   wcscpy(tmp, L"");                                                            \
   for (i = 0; i < argc; i++) {                                                 \
-    swprintf(tmp2, BS_SHORT, L"'%s'", argv[i]);                                \
+    swprintf(tmp2, BS_SHORT, L"%s", argv[i]);                                  \
     if (tmp_len + wcslen(tmp2) < BS_LINE) {                                    \
       wcscat(tmp, tmp2);                                                       \
       tmp_len += wcslen(tmp2);                                                 \
@@ -92,23 +94,33 @@ void add_link(line_t *line, unsigned start, unsigned end, link_type_t type,
   line_realloc_link((*line), trgt_len);
   line->links[line->links_length - 1].start = start;
   line->links[line->links_length - 1].end = end;
-  line->links[line->links_length - 1].type = LT_MAN;
+  line->links[line->links_length - 1].type = type;
   wcscpy(line->links[line->links_length - 1].trgt, trgt);
 }
 
-// Helper of man(). Discover links that match in the text of line, and add them
-// to said line.
-void discover_links(const full_regex_t *re, line_t *line) {
+// Helper of man(). Discover links that match re in the text of line, and add
+// them to said line. type signifies the link type to add.
+void discover_links(const full_regex_t *re, line_t *line, link_type_t type) {
   unsigned loff = 0; // offset (in line text) to start searching for links
-  range_t lrng =
-      fr_search(&re_man, &line->text[loff]); // location of link in line
-  wchar_t *tmp = walloca(BS_LINE);           // temporary
+  range_t lrng = fr_search(re, &line->text[loff]); // location of link in line
+  wchar_t trgt[BS_LINE];                           // link target
+  wchar_t *sc;  // temporary; holds manual page section of link target
+  wchar_t *buf; // temporary
 
   while (lrng.beg != lrng.end) {
     // While a link has been found, add it to the line
-    wcsncpy(tmp, &line->text[loff + lrng.beg], lrng.end - lrng.beg);
-    tmp[lrng.end - lrng.beg] = L'\0';
-    add_link(line, loff + lrng.beg, loff + lrng.end, LT_MAN, tmp);
+    wcsncpy(trgt, &line->text[loff + lrng.beg], lrng.end - lrng.beg);
+    trgt[lrng.end - lrng.beg] = L'\0';
+    if (LT_MAN == type) {
+      // Ugly hack: if type is LT_MAN, check that the link's section is listed
+      // in global lc_all before adding it
+      sc = wcstok(trgt, L"()", &buf);
+      if (NULL != sc)
+        sc = wcstok(NULL, L"()", &buf);
+      if (NULL != sc && wcasememberof(sc_all, sc, sc_all_len))
+        add_link(line, loff + lrng.beg, loff + lrng.end, type, trgt);
+    } else
+      add_link(line, loff + lrng.beg, loff + lrng.end, type, trgt);
     loff += lrng.end;
     if (loff < line->length) {
       // Link wasn't at the very end of line; look for another link after it
@@ -161,6 +173,17 @@ void discover_links(const full_regex_t *re, line_t *line) {
 // true if we tmpw[i] contains any terminal escape sequence that resets it to
 // normal text
 #define got_reg (got_not_bold || got_not_italic || got_not_uline || got_normal)
+
+// assign the value { v0, v1, ..., v7 } to 8-value array trgt
+#define arr_assign(trgt, v0, v1, v2, v3, v4, v5, v6, v7)                       \
+  trgt[0] = v0;                                                                \
+  trgt[1] = v1;                                                                \
+  trgt[2] = v2;                                                                \
+  trgt[3] = v3;                                                                \
+  trgt[4] = v4;                                                                \
+  trgt[5] = v5;                                                                \
+  trgt[6] = v6;                                                                \
+  trgt[7] = v7;
 
 //
 // Functions
@@ -253,13 +276,16 @@ void init() {
   config.colours.trans_prompt_help =
       100 * config.colours.stat_input_prompt.pair +
       config.colours.stat_input_help.pair;
-  config.keys.up = (int[]){KEY_UP, KEY_BACKSPACE, 'y', 'k', 0};
-  config.keys.down = (int[]){KEY_DOWN, KEY_ENTER, 'e', 'j', 0};
-  config.keys.help = (int[]){'h', '?', 0};
-  config.keys.quit = (int[]){'q', KEY_BREAK, 0};
+  arr_assign(config.keys.up, KEY_UP, KEY_BACKSPACE, (int)'y', (int)'k', 0, 0, 0,
+             0);
+  arr_assign(config.keys.down, KEY_DOWN, KEY_ENTER, (int)'e', (int)'j', 0, 0, 0,
+             0);
+  arr_assign(config.keys.help, (int)'h', (int)'?', 0, 0, 0, 0, 0, 0);
+  arr_assign(config.keys.quit, (int)'q', KEY_BREAK, 0, 0, 0, 0, 0, 0);
   config.layout.tui = true;
   config.layout.fixedwidth = false;
   config.layout.sbar = true;
+  config.layout.beep = true;
   config.layout.width = 80;
   config.layout.height = 25;
   config.layout.sbar_width = 1;
@@ -292,6 +318,9 @@ void init() {
   // Initialize aw_all and sc_all
   aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"''");
   sc_all_len = aprowhat_sections(&sc_all, aw_all, aw_all_len);
+
+  // Initialize page_title
+  wcscpy(page_title, L"");
 
   // initialize regular expressions
   fr_init(&re_man, "[a-zA-Z0-9\\.:@_-]+\\([a-zA-Z0-9]+\\)");
@@ -806,9 +835,11 @@ unsigned man(line_t **dst, const wchar_t *args) {
 
     // Discover and add links (skipping the first two lines, and the last line)
     if (ln > 1 && !feof(pp)) {
-      discover_links(&re_man, &res[ln]);
-      discover_links(&re_http, &res[ln]);
-      discover_links(&re_email, &res[ln]);
+      discover_links(&re_man, &res[ln], LT_MAN);
+      discover_links(&re_http, &res[ln], LT_HTTP);
+      discover_links(&re_email, &res[ln], LT_EMAIL);
+      for (unsigned i = 0; i < res[ln].links_length; i++) {
+      }
     }
 
     inc_ln;
@@ -825,11 +856,39 @@ unsigned man(line_t **dst, const wchar_t *args) {
   return ln;
 }
 
+link_loc_t prev_link(line_t *lines, unsigned lines_len, link_loc_t start) {
+  unsigned i;
+  link_loc_t res;
+
+  // If line no. start.line has a link before start.link, return that link
+  if (start.link > 0) {
+    res.ok = true;
+    res.line = start.line;
+    res.link = start.link - 1;
+    return res;
+  }
+
+  // Otherwise, return the last link of the first line before line no.
+  // start.line that has links
+  for (i = start.line - 1; i > 0; i--) {
+    if (lines[i].links_length > 0) {
+      res.ok = true;
+      res.line = i;
+      res.link = lines[i].links_length - 1;
+      return res;
+    }
+  }
+
+  // Return not found if that fails
+  res.ok = false;
+  return res;
+}
+
 link_loc_t next_link(line_t *lines, unsigned lines_len, link_loc_t start) {
   unsigned i;
   link_loc_t res;
 
-  // If line no. start.line is longer than lines_len, return not found
+  // If start.line is larger than lines_len, return not found
   if (start.line >= lines_len) {
     res.ok = false;
     return res;
@@ -859,31 +918,28 @@ link_loc_t next_link(line_t *lines, unsigned lines_len, link_loc_t start) {
   return res;
 }
 
-void populate() {
-  wchar_t *tmp = walloca(BS_SHORT);  // temporary
-  link_loc_t pstart = {false, 0, 0}; // first column of first line in a page
-
+void populate_page() {
   switch (history[history_cur].request_type) {
   case RT_INDEX:
+    wcscpy(page_title, L"All Manual Pages");
     page_len = index_page(&page);
     break;
   case RT_MAN:
+    wcsncpy(page_title, history[history_cur].args, BS_SHORT);
     page_len = man(&page, history[history_cur].args);
     break;
   case RT_APROPOS:
-    swprintf(tmp, BS_SHORT, L"Apropos for: %ls", history[history_cur].args);
-    page_len =
-        aprowhat(&page, AW_APROPOS, history[history_cur].args, L"APROPOS", tmp);
+    swprintf(page_title, BS_SHORT, L"Apropos for: %ls",
+             history[history_cur].args);
+    page_len = aprowhat(&page, AW_APROPOS, history[history_cur].args,
+                        L"APROPOS", page_title);
     break;
   case RT_WHATIS:
-    swprintf(tmp, BS_SHORT, L"Whatis for: %ls", history[history_cur].args);
-    page_len =
-        aprowhat(&page, AW_WHATIS, history[history_cur].args, L"WHATIS", tmp);
+    swprintf(page_title, BS_SHORT, L"Whatis for: %ls",
+             history[history_cur].args);
+    page_len = aprowhat(&page, AW_WHATIS, history[history_cur].args, L"WHATIS",
+                        page_title);
   }
-
-  page_flink = next_link(page, page_len, pstart);
-  page_top = 0;
-  page_left = 0;
 }
 
 void aprowhat_free(aprowhat_t *aw, unsigned aw_len) {

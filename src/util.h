@@ -157,9 +157,13 @@ extern void wcrepl(wchar_t *dst, const wchar_t *hayst, wchar_t needle,
 extern void wwrap(wchar_t *trgt, unsigned cols);
 
 // Return true if needle is in array of (wide) strings hayst, false otherwise.
-// needle_length is the length of needle.
+// hayst_length is the length of hayst.
 extern bool wmemberof(wchar_t *const *hayst, const wchar_t *needle,
-                      unsigned needle_len);
+                      unsigned hayst_len);
+
+// Case-insensitive version of wmemberof()
+extern bool wcasememberof(wchar_t *const *hayst, const wchar_t *needle,
+                          unsigned hayst_len);
 
 // Sort the strings in trgt alphanumerically. trgt_len is trgt's length. Setting
 // rev to true causes reverse sorting.

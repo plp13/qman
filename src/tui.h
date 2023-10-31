@@ -8,6 +8,17 @@
 #include "program.h"
 
 //
+// Constants
+//
+
+// Program actions
+#define PA_NULL 0 // (no action)
+#define PA_UP 1   // focus on previous link, or scroll up one line
+#define PA_DOWN 2 // focus on next link, or scroll down one line
+#define PA_HELP 3 // get help
+#define PA_QUIT 4 // exit the program
+
+//
 // Global variables
 //
 
@@ -23,7 +34,7 @@ extern WINDOW *wsbar;
 // Status bar window
 extern WINDOW *wstat;
 
-extern int action;
+extern unsigned action;
 
 //
 // Macros
@@ -92,7 +103,10 @@ extern void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
 
 // Return the program action number that corresponds to input character chr. If
 // no such action, return -1.
-extern int get_action(int chr);
+extern unsigned get_action(int chr);
+
+// Beeo if config.layout.beep is true
+extern void cbeep();
 
 // Delete all windows and wind down ncurses. No need to call this function
 // normally, as it's called by winddown().

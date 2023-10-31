@@ -72,10 +72,10 @@ typedef struct {
 
 // Program configuration: program action to key character mappings
 typedef struct {
-  int *up;   // PA_UP
-  int *down; // PA_DOWN
-  int *help; // PA_HELP
-  int *quit; // PA_QUIT
+  int up[8];   // PA_UP
+  int down[8]; // PA_DOWN
+  int help[8]; // PA_HELP
+  int quit[8]; // PA_QUIT
 } config_keys_t;
 
 // Program configuration: screen layout
@@ -85,6 +85,7 @@ typedef struct {
   bool fixedwidth; // if true, don't change the width to match the current
                    // terminal width
   bool sbar;       // if true, show the scrollbar
+  bool beep;       // if true, beep the terminal
   unsigned width;  // current terminal width
   unsigned height; // current terminal height
   unsigned sbar_width;  // scrollbar width
@@ -186,12 +187,6 @@ typedef struct {
 #define ES_CHILD_ERROR 3 // child process error
 #define ES_NOT_FOUND 16  // manual page(s) not found
 
-// Program actions
-#define PA_UP 0   // focus on previous link, or scroll up one line
-#define PA_DOWN 1 // focus on next link, or scroll down one line
-#define PA_HELP 2 // get help
-#define PA_QUIT 3 // exit the program
-
 //
 // Global variables
 //
@@ -226,6 +221,9 @@ extern unsigned sc_all_len;
 
 // Current page being displayed
 extern line_t *page;
+
+// Title of current page
+extern wchar_t page_title[BS_SHORT];
 
 // Number of lines in page
 extern unsigned page_len;
@@ -294,6 +292,11 @@ extern full_regex_t re_man, // manual page
     free(links[link_free_i].trgt);                                             \
   free(links);
 
+// String representation of a page request type
+#define request_type_str(t)                                                    \
+  RT_INDEX == t                                                                \
+      ? L"INDEX"                                                               \
+      : (RT_MAN == t ? L"MAN" : (RT_APROPOS == t ? L"APROPOS" : L"WHATIS"))
 //
 // Functions
 //
@@ -348,14 +351,19 @@ extern unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const wchar_t *args,
 // of lines in said output. args specifies the arguments for the man command.
 extern unsigned man(line_t **dst, const wchar_t *args);
 
+// Find the previous link in lines (of linegth lines_len), starting at location
+// start. Return said link's location.
+extern link_loc_t prev_link(line_t *lines, unsigned lines_len,
+                            link_loc_t start);
+
 // Find the next link in lines (of length lines_len), starting at location
 // start. Return said link's location.
 extern link_loc_t next_link(line_t *lines, unsigned lines_len,
                             link_loc_t start);
 
-// Populate page, page_len, page_flink, page_top, and page_left, based on the
-// contents of history[history_cur]
-extern void populate();
+// Populate page, page_title, and page_len, based on the contents of
+// history[history_cur]
+extern void populate_page();
 
 // Free the memory occupied by aw (of length aw_len)
 extern void aprowhat_free(aprowhat_t *res, unsigned res_len);
