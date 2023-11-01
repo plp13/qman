@@ -362,7 +362,7 @@ extern link_loc_t next_link(line_t *lines, unsigned lines_len,
                             link_loc_t start);
 
 // Populate page, page_title, and page_len, based on the contents of
-// history[history_cur]
+// history[history_cur].
 extern void populate_page();
 
 // Free the memory occupied by aw (of length aw_len)

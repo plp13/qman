@@ -18,7 +18,7 @@ void *xcalloc(size_t nmemb, size_t size) {
   void *res = calloc(nmemb, size);
 
   if (NULL == res) {
-    wchar_t errmsg[BS_SHORT];
+    static wchar_t errmsg[BS_SHORT];
     serror(errmsg, L"Unable to calloc()");
     winddown(ES_OPER_ERROR, errmsg);
   }
@@ -30,7 +30,7 @@ void *xreallocarray(void *ptr, size_t nmemb, size_t size) {
   void *res = reallocarray(ptr, nmemb, size);
 
   if (NULL == res) {
-    wchar_t errmsg[BS_SHORT];
+    static wchar_t errmsg[BS_SHORT];
     serror(errmsg, L"Unable to reallocarray()");
     winddown(ES_OPER_ERROR, errmsg);
   }
@@ -42,7 +42,7 @@ FILE *xpopen(const char *command, const char *type) {
   FILE *pipe = popen(command, type);
 
   if (NULL == pipe) {
-    wchar_t errmsg[BS_SHORT];
+    static wchar_t errmsg[BS_SHORT];
     serror(errmsg, L"Unable to popen()");
     winddown(ES_OPER_ERROR, errmsg);
   }
@@ -54,7 +54,7 @@ int xpclose(FILE *stream) {
   int status = pclose(stream);
 
   if (-1 == status) {
-    wchar_t errmsg[BS_SHORT];
+    static wchar_t errmsg[BS_SHORT];
     serror(errmsg, L"Unable to pclose()");
     winddown(ES_OPER_ERROR, errmsg);
   }
@@ -66,7 +66,7 @@ FILE *xfopen(const char *pathname, const char *mode) {
   FILE *file = fopen(pathname, mode);
 
   if (NULL == file) {
-    wchar_t errmsg[BS_SHORT];
+    static wchar_t errmsg[BS_SHORT];
     serror(errmsg, L"Unable to fopen()");
     winddown(ES_OPER_ERROR, errmsg);
   }
@@ -78,7 +78,7 @@ int xfclose(FILE *stream) {
   int status = fclose(stream);
 
   if (EOF == status) {
-    wchar_t errmsg[BS_SHORT];
+    static wchar_t errmsg[BS_SHORT];
     serror(errmsg, L"Unable to fclose()");
     winddown(ES_OPER_ERROR, errmsg);
   }
@@ -90,7 +90,7 @@ FILE *xtmpfile() {
   FILE *file = tmpfile();
 
   if (NULL == file) {
-    wchar_t errmsg[BS_SHORT];
+    static wchar_t errmsg[BS_SHORT];
     serror(errmsg, L"Unable to tmpfile()");
     winddown(ES_OPER_ERROR, errmsg);
   }
@@ -101,7 +101,7 @@ FILE *xtmpfile() {
 char *xfgets(char *s, int size, FILE *stream) {
   char *res = fgets(s, size, stream);
   if (ferror(stream)) {
-    wchar_t errmsg[BS_SHORT];
+    static wchar_t errmsg[BS_SHORT];
     serror(errmsg, L"Unable to fgets()");
     winddown(ES_OPER_ERROR, errmsg);
   }
@@ -112,7 +112,7 @@ char *xfgets(char *s, int size, FILE *stream) {
 size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
   size_t cnt = fwrite(ptr, size, nmemb, stream);
   if (ferror(stream)) {
-    wchar_t errmsg[BS_SHORT];
+    static wchar_t errmsg[BS_SHORT];
     serror(errmsg, L"Unable to write()");
     winddown(ES_OPER_ERROR, errmsg);
   }
@@ -318,7 +318,7 @@ void fr_init(full_regex_t *re, char *str) {
   int err = regcomp(&re->re, str, REG_EXTENDED);
 
   if (0 != err) {
-    wchar_t errmsg[BS_SHORT];
+    static wchar_t errmsg[BS_SHORT];
     char err_str[BS_SHORT];
     regerror(err, NULL, err_str, BS_SHORT);
     swprintf(errmsg, BS_SHORT, L"Unable to regcomp(): %s", err_str);

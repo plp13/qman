@@ -1,7 +1,7 @@
 // Program-specific infrastructure (implementation)
 
-#include "lib.h"
 #include "program.h"
+#include "lib.h"
 #include "tui.h"
 
 //
@@ -397,8 +397,7 @@ int parse_options(int argc, char *const *argv) {
     case '?':
       // an unknown option was passed; error out
       free(longopts);
-      wchar_t *msg = L"Unable to parse program arguments";
-      winddown(ES_USAGE_ERROR, msg);
+      winddown(ES_USAGE_ERROR, L"Unable to parse program arguments");
       break;
     }
   }
@@ -478,7 +477,7 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
                        const wchar_t *args) {
   // Prepare apropos/whatis command
   char cmdstr[BS_SHORT];
-  if (cmd == AW_WHATIS)
+  if (AW_WHATIS == cmd)
     sprintf(cmdstr, "%s -l %ls", config.misc.whatis_path, args);
   else
     sprintf(cmdstr, "%s -l %ls", config.misc.apropos_path, args);
@@ -502,7 +501,7 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
 
   unsigned page_len, section_len, descr_len, i;
 
-  // For each line returned by apropos...
+  // For each line returned by apropos/whatis...
   for (i = 0; i < lines; i++) {
     sreadline(line, BS_LINE, fp);
 
@@ -531,6 +530,16 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   }
 
   xfclose(fp);
+
+  // Exit the program gracefully, if no results were returned by apropos/whatis
+  static wchar_t errmsg[BS_LINE];
+  if (0 == lines) {
+    if (AW_WHATIS == cmd)
+      swprintf(errmsg, BS_LINE, L"Whatis '%ls': nothing apropriate", args);
+    else
+      swprintf(errmsg, BS_LINE, L"Apropos '%ls': nothing apropriate", args);
+    winddown(ES_NOT_FOUND, errmsg);
+  }
 
   *dst = res;
   return lines;
@@ -851,6 +860,13 @@ unsigned man(line_t **dst, const wchar_t *args) {
   xpclose(pp);
   free(tmpw);
   free(tmps);
+
+
+  static wchar_t errmsg[BS_LINE];
+  if (0 == ln) {
+    swprintf(errmsg, BS_LINE, L"No manual page for '%ls'", args);
+    winddown(ES_NOT_FOUND, errmsg);
+  }
 
   *dst = res;
   return ln;
