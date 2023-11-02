@@ -93,6 +93,16 @@ void init_tui() {
               config.colours.stat_input_prompt.bg,
               config.colours.stat_input_help.bg);
   }
+  // Initialize key characters mappings
+  arr_assign(config.keys.up, KEY_UP, (int)'y', (int)'k', 0, 0, 0, 0, 0);
+  arr_assign(config.keys.down, KEY_DOWN, (int)'e', (int)'j', 0, 0, 0, 0, 0);
+  arr_assign(config.keys.pgup, KEY_PPAGE, (int)'f', 0, 0, 0, 0, 0, 0);
+  arr_assign(config.keys.pgdn, KEY_NPAGE, (int)'b', 0, 0, 0, 0, 0, 0);
+  arr_assign(config.keys.home, KEY_HOME, (int)'g', 0, 0, 0, 0, 0, 0);
+  arr_assign(config.keys.end, KEY_END, (int)'G', 0, 0, 0, 0, 0, 0);
+  arr_assign(config.keys.open, (int)'\n', (int)'o', 0, 0, 0, 0, 0, 0);
+  arr_assign(config.keys.help, (int)'h', (int)'?', 0, 0, 0, 0, 0, 0);
+  arr_assign(config.keys.quit, KEY_BREAK, (int)'q', (int)'Q', 0, 0, 0, 0, 0);
 }
 
 void init_windows() {
@@ -249,17 +259,17 @@ void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
            prompt_col = 0, prompt_width = width / 2, help_col = prompt_width,
            help_width = width - prompt_width;
 
-  wchar_t tmp[BS_SHORT], tmp2[BS_SHORT];
+  wchar_t tmp[BS_LINE], tmp2[BS_LINE];
 
   // Draw the indicator line
-  swprintf(tmp, BS_SHORT, L" %-*ls", mode_width - 1, mode);
+  swprintf(tmp, BS_LINE, L" %-*ls", mode_width - 1, mode);
   change_colour(wstat, config.colours.stat_indic_mode);
   mvwaddnwstr(wstat, 0, mode_col, tmp, mode_width);
-  swprintf(tmp, BS_SHORT, L" %-*ls", name_width - 1, name);
+  swprintf(tmp, BS_LINE, L" %-*ls", name_width - 1, name);
   change_colour(wstat, config.colours.stat_indic_name);
   mvwaddnwstr(wstat, 0, name_col, tmp, name_width);
-  swprintf(tmp2, BS_SHORT, L"%d:%d", lines_pos, lines_len);
-  swprintf(tmp, BS_SHORT, L"%*ls ", loc_width - 1, tmp2);
+  swprintf(tmp2, BS_LINE, L"%d:%d", lines_pos, lines_len);
+  swprintf(tmp, BS_LINE, L"%*ls ", loc_width - 1, tmp2);
   change_colour(wstat, config.colours.stat_indic_loc);
   mvwaddnwstr(wstat, 0, loc_col, tmp, loc_width);
   wattr_set(wstat, WA_NORMAL, config.colours.trans_mode_name, NULL);
@@ -268,10 +278,10 @@ void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
   mvwaddnwstr(wstat, 0, loc_col - 1, config.chars.trans_name_loc, 1);
 
   // Draw the input line
-  swprintf(tmp, BS_SHORT, L"%*ls ", help_width - 1, help);
+  swprintf(tmp, BS_LINE, L"%*ls ", help_width - 1, help);
   change_colour(wstat, config.colours.stat_input_help);
   mvwaddnwstr(wstat, 1, help_col, tmp, help_width);
-  swprintf(tmp, BS_SHORT, L"%ls", prompt);
+  swprintf(tmp, BS_LINE, L"%ls", prompt);
   wattr_set(wstat, WA_NORMAL, config.colours.trans_prompt_help, NULL);
   mvwaddnwstr(wstat, 1, help_col - 1, config.chars.trans_prompt_help, 1);
   change_colour(wstat, config.colours.stat_input_prompt);
@@ -283,6 +293,11 @@ void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
 unsigned get_action(int chr) {
   ret_act_if_chr_in_map(config.keys.up, chr, PA_UP);
   ret_act_if_chr_in_map(config.keys.down, chr, PA_DOWN);
+  ret_act_if_chr_in_map(config.keys.pgup, chr, PA_PGUP);
+  ret_act_if_chr_in_map(config.keys.pgdn, chr, PA_PGDN);
+  ret_act_if_chr_in_map(config.keys.home, chr, PA_HOME);
+  ret_act_if_chr_in_map(config.keys.end, chr, PA_END);
+  ret_act_if_chr_in_map(config.keys.open, chr, PA_OPEN);
   ret_act_if_chr_in_map(config.keys.help, chr, PA_HELP);
   ret_act_if_chr_in_map(config.keys.quit, chr, PA_QUIT);
 

@@ -64,7 +64,7 @@ full_regex_t re_man, re_http, re_email;
   tmp_len = 0;                                                                 \
   wcscpy(tmp, L"");                                                            \
   for (i = 0; i < argc; i++) {                                                 \
-    swprintf(tmp2, BS_SHORT, L"%s", argv[i]);                                  \
+    swprintf(tmp2, BS_SHORT, L"'%s'", argv[i]);                                \
     if (tmp_len + wcslen(tmp2) < BS_LINE) {                                    \
       wcscat(tmp, tmp2);                                                       \
       tmp_len += wcslen(tmp2);                                                 \
@@ -124,7 +124,7 @@ void discover_links(const full_regex_t *re, line_t *line, link_type_t type) {
     loff += lrng.end;
     if (loff < line->length) {
       // Link wasn't at the very end of line; look for another link after it
-      lrng = fr_search(&re_man, &line->text[loff]);
+      lrng = fr_search(re, &line->text[loff]);
     } else {
       // Link was at the very end of line; exit the loop
       lrng.beg = 0;
@@ -173,17 +173,6 @@ void discover_links(const full_regex_t *re, line_t *line, link_type_t type) {
 // true if we tmpw[i] contains any terminal escape sequence that resets it to
 // normal text
 #define got_reg (got_not_bold || got_not_italic || got_not_uline || got_normal)
-
-// assign the value { v0, v1, ..., v7 } to 8-value array trgt
-#define arr_assign(trgt, v0, v1, v2, v3, v4, v5, v6, v7)                       \
-  trgt[0] = v0;                                                                \
-  trgt[1] = v1;                                                                \
-  trgt[2] = v2;                                                                \
-  trgt[3] = v3;                                                                \
-  trgt[4] = v4;                                                                \
-  trgt[5] = v5;                                                                \
-  trgt[6] = v6;                                                                \
-  trgt[7] = v7;
 
 //
 // Functions
@@ -276,12 +265,6 @@ void init() {
   config.colours.trans_prompt_help =
       100 * config.colours.stat_input_prompt.pair +
       config.colours.stat_input_help.pair;
-  arr_assign(config.keys.up, KEY_UP, KEY_BACKSPACE, (int)'y', (int)'k', 0, 0, 0,
-             0);
-  arr_assign(config.keys.down, KEY_DOWN, KEY_ENTER, (int)'e', (int)'j', 0, 0, 0,
-             0);
-  arr_assign(config.keys.help, (int)'h', (int)'?', 0, 0, 0, 0, 0, 0);
-  arr_assign(config.keys.quit, (int)'q', KEY_BREAK, 0, 0, 0, 0, 0, 0);
   config.layout.tui = true;
   config.layout.fixedwidth = false;
   config.layout.sbar = true;
@@ -324,9 +307,9 @@ void init() {
 
   // initialize regular expressions
   fr_init(&re_man, "[a-zA-Z0-9\\.:@_-]+\\([a-zA-Z0-9]+\\)");
-  fr_init(&re_http, "https?:\\/\\/[a-zA-Z0-9\\.\\[\\]\\/\\?\\+:@_#%-]+");
+  fr_init(&re_http, "https?:\\/\\/[a-zA-Z0-9\\.\\/\\?\\+:@_#%-]+");
   fr_init(&re_email, "[a-zA-Z0-9\\.\\$\\*\\+\\?\\^\\|!#%&'/"
-                     "=_`{}~-][a-zA-Z0-9\\.\\$\\*\\+\\?\\^\\|\\.!#%&'/"
+                     "=_`{}~-][a-zA-Z0-9\\.\\$\\*\\+\\/\\?\\^\\|\\.!#%&'"
                      "=_`{}~-]*@[a-zA-Z0-9-][a-zA-Z0-9\\.-]*");
 }
 
@@ -535,9 +518,9 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   static wchar_t errmsg[BS_LINE];
   if (0 == lines) {
     if (AW_WHATIS == cmd)
-      swprintf(errmsg, BS_LINE, L"Whatis '%ls': nothing apropriate", args);
+      swprintf(errmsg, BS_LINE, L"Whatis %ls: nothing apropriate", args);
     else
-      swprintf(errmsg, BS_LINE, L"Apropos '%ls': nothing apropriate", args);
+      swprintf(errmsg, BS_LINE, L"Apropos %ls: nothing apropriate", args);
     winddown(ES_NOT_FOUND, errmsg);
   }
 
@@ -861,10 +844,9 @@ unsigned man(line_t **dst, const wchar_t *args) {
   free(tmpw);
   free(tmps);
 
-
   static wchar_t errmsg[BS_LINE];
   if (0 == ln) {
-    swprintf(errmsg, BS_LINE, L"No manual page for '%ls'", args);
+    swprintf(errmsg, BS_LINE, L"No manual page for %ls", args);
     winddown(ES_NOT_FOUND, errmsg);
   }
 
@@ -934,6 +916,58 @@ link_loc_t next_link(line_t *lines, unsigned lines_len, link_loc_t start) {
   return res;
 }
 
+link_loc_t first_link(line_t *lines, unsigned lines_len, unsigned start,
+                      unsigned stop) {
+  unsigned i;
+  link_loc_t res;
+
+  // If the arguments don't make sense, return not found
+  if (start > lines_len || stop > lines_len || start > stop) {
+    res.ok = false;
+    return res;
+  }
+
+  // Attempt to find and return the first link in the line range
+  for (i = start; i <= stop; i++) {
+    if (lines[i].links_length > 0) {
+      res.ok = true;
+      res.line = i;
+      res.link = 0;
+      return res;
+    }
+  }
+
+  // If that fails, return not found
+  res.ok = false;
+  return res;
+}
+
+link_loc_t last_link(line_t *lines, unsigned lines_len, unsigned start,
+                     unsigned stop) {
+  unsigned i;
+  link_loc_t res;
+
+  // If the arguments don't make sense, return not found
+  if (start > lines_len || stop > lines_len || start > stop) {
+    res.ok = false;
+    return res;
+  }
+
+  // Attempt to find and return the last link in the line range
+  for (i = stop; i >= start && i != (unsigned)-1; i--) {
+    if (lines[i].links_length > 0) {
+      res.ok = true;
+      res.line = i;
+      res.link = lines[i].links_length - 1;
+      return res;
+    }
+  }
+
+  // If that fails, return not found
+  res.ok = false;
+  return res;
+}
+
 void populate_page() {
   switch (history[history_cur].request_type) {
   case RT_INDEX:
@@ -941,7 +975,8 @@ void populate_page() {
     page_len = index_page(&page);
     break;
   case RT_MAN:
-    wcsncpy(page_title, history[history_cur].args, BS_SHORT);
+    swprintf(page_title, BS_SHORT, L"Manual page(s) for: %ls",
+             history[history_cur].args);
     page_len = man(&page, history[history_cur].args);
     break;
   case RT_APROPOS:
@@ -1026,6 +1061,6 @@ void winddown(int ec, const wchar_t *em) {
 
   // (Optionally) print em and exit
   if (NULL != em)
-    wprintf(L"%ls\n", em);
+    fwprintf(stderr, L"%ls\n", em);
   exit(ec);
 }

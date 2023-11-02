@@ -15,8 +15,13 @@
 #define PA_NULL 0 // (no action)
 #define PA_UP 1   // focus on previous link, or scroll up one line
 #define PA_DOWN 2 // focus on next link, or scroll down one line
-#define PA_HELP 3 // get help
-#define PA_QUIT 4 // exit the program
+#define PA_PGUP 3 // scroll up one window height
+#define PA_PGDN 4 // dcroll down one window height
+#define PA_HOME 5 // go to the beginning of page
+#define PA_END 6  // go to the end of page
+#define PA_OPEN 7 // open the current link
+#define PA_HELP 8 // get help
+#define PA_QUIT 9 // exit the program
 
 //
 // Global variables
@@ -60,6 +65,17 @@ extern unsigned action;
     else                                                                       \
       mvwchgat(win, y, x, n, WA_NORMAL, col.pair, NULL);                       \
   }
+
+// assign the value { v0, v1, ..., v7 } to 8-value array trgt
+#define arr_assign(trgt, v0, v1, v2, v3, v4, v5, v6, v7)                       \
+  trgt[0] = v0;                                                                \
+  trgt[1] = v1;                                                                \
+  trgt[2] = v2;                                                                \
+  trgt[3] = v3;                                                                \
+  trgt[4] = v4;                                                                \
+  trgt[5] = v5;                                                                \
+  trgt[6] = v6;                                                                \
+  trgt[7] = v7;
 
 //
 // Functions

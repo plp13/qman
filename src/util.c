@@ -327,7 +327,7 @@ void fr_init(full_regex_t *re, char *str) {
 }
 
 range_t fr_search(const full_regex_t *re, wchar_t *src) {
-  char *ssrc = salloca(BS_LINE); // char* version of src
+  char ssrc[BS_LINE]; // char* version of src
   wcstombs(ssrc, src, BS_LINE);
   regmatch_t pmatch[1]; // regex match
   range_t res;          // return value

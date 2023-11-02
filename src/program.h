@@ -74,6 +74,11 @@ typedef struct {
 typedef struct {
   int up[8];   // PA_UP
   int down[8]; // PA_DOWN
+  int pgup[8]; // PA_PGUP
+  int pgdn[8]; // PA_PGDN
+  int home[8]; // PA_HOME
+  int end[8];  // PA_END
+  int open[8]; // PA_OPEN
   int help[8]; // PA_HELP
   int quit[8]; // PA_QUIT
 } config_keys_t;
@@ -360,6 +365,16 @@ extern link_loc_t prev_link(line_t *lines, unsigned lines_len,
 // start. Return said link's location.
 extern link_loc_t next_link(line_t *lines, unsigned lines_len,
                             link_loc_t start);
+
+// Return the first link in lines (of length lines_len) that appears in line
+// number range [start, stop]
+extern link_loc_t first_link(line_t *lines, unsigned lines_len, unsigned start,
+                             unsigned stop);
+
+// Return the last link in lines (of length lines_len) that appears in line
+// number range [start, stop]
+extern link_loc_t last_link(line_t *lines, unsigned lines_len, unsigned start,
+                            unsigned stop);
 
 // Populate page, page_title, and page_len, based on the contents of
 // history[history_cur].
