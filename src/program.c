@@ -58,22 +58,21 @@ full_regex_t re_man, re_http, re_email;
 // Helper macros and functions
 //
 
-// Helper of parse_args(). Surround all arguments of argv with  single quotes,
-// and place them in tmp.
-#define flatten_args                                                           \
-  tmp_len = 0;                                                                 \
-  wcscpy(tmp, L"");                                                            \
-  for (i = 0; i < argc; i++) {                                                 \
-    swprintf(tmp2, BS_SHORT, L"'%s'", argv[i]);                                \
-    if (tmp_len + wcslen(tmp2) < BS_LINE) {                                    \
-      wcscat(tmp, tmp2);                                                       \
-      tmp_len += wcslen(tmp2);                                                 \
-    }                                                                          \
-    if (i < argc - 1 && tmp_len + 1 < BS_LINE) {                               \
-      wcscat(tmp, L" ");                                                       \
-      tmp_len++;                                                               \
-    }                                                                          \
+// Helper of history_push() and winddown(). Free all memory occupied by history.
+void history_free() {
+  unsigned i;
+
+  for (i = 0; i <= history_top; i++) {
+    if (NULL != history[i].args)
+      free(history[i].args);
   }
+  if (NULL != history && history_top > 0) {
+    free(history);
+    history = NULL;
+    history_top = 0;
+    history_cur = 0;
+  }
+}
 
 // Helper of man() and aprowhat_render(). Increase ln, and reallocate res in
 // memory, if ln has exceeded its size.
@@ -287,16 +286,19 @@ void init() {
   strcpy(config.misc.whatis_path, "/usr/bin/whatis");
   config.misc.apropos_path = salloc(BS_SHORT);
   strcpy(config.misc.apropos_path, "/usr/bin/apropos");
+  config.misc.browser_path = salloc(BS_SHORT);
+  strcpy(config.misc.browser_path, "/usr/bin/xdg-open");
+  config.misc.mailer_path = salloc(BS_SHORT);
+  strcpy(config.misc.mailer_path, "/usr/bin/xdg-email");
   config.misc.config_path = salloc(BS_SHORT);
   strcpy(config.misc.config_path, "~/qman.conf");
-  config.misc.history_size = 256;
+  config.misc.history_size = 65536;
 
   // Initialize history
   history_cur = 0;
   history_top = 0;
   history = aalloc(config.misc.history_size, request_t);
-  history[history_cur].request_type = RT_INDEX;
-  history[history_cur].args = NULL;
+  history_replace(RT_INDEX, NULL);
 
   // Initialize aw_all and sc_all
   aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"''");
@@ -307,7 +309,7 @@ void init() {
 
   // initialize regular expressions
   fr_init(&re_man, "[a-zA-Z0-9\\.:@_-]+\\([a-zA-Z0-9]+\\)");
-  fr_init(&re_http, "https?:\\/\\/[a-zA-Z0-9\\.\\/\\?\\+:@_#%-]+");
+  fr_init(&re_http, "https?:\\/\\/[a-zA-Z0-9\\.\\/\\?\\+:@_#%=-]+");
   fr_init(&re_email, "[a-zA-Z0-9\\.\\$\\*\\+\\?\\^\\|!#%&'/"
                      "=_`{}~-][a-zA-Z0-9\\.\\$\\*\\+\\/\\?\\^\\|\\.!#%&'"
                      "=_`{}~-]*@[a-zA-Z0-9-][a-zA-Z0-9\\.-]*");
@@ -391,8 +393,9 @@ void parse_args(int argc, char *const *argv) {
   wchar_t tmp[BS_LINE], tmp2[BS_SHORT]; // temporary
   unsigned tmp_len; // length of tmp (used to guard against buffer overflows)
 
-  // If the user has specified at least one argument, try to show a manual page
-  // rather than the index page
+  // If the user has specified at least one argument, we should show a manual
+  // page rather than the index page; set the request type of
+  // history[history_cur] to RT_MAN
   if (RT_INDEX == history[history_cur].request_type && argc >= 1)
     history[history_cur].request_type = RT_MAN;
 
@@ -415,10 +418,24 @@ void parse_args(int argc, char *const *argv) {
       }
     }
 
-    // Flatten all arguments into history[history_cur].args
-    flatten_args;
-    history[history_cur].args = walloc(wcslen(tmp));
-    wcscpy(history[history_cur].args, tmp);
+    // Surround all members of argv with single quotes, and flatten them into
+    // the tmp string
+    tmp_len = 0;
+    wcscpy(tmp, L"");
+    for (i = 0; i < argc; i++) {
+      swprintf(tmp2, BS_SHORT, L"'%s'", argv[i]);
+      if (tmp_len + wcslen(tmp2) < BS_LINE) {
+        wcscat(tmp, tmp2);
+        tmp_len += wcslen(tmp2);
+      }
+      if (i < argc - 1 && tmp_len + 1 < BS_LINE) {
+        wcscat(tmp, L" ");
+        tmp_len++;
+      }
+    }
+
+    // Set history[history_cur] to tmp
+    history_replace(history[history_cur].request_type, tmp);
   }
 }
 
@@ -454,6 +471,61 @@ void usage() {
   // Footer
   wprintf(L"\nMandatory or optional arguments to long options are also "
           L"mandatory or optional\nfor any corresponding short options.\n");
+}
+
+void history_replace(request_type_t rt, wchar_t *args) {
+  history[history_cur].request_type = rt;
+  if (NULL == args)
+    history[history_cur].args = NULL;
+  else {
+    history[history_cur].args = walloc(wcslen(args));
+    wcscpy(history[history_cur].args, args);
+  }
+}
+
+void history_push(request_type_t rt, wchar_t *args) {
+  unsigned i;
+
+  // Increase history_cur and history_top as needed
+  history_cur++;
+  if (history_top < history_cur)
+    history_top = history_cur;
+  else if (history_top > history_cur)
+    for (i = history_cur + 1; i <= history_top; i++)
+      if (NULL != history[i].args)
+        free(history[i].args);
+
+  // Failsafe: in the unlikely case history_top exceeds history size, free all
+  // memory used by history and start over
+  if (history_top >= config.misc.history_size) {
+    history_free();
+    history_top = 0;
+    history_cur = 0;
+  }
+
+  history_replace(rt, args);
+}
+
+bool history_back(unsigned n) {
+  int pos = history_cur - n;
+
+  if (pos >= 0) {
+    history_cur = pos;
+    return true;
+  }
+
+  return false;
+}
+
+bool history_forward(unsigned n) {
+  int pos = history_cur + n;
+
+  if (pos <= history_top) {
+    history_cur = pos;
+    return true;
+  }
+
+  return false;
 }
 
 unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
@@ -921,8 +993,10 @@ link_loc_t first_link(line_t *lines, unsigned lines_len, unsigned start,
   unsigned i;
   link_loc_t res;
 
-  // If the arguments don't make sense, return not found
-  if (start > lines_len || stop > lines_len || start > stop) {
+  // Sanitize arguments, and return not found if they don't make sense
+  if (stop > lines_len)
+    stop = lines_len;
+  if (start > lines_len || start > stop) {
     res.ok = false;
     return res;
   }
@@ -947,8 +1021,10 @@ link_loc_t last_link(line_t *lines, unsigned lines_len, unsigned start,
   unsigned i;
   link_loc_t res;
 
-  // If the arguments don't make sense, return not found
-  if (start > lines_len || stop > lines_len || start > stop) {
+  // Sanitize arguments, and return not found if they don't make sense
+  if (stop > lines_len)
+    stop = lines_len;
+  if (start > lines_len || start > stop) {
     res.ok = false;
     return res;
   }
@@ -969,6 +1045,14 @@ link_loc_t last_link(line_t *lines, unsigned lines_len, unsigned start,
 }
 
 void populate_page() {
+  // If page is already populated, free its allocated memory
+  if (NULL != page && page_len > 0) {
+    lines_free(page, page_len);
+    page = NULL;
+    page_len = 0;
+  }
+
+  // Populate page according to the request type of history[history_cur]
   switch (history[history_cur].request_type) {
   case RT_INDEX:
     wcscpy(page_title, L"All Manual Pages");
@@ -1034,25 +1118,28 @@ void winddown(int ec, const wchar_t *em) {
     free(config.misc.apropos_path);
 
   // Deallocate memory used by history global
-  unsigned i;
-  for (i = 0; i <= history_top; i++) {
-    if (NULL != history[i].args)
-      free(history[i].args);
-  }
-  if (NULL != history)
-    free(history);
+  history_free();
 
   // Deallocate memory used by aw_all global
-  if (NULL != aw_all && aw_all_len > 0)
+  if (NULL != aw_all && aw_all_len > 0) {
     aprowhat_free(aw_all, aw_all_len);
+    aw_all = NULL;
+    aw_all_len = 0;
+  }
 
   // Deallocate memory used by sc_all global
-  if (NULL != sc_all && sc_all_len > 0)
+  if (NULL != sc_all && sc_all_len > 0) {
     wafree(sc_all, sc_all_len);
+    sc_all = NULL;
+    sc_all_len = 0;
+  }
 
   // Deallocate memory used by page global
-  if (NULL != page && page_len > 0)
+  if (NULL != page && page_len > 0) {
     lines_free(page, page_len);
+    page = NULL;
+    page_len = 0;
+  }
 
   // Deallocate memory used by re_... regular expression globals
   regfree(&re_man.re);

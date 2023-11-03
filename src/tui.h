@@ -8,22 +8,6 @@
 #include "program.h"
 
 //
-// Constants
-//
-
-// Program actions
-#define PA_NULL 0 // (no action)
-#define PA_UP 1   // focus on previous link, or scroll up one line
-#define PA_DOWN 2 // focus on next link, or scroll down one line
-#define PA_PGUP 3 // scroll up one window height
-#define PA_PGDN 4 // dcroll down one window height
-#define PA_HOME 5 // go to the beginning of page
-#define PA_END 6  // go to the end of page
-#define PA_OPEN 7 // open the current link
-#define PA_HELP 8 // get help
-#define PA_QUIT 9 // exit the program
-
-//
 // Global variables
 //
 
@@ -39,7 +23,7 @@ extern WINDOW *wsbar;
 // Status bar window
 extern WINDOW *wstat;
 
-extern unsigned action;
+extern action_t action;
 
 //
 // Macros
@@ -67,7 +51,7 @@ extern unsigned action;
   }
 
 // assign the value { v0, v1, ..., v7 } to 8-value array trgt
-#define arr_assign(trgt, v0, v1, v2, v3, v4, v5, v6, v7)                       \
+#define arr8(trgt, v0, v1, v2, v3, v4, v5, v6, v7)                             \
   trgt[0] = v0;                                                                \
   trgt[1] = v1;                                                                \
   trgt[2] = v2;                                                                \
@@ -119,7 +103,7 @@ extern void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
 
 // Return the program action number that corresponds to input character chr. If
 // no such action, return -1.
-extern unsigned get_action(int chr);
+extern action_t get_action(int chr);
 
 // Beeo if config.layout.beep is true
 extern void cbeep();

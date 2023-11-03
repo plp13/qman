@@ -1,7 +1,8 @@
 // Text user interface (implementation)
 
-#include "lib.h"
 #include "tui.h"
+#include "lib.h"
+#include <curses.h>
 
 //
 // Global variables
@@ -13,22 +14,7 @@ WINDOW *wsbar = NULL;
 
 WINDOW *wstat = NULL;
 
-unsigned action = PA_NULL;
-
-//
-// Helper functions and macros
-//
-
-// Helper of action(). Return act if chr is in null-terminated array map.
-#define ret_act_if_chr_in_map(map, chr, act)                                   \
-  {                                                                            \
-    unsigned i = 0;                                                            \
-    while (0 != map[i]) {                                                      \
-      if (chr == map[i])                                                       \
-        return act;                                                            \
-      i++;                                                                     \
-    }                                                                          \
-  }
+action_t action = PA_NULL;
 
 //
 // Functions
@@ -94,15 +80,21 @@ void init_tui() {
               config.colours.stat_input_help.bg);
   }
   // Initialize key characters mappings
-  arr_assign(config.keys.up, KEY_UP, (int)'y', (int)'k', 0, 0, 0, 0, 0);
-  arr_assign(config.keys.down, KEY_DOWN, (int)'e', (int)'j', 0, 0, 0, 0, 0);
-  arr_assign(config.keys.pgup, KEY_PPAGE, (int)'f', 0, 0, 0, 0, 0, 0);
-  arr_assign(config.keys.pgdn, KEY_NPAGE, (int)'b', 0, 0, 0, 0, 0, 0);
-  arr_assign(config.keys.home, KEY_HOME, (int)'g', 0, 0, 0, 0, 0, 0);
-  arr_assign(config.keys.end, KEY_END, (int)'G', 0, 0, 0, 0, 0, 0);
-  arr_assign(config.keys.open, (int)'\n', (int)'o', 0, 0, 0, 0, 0, 0);
-  arr_assign(config.keys.help, (int)'h', (int)'?', 0, 0, 0, 0, 0, 0);
-  arr_assign(config.keys.quit, KEY_BREAK, (int)'q', (int)'Q', 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_UP], KEY_UP, (int)'y', (int)'k', 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_DOWN], KEY_DOWN, (int)'e', (int)'j', 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_PGUP], KEY_PPAGE, (int)'b', 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_PGDN], KEY_NPAGE, (int)'f', 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_HOME], KEY_HOME, (int)'g', 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_END], KEY_END, (int)'G', 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_OPEN], KEY_ENTER, (int)'\n', (int)'o', 0, 0, 0, 0,
+       0);
+  arr8(config.keys[PA_OPEN_APROPOS], (int)'a', (int)'A', 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_OPEN_WHATIS], (int)'w', (int)'W', 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_INDEX], (int)'i', (int)'I', 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_BACK], KEY_BACKSPACE, (int)'\b', (int)'[', 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_FWRD], (int)']', 0, 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_HELP], (int)'h', (int)'H', (int)'?', 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_QUIT], KEY_BREAK, (int)'q', (int)'Q', 0, 0, 0, 0, 0);
 }
 
 void init_windows() {
@@ -290,16 +282,14 @@ void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
   wnoutrefresh(wstat);
 }
 
-unsigned get_action(int chr) {
-  ret_act_if_chr_in_map(config.keys.up, chr, PA_UP);
-  ret_act_if_chr_in_map(config.keys.down, chr, PA_DOWN);
-  ret_act_if_chr_in_map(config.keys.pgup, chr, PA_PGUP);
-  ret_act_if_chr_in_map(config.keys.pgdn, chr, PA_PGDN);
-  ret_act_if_chr_in_map(config.keys.home, chr, PA_HOME);
-  ret_act_if_chr_in_map(config.keys.end, chr, PA_END);
-  ret_act_if_chr_in_map(config.keys.open, chr, PA_OPEN);
-  ret_act_if_chr_in_map(config.keys.help, chr, PA_HELP);
-  ret_act_if_chr_in_map(config.keys.quit, chr, PA_QUIT);
+action_t get_action(int chr) {
+  action_t i;
+  unsigned j;
+
+  for (i = PA_NULL; i <= PA_QUIT; i++)
+    for (j = 0; j < 8; j++)
+      if (config.keys[i][j] == chr)
+        return i;
 
   return PA_NULL;
 }

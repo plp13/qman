@@ -35,6 +35,25 @@ typedef struct {
   short pair; // pair no.
 } colour_t;
 
+// A program action
+typedef enum {
+  PA_NULL,         // do nothing (must be first member of action_t)
+  PA_UP,           // scroll up one line
+  PA_DOWN,         // scroll down one line
+  PA_PGUP,         // scroll up one page
+  PA_PGDN,         // scroll down one page
+  PA_HOME,         // go to page top
+  PA_END,          // go to page end
+  PA_OPEN,         // open focused link
+  PA_OPEN_APROPOS, // perform apropos on focused link
+  PA_OPEN_WHATIS,  // perform whatis on focused link
+  PA_INDEX,        // go to index (home) page
+  PA_BACK,         // go back one step in history
+  PA_FWRD,         // go forward one step in history
+  PA_HELP,         // go to keyboard help page
+  PA_QUIT          // exit the program (must be last member of action_t)
+} action_t;
+
 // Characters used for drawing the TUI
 typedef struct {
   wchar_t *sbar_top;          // status bar top
@@ -71,17 +90,7 @@ typedef struct {
 } config_colours_t;
 
 // Program configuration: program action to key character mappings
-typedef struct {
-  int up[8];   // PA_UP
-  int down[8]; // PA_DOWN
-  int pgup[8]; // PA_PGUP
-  int pgdn[8]; // PA_PGDN
-  int home[8]; // PA_HOME
-  int end[8];  // PA_END
-  int open[8]; // PA_OPEN
-  int help[8]; // PA_HELP
-  int quit[8]; // PA_QUIT
-} config_keys_t;
+typedef int config_keys_t[PA_QUIT + 1][8];
 
 // Program configuration: screen layout
 typedef struct {
@@ -101,7 +110,7 @@ typedef struct {
   unsigned rmargin;     // size of right margin
 } config_layout_t;
 
-// program configuration: miscellaneous
+// Program configuration: miscellaneous
 typedef struct {
   wchar_t *program_name;    // this program's name
   wchar_t *program_version; // version string
@@ -109,6 +118,8 @@ typedef struct {
   char *man_path;           // path to 'man' command
   char *whatis_path;        // path to 'whatis' command
   char *apropos_path;       // path to 'apropos' command
+  char *browser_path;       // path to the user's web browser
+  char *mailer_path;        // path to the user's email program
   unsigned history_size;    // size of page request history
 } config_misc_t;
 
@@ -202,7 +213,7 @@ extern option_t options[];
 // Program configuration
 extern config_t config;
 
-// historyory of page requests
+// History of page requests
 extern request_t *history;
 
 // Location of current request in history array
@@ -314,12 +325,29 @@ extern void init();
 // usage error.
 extern int parse_options(int argc, char *const *argv);
 
-// Retrieve argc and argv without the command line options, and modify history
-// appropriately. Exit in case of usage error.
+// Retrieve argc and argv with the command line options removed, and modify
+// history appropriately. Exit in case of usage error.
 extern void parse_args(int argc, char *const *argv);
 
 // Print usage information
 extern void usage();
+
+// Populate the current history entry (i.e. history[history_cur]) using rt and
+// args
+extern void history_replace(request_type_t rt, wchar_t *args);
+
+// Add a new history entry, and populate it with rt and args. The new entry is
+// added right after history_cur. Any entries between history_cur and
+// history_top are deleted.
+extern void history_push(request_type_t rt, wchar_t *args);
+
+// If n is smaller than or equal to history_cur, go back n steps and return
+// true. Otherwise, return false.
+extern bool history_back(unsigned n);
+
+// If n + history_cur is smaller than or equal to history_top, go forward n
+// steps and return true. Otherwise, return false.
+extern bool history_forward(unsigned n);
 
 // Execute apropos or whatis, and place their result in dst. Return the number
 // of entries found. Arguments cmd and args respectively specify the command to
