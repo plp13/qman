@@ -58,22 +58,6 @@ full_regex_t re_man, re_http, re_email;
 // Helper macros and functions
 //
 
-// Helper of history_push() and winddown(). Free all memory occupied by history.
-void history_free() {
-  unsigned i;
-
-  for (i = 0; i <= history_top; i++) {
-    if (NULL != history[i].args)
-      free(history[i].args);
-  }
-  if (NULL != history && history_top > 0) {
-    free(history);
-    history = NULL;
-    history_top = 0;
-    history_cur = 0;
-  }
-}
-
 // Helper of man() and aprowhat_render(). Increase ln, and reallocate res in
 // memory, if ln has exceeded its size.
 #define inc_ln                                                                 \
@@ -257,6 +241,10 @@ void init() {
   config.colours.stat_input_help.bold = true;
   config.colours.stat_input_help.bg = COLOR_BLACK;
   config.colours.stat_input_help.pair = 54;
+  config.colours.stat_input_em.fg = COLOR_RED;
+  config.colours.stat_input_em.bold = true;
+  config.colours.stat_input_em.bg = COLOR_BLACK;
+  config.colours.stat_input_em.pair = 55;
   config.colours.trans_mode_name = 100 * config.colours.stat_indic_mode.pair +
                                    config.colours.stat_indic_name.pair;
   config.colours.trans_name_loc = 100 * config.colours.stat_indic_name.pair +
@@ -264,6 +252,9 @@ void init() {
   config.colours.trans_prompt_help =
       100 * config.colours.stat_input_prompt.pair +
       config.colours.stat_input_help.pair;
+  config.colours.trans_prompt_em =
+      100 * config.colours.stat_input_prompt.pair +
+      config.colours.stat_input_em.pair;
   config.layout.tui = true;
   config.layout.fixedwidth = false;
   config.layout.sbar = true;
@@ -293,6 +284,22 @@ void init() {
   config.misc.config_path = salloc(BS_SHORT);
   strcpy(config.misc.config_path, "~/qman.conf");
   config.misc.history_size = 65536;
+
+  // Initialize key characters mappings
+  arr8(config.keys[PA_UP], KEY_UP, (int)'y', (int)'k', 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_DOWN], KEY_DOWN, (int)'e', (int)'j', 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_PGUP], KEY_PPAGE, (int)'b', 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_PGDN], KEY_NPAGE, (int)'f', 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_HOME], KEY_HOME, (int)'g', 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_END], KEY_END, (int)'G', 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_OPEN], KEY_ENTER, (int)'\n', (int)'o', 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_OPEN_APROPOS], (int)'a', (int)'A', 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_OPEN_WHATIS], (int)'w', (int)'W', 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_INDEX], (int)'i', (int)'I', 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_BACK], KEY_BACKSPACE, (int)'\b', (int)'[', 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_FWRD], (int)']', 0, 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_HELP], (int)'h', (int)'H', (int)'?', 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_QUIT], KEY_BREAK, (int)'q', (int)'Q', 0, 0, 0, 0, 0);
 
   // Initialize history
   history_cur = 0;
@@ -355,15 +362,15 @@ int parse_options(int argc, char *const *argv) {
       break;
     case 'n':
       // -n or --index was passed; show index page
-      history[history_cur].request_type = RT_INDEX;
+      history_replace(RT_INDEX, NULL);
       break;
     case 'k':
       // -k or --apropos was passed; try to show apropos results
-      history[history_cur].request_type = RT_APROPOS;
+      history_replace(RT_APROPOS, NULL);
       break;
     case 'f':
       // -f or --whatis was passed; try to show whatis results
-      history[history_cur].request_type = RT_WHATIS;
+      history_replace(RT_WHATIS, NULL);
       break;
     case 'T':
       // -T or --cli was passed; do not launch the TUI
@@ -397,7 +404,7 @@ void parse_args(int argc, char *const *argv) {
   // page rather than the index page; set the request type of
   // history[history_cur] to RT_MAN
   if (RT_INDEX == history[history_cur].request_type && argc >= 1)
-    history[history_cur].request_type = RT_MAN;
+    history_replace(RT_MAN, NULL);
 
   // If we are showing a manual, apropos, or whatis page...
   if (RT_INDEX != history[history_cur].request_type) {
@@ -434,7 +441,7 @@ void parse_args(int argc, char *const *argv) {
       }
     }
 
-    // Set history[history_cur] to tmp
+    // Set history[history_cur].args to tmp
     history_replace(history[history_cur].request_type, tmp);
   }
 }
@@ -475,42 +482,66 @@ void usage() {
 
 void history_replace(request_type_t rt, wchar_t *args) {
   history[history_cur].request_type = rt;
+
+  if (NULL != history[history_cur].args)
+    free(history[history_cur].args);
+
   if (NULL == args)
     history[history_cur].args = NULL;
   else {
     history[history_cur].args = walloc(wcslen(args));
     wcscpy(history[history_cur].args, args);
   }
+
+  history[history_cur].top = 0;
+  history[history_cur].flink = (link_loc_t){false, 0, 0};
 }
 
 void history_push(request_type_t rt, wchar_t *args) {
   unsigned i;
 
+  // Save user's position
+  history[history_cur].top = page_top;
+  history[history_cur].flink = page_flink;
+
   // Increase history_cur and history_top as needed
   history_cur++;
   if (history_top < history_cur)
+    // If we're pushing at the top of the history stack, history_top becomes
+    // equal to history_cur
     history_top = history_cur;
   else if (history_top > history_cur)
+    // If we're pushing in the middle of the history stack, all subsequent
+    // history entries are lost, and we must free any memory used by their args
     for (i = history_cur + 1; i <= history_top; i++)
-      if (NULL != history[i].args)
+      if (NULL != history[i].args) {
         free(history[i].args);
+        history[i].args = NULL;
+      }
 
   // Failsafe: in the unlikely case history_top exceeds history size, free all
   // memory used by history and start over
   if (history_top >= config.misc.history_size) {
-    history_free();
+    requests_free(history, config.misc.history_size);
     history_top = 0;
     history_cur = 0;
+    history = aalloc(config.misc.history_size, request_t);
   }
 
+  // Populate the new history entry
   history_replace(rt, args);
 }
 
 bool history_back(unsigned n) {
+  history[history_cur].top = page_top;
+  history[history_cur].flink = page_flink;
+
   int pos = history_cur - n;
 
   if (pos >= 0) {
     history_cur = pos;
+    page_top = history[history_cur].top;
+    page_flink = history[history_cur].flink;
     return true;
   }
 
@@ -518,10 +549,15 @@ bool history_back(unsigned n) {
 }
 
 bool history_forward(unsigned n) {
+  history[history_cur].top = page_top;
+  history[history_cur].flink = page_flink;
+
   int pos = history_cur + n;
 
   if (pos <= history_top) {
     history_cur = pos;
+    page_top = history[history_cur].top;
+    page_flink = history[history_cur].flink;
     return true;
   }
 
@@ -533,9 +569,9 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   // Prepare apropos/whatis command
   char cmdstr[BS_SHORT];
   if (AW_WHATIS == cmd)
-    sprintf(cmdstr, "%s -l %ls", config.misc.whatis_path, args);
+    sprintf(cmdstr, "%s -l %ls 2>>/dev/null", config.misc.whatis_path, args);
   else
-    sprintf(cmdstr, "%s -l %ls", config.misc.apropos_path, args);
+    sprintf(cmdstr, "%s -l %ls 2>>/dev/null", config.misc.apropos_path, args);
 
   // Execute apropos, and enter its result into a temporary file. lines becomes
   // the total number of lines copied.
@@ -863,7 +899,8 @@ unsigned man(line_t **dst, const wchar_t *args) {
 
   // Prepare man command
   char cmdstr[BS_SHORT];
-  sprintf(cmdstr, "%s --warnings='!all' %ls", config.misc.man_path, args);
+  sprintf(cmdstr, "%s --warnings='!all' %ls 2>>/dev/null", config.misc.man_path,
+          args);
 
   // Execute man and, read its output, and process it into res
   FILE *pp = xpopen(cmdstr, "r");
@@ -1077,6 +1114,16 @@ void populate_page() {
   }
 }
 
+void requests_free(request_t *reqs, unsigned reqs_len) {
+  unsigned i;
+
+  for (i = 0; i < reqs_len; i++)
+    if (NULL != reqs[i].args)
+      free(reqs[i].args);
+
+  free(reqs);
+}
+
 void aprowhat_free(aprowhat_t *aw, unsigned aw_len) {
   unsigned i;
 
@@ -1118,28 +1165,19 @@ void winddown(int ec, const wchar_t *em) {
     free(config.misc.apropos_path);
 
   // Deallocate memory used by history global
-  history_free();
+  requests_free(history, config.misc.history_size);
 
   // Deallocate memory used by aw_all global
-  if (NULL != aw_all && aw_all_len > 0) {
+  if (NULL != aw_all && aw_all_len > 0)
     aprowhat_free(aw_all, aw_all_len);
-    aw_all = NULL;
-    aw_all_len = 0;
-  }
 
   // Deallocate memory used by sc_all global
-  if (NULL != sc_all && sc_all_len > 0) {
+  if (NULL != sc_all && sc_all_len > 0)
     wafree(sc_all, sc_all_len);
-    sc_all = NULL;
-    sc_all_len = 0;
-  }
 
   // Deallocate memory used by page global
-  if (NULL != page && page_len > 0) {
+  if (NULL != page && page_len > 0)
     lines_free(page, page_len);
-    page = NULL;
-    page_len = 0;
-  }
 
   // Deallocate memory used by re_... regular expression globals
   regfree(&re_man.re);

@@ -4,7 +4,7 @@
 #include "program.h"
 
 //
-// Functions
+// Functions (utility)
 //
 
 void init_cli() {
@@ -56,4 +56,17 @@ void print_page(line_t *lines, unsigned lines_len) {
     fputws(reg, stdout);
     fputwc(L'\n', stdout);
   }
+}
+
+//
+// Functions (handlers)
+//
+
+// Main handler for the CLI
+void cli() {
+  init_cli();
+
+  populate_page();
+
+  print_page(page, page_len);
 }

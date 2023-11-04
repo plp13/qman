@@ -84,9 +84,12 @@ typedef struct {
   colour_t stat_indic_loc;    // location section of status bar indicator line
   colour_t stat_input_prompt; // prompt section of status bar input line
   colour_t stat_input_help;   // help section of status bar input line
+  colour_t stat_input_em;     // error message section of status bar input line
   unsigned trans_mode_name;   // colour pair for mode to name transition
   unsigned trans_name_loc;    // colour pair for name to location transition
   unsigned trans_prompt_help; // colour pair for prompt to help transition
+  unsigned
+      trans_prompt_em; // colour pair for prompt to error message transition
 } config_colours_t;
 
 // Program configuration: program action to key character mappings
@@ -132,6 +135,13 @@ typedef struct {
   config_misc_t misc;
 } config_t;
 
+// Location of a link in an array of lines
+typedef struct {
+  bool ok;       // true if the location exists, false otherwise
+  unsigned line; // line number
+  unsigned link; // link number
+} link_loc_t;
+
 // Page request type
 typedef enum {
   RT_INDEX,   // show a list of all manual pages
@@ -144,6 +154,10 @@ typedef enum {
 typedef struct {
   request_type_t request_type;
   wchar_t *args; // arguments for the man/apropos/whatis command
+  // The following are used by history_...() functions, to record the user's
+  // location in history entries (which are instances of request_t)
+  unsigned top;     // recorded page_top
+  link_loc_t flink; // recorded page_flink
 } request_t;
 
 // Choice between apropos and whatis
@@ -184,13 +198,6 @@ typedef struct {
   bitarr_t italic; // italic
   bitarr_t uline;  // underlined
 } line_t;
-
-// Location of a link in an array of lines
-typedef struct {
-  bool ok;       // true if the location exists, false otherwise
-  unsigned line; // line number
-  unsigned link; // link number
-} link_loc_t;
 
 //
 // Constants
@@ -332,21 +339,26 @@ extern void parse_args(int argc, char *const *argv);
 // Print usage information
 extern void usage();
 
-// Populate the current history entry (i.e. history[history_cur]) using rt and
-// args
+// All history_...() functions also save and restore page_top and page_flink
+// inside the history entries they manipulate, to keep track of the user's
+// position in each history entry.
+
+// Populate the current history entry (i.e. history[history_cur]), setting its
+// request_type member to rt, and its args to args
 extern void history_replace(request_type_t rt, wchar_t *args);
 
-// Add a new history entry, and populate it with rt and args. The new entry is
-// added right after history_cur. Any entries between history_cur and
-// history_top are deleted.
+// Push a new entry into history, as follows:
+// Add a new history entry after history_cur, and populate it with rt and args
+// using history_replace(). Increase history_cur, and adjust history_top so that
+// it remains equal to or greater than it.
 extern void history_push(request_type_t rt, wchar_t *args);
 
-// If n is smaller than or equal to history_cur, go back n steps and return
-// true. Otherwise, return false.
+// If n is smaller than or equal to history_cur, go back n steps in history and
+// return true. Otherwise, return false.
 extern bool history_back(unsigned n);
 
 // If n + history_cur is smaller than or equal to history_top, go forward n
-// steps and return true. Otherwise, return false.
+// steps in history and return true. Otherwise, return false.
 extern bool history_forward(unsigned n);
 
 // Execute apropos or whatis, and place their result in dst. Return the number
@@ -407,6 +419,9 @@ extern link_loc_t last_link(line_t *lines, unsigned lines_len, unsigned start,
 // Populate page, page_title, and page_len, based on the contents of
 // history[history_cur].
 extern void populate_page();
+
+// Free the memory occupied by reqs (of length reqs_len)
+extern void requests_free(request_t *reqs, unsigned reqs_len);
 
 // Free the memory occupied by aw (of length aw_len)
 extern void aprowhat_free(aprowhat_t *res, unsigned res_len);

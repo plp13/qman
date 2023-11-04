@@ -50,19 +50,8 @@ extern action_t action;
       mvwchgat(win, y, x, n, WA_NORMAL, col.pair, NULL);                       \
   }
 
-// assign the value { v0, v1, ..., v7 } to 8-value array trgt
-#define arr8(trgt, v0, v1, v2, v3, v4, v5, v6, v7)                             \
-  trgt[0] = v0;                                                                \
-  trgt[1] = v1;                                                                \
-  trgt[2] = v2;                                                                \
-  trgt[3] = v3;                                                                \
-  trgt[4] = v4;                                                                \
-  trgt[5] = v5;                                                                \
-  trgt[6] = v6;                                                                \
-  trgt[7] = v7;
-
 //
-// Functions
+// Functions (utility)
 //
 
 // Initialize ncurses
@@ -98,8 +87,12 @@ extern void draw_sbar(unsigned lines_len, unsigned lines_top);
 // lines_pos -- focused line number in page
 // prompt -- cursor prompt
 // help -- help text
+// em -- error message
+// (Normally, we will display help. If, however, help is NULL, we'll display
+// em.)
 extern void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
-                      unsigned lines_pos, wchar_t *prompt, wchar_t *help);
+                      unsigned lines_pos, wchar_t *prompt, wchar_t *help,
+                      wchar_t *em);
 
 // Return the program action number that corresponds to input character chr. If
 // no such action, return -1.
@@ -111,5 +104,51 @@ extern void cbeep();
 // Delete all windows and wind down ncurses. No need to call this function
 // normally, as it's called by winddown().
 extern void winddown_tui();
+
+//
+// Functions (handlers)
+//
+
+// Error handler: display em in the status bar, and call cbeep();
+void tui_error(wchar_t *em);
+
+// Handler for PA_UP
+extern bool tui_up();
+
+// Handler for PA_DOWN
+extern bool tui_down();
+
+// Handler for PA_PGUP
+extern bool tui_pgup();
+
+// Handler for PA_PGDN
+extern bool tui_pgdn();
+
+// Handler for PA_HOME
+extern bool tui_home();
+
+// Handler for PA_END
+extern bool tui_end();
+
+// Handler for PA_OPEN
+extern bool tui_open();
+
+// Handler of PA_OPEN_APROPOS
+extern bool tui_open_apropos();
+
+// Handler of PA_OPEN_WHATIS
+extern bool tui_open_whatis();
+
+// Handler for PA_INDEX
+extern bool tui_index();
+
+// Handler for PA_BACK
+extern bool tui_back();
+
+// Handler for PA_FWRD
+extern bool tui_fwrd();
+
+// Main handler/loop for the TUI
+extern void tui();
 
 #endif

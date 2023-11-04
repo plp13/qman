@@ -76,6 +76,17 @@ typedef struct {
 // Allocate stack memory for a bit array bitarr_t that is len bits long
 #define balloca(len) alloca(len % 8 == 0 ? len / 8 : 1 + len / 8)
 
+// assign the value { v0, v1, ..., v7 } to 8-value array trgt
+#define arr8(trgt, v0, v1, v2, v3, v4, v5, v6, v7)                             \
+  trgt[0] = v0;                                                                \
+  trgt[1] = v1;                                                                \
+  trgt[2] = v2;                                                                \
+  trgt[3] = v3;                                                                \
+  trgt[4] = v4;                                                                \
+  trgt[5] = v5;                                                                \
+  trgt[6] = v6;                                                                \
+  trgt[7] = v7;
+
 //
 // Functions
 //
