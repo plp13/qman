@@ -120,6 +120,30 @@ size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
   return cnt;
 }
 
+char *xstrdup(const char *s) {
+  char *res = strdup(s);
+
+  if (NULL == res) {
+    static wchar_t errmsg[BS_SHORT];
+    serror(errmsg, L"Unable to strdup()");
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+
+  return res;
+}
+
+wchar_t *xwcsdup(const wchar_t *s) {
+  wchar_t *res = wcsdup(s);
+
+  if (NULL == res) {
+    static wchar_t errmsg[BS_SHORT];
+    serror(errmsg, L"Unable to strdup()");
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+
+  return res;
+}
+
 int getenvi(const char *name) {
   char *val = getenv(name);
   if (NULL == val)

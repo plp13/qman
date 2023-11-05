@@ -127,6 +127,12 @@ extern char *xfgets(char *s, int size, FILE *stream);
 // Safely call fwrite()
 extern size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 
+// Safely call strdup()
+extern char *xstrdup(const char *s);
+
+// Safely call wcsdup()
+extern wchar_t *xwcsdup(const wchar_t *s);
+
 // Return the value of environment variable name as an integer. Return 0 in case
 // of error.
 extern int getenvi(const char *name);

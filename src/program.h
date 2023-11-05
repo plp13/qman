@@ -293,8 +293,8 @@ extern full_regex_t re_man, // manual page
     line.uline = NULL;                                                         \
   }
 
-// Allocate memory for an extra link for line. trgt_length is the length of the
-// new link's trgt member.
+// Allocate memory for an extra link for line, and increase its link_length
+// by 1. trgt_length is the length of the new link's trgt member.
 #define line_realloc_link(line, trgt_len)                                      \
   line.links_length++;                                                         \
   line.links = xreallocarray(line.links, line.links_length, sizeof(link_t));   \

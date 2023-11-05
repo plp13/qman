@@ -252,9 +252,8 @@ void init() {
   config.colours.trans_prompt_help =
       100 * config.colours.stat_input_prompt.pair +
       config.colours.stat_input_help.pair;
-  config.colours.trans_prompt_em =
-      100 * config.colours.stat_input_prompt.pair +
-      config.colours.stat_input_em.pair;
+  config.colours.trans_prompt_em = 100 * config.colours.stat_input_prompt.pair +
+                                   config.colours.stat_input_em.pair;
   config.layout.tui = true;
   config.layout.fixedwidth = false;
   config.layout.sbar = true;
@@ -267,22 +266,14 @@ void init() {
   config.layout.main_height = 23;
   config.layout.lmargin = 2;
   config.layout.rmargin = 2;
-  config.misc.program_name = walloc(BS_SHORT);
-  wcscpy(config.misc.program_name, L"qman");
-  config.misc.program_version = walloc(BS_SHORT);
-  wcscpy(config.misc.program_version, L"qman nightly");
-  config.misc.man_path = salloc(BS_SHORT);
-  strcpy(config.misc.man_path, "/usr/bin/man");
-  config.misc.whatis_path = salloc(BS_SHORT);
-  strcpy(config.misc.whatis_path, "/usr/bin/whatis");
-  config.misc.apropos_path = salloc(BS_SHORT);
-  strcpy(config.misc.apropos_path, "/usr/bin/apropos");
-  config.misc.browser_path = salloc(BS_SHORT);
-  strcpy(config.misc.browser_path, "/usr/bin/xdg-open");
-  config.misc.mailer_path = salloc(BS_SHORT);
-  strcpy(config.misc.mailer_path, "/usr/bin/xdg-email");
-  config.misc.config_path = salloc(BS_SHORT);
-  strcpy(config.misc.config_path, "~/qman.conf");
+  config.misc.program_name = xwcsdup(L"qman");
+  config.misc.program_version = xwcsdup(L"qman nightly");
+  config.misc.man_path = xstrdup("/usr/bin/man");
+  config.misc.whatis_path = xstrdup("/usr/bin/whatis");
+  config.misc.apropos_path = xstrdup("/usr/bin/apropos");
+  config.misc.browser_path = xstrdup("/usr/bin/xdg-open");
+  config.misc.mailer_path = xstrdup("/usr/bin/xdg-email");
+  config.misc.config_path = xstrdup("~/qman.conf");
   config.misc.history_size = 65536;
 
   // Initialize key characters mappings
@@ -378,8 +369,8 @@ int parse_options(int argc, char *const *argv) {
       break;
     case 'C':
       // -C or --config-path was passed; read from a different config file
-      config.misc.config_path = walloc(strlen(optarg));
-      strcpy(config.misc.config_path, optarg);
+      free(config.misc.config_path);
+      config.misc.config_path = xstrdup(optarg);
       break;
     case 'h':
       // -h or --help was passed; print usage and exit
@@ -489,8 +480,7 @@ void history_replace(request_type_t rt, wchar_t *args) {
   if (NULL == args)
     history[history_cur].args = NULL;
   else {
-    history[history_cur].args = walloc(wcslen(args));
-    wcscpy(history[history_cur].args, args);
+    history[history_cur].args = wcsdup(args);
   }
 
   history[history_cur].top = 0;
@@ -645,8 +635,7 @@ unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *aw,
 
   for (i = 0; i < aw_len && res_i < BS_SHORT; i++) {
     if (!wmemberof(res, aw[i].section, res_i)) {
-      res[res_i] = walloc(wcslen(aw[i].section));
-      wcscpy(res[res_i], aw[i].section);
+      res[res_i] = wcsdup(aw[i].section);
       res_i++;
     }
   }
@@ -674,9 +663,9 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   unsigned hfr_width =
       hfl_width + (text_width - hfc_width) % 2; // header/footer right area
 
-  unsigned ln = 0;                // current line number
-  unsigned i, j;                  // iterators
-  wchar_t *tmp = walloc(BS_LINE); // temporary
+  unsigned ln = 0;      // current line number
+  unsigned i, j;        // iterators
+  wchar_t tmp[BS_LINE]; // temporary
 
   unsigned res_len = 1024;               // result buffer length
   line_t *res = aalloc(res_len, line_t); // result buffer
@@ -832,8 +821,6 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   bset(res[ln].uline,
        lmargin_width + hfl_width + hfc_width + hfr_width - key_len);
   bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
-
-  free(tmp);
 
   *dst = res;
   return ln + 1;
