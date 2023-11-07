@@ -67,6 +67,8 @@ void cli() {
   init_cli();
 
   populate_page();
+  if (err)
+    winddown(ES_NOT_FOUND, err_msg);
 
   print_page(page, page_len);
 }

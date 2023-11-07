@@ -47,6 +47,9 @@ typedef enum {
   PA_OPEN,         // open focused link
   PA_OPEN_APROPOS, // perform apropos on focused link
   PA_OPEN_WHATIS,  // perform whatis on focused link
+  PA_SP_OPEN,      // open a manual page specified by the user
+  PA_SP_APROPOS,   // perform apropos on a manual page specified by the user
+  PA_SP_WHATIS,    // perform whatis on a manual page specified by the user
   PA_INDEX,        // go to index (home) page
   PA_BACK,         // go back one step in history
   PA_FWRD,         // go forward one step in history
@@ -54,7 +57,7 @@ typedef enum {
   PA_QUIT          // exit the program (must be last member of action_t)
 } action_t;
 
-// Characters used for drawing the TUI
+// Program configuration: characters used for drawing the TUI
 typedef struct {
   wchar_t *sbar_top;          // status bar top
   wchar_t *sbar_vline;        // status bar vertical line
@@ -63,6 +66,14 @@ typedef struct {
   wchar_t *trans_mode_name;   // mode to name transition (on indicator line)
   wchar_t *trans_name_loc;    // name to location transition (on indicator line)
   wchar_t *trans_prompt_help; // prompt to help transition (on input line)
+  wchar_t
+      *trans_prompt_em; // prompt to error message transition (on input line)
+  wchar_t *box_hline;   // box horizontal line
+  wchar_t *box_vline;   // box vertical line
+  wchar_t *box_tl;      // box top left
+  wchar_t *box_tr;      // box top right
+  wchar_t *box_bl;      // box bottom left
+  wchar_t *box_br;      // box bottom right
 } config_chars_t;
 
 // Program configuration: colours
@@ -85,6 +96,8 @@ typedef struct {
   colour_t stat_input_prompt; // prompt section of status bar input line
   colour_t stat_input_help;   // help section of status bar input line
   colour_t stat_input_em;     // error message section of status bar input line
+  colour_t imm_border;        // immediate window border
+  colour_t imm_title;         // immediate title bar
   unsigned trans_mode_name;   // colour pair for mode to name transition
   unsigned trans_name_loc;    // colour pair for name to location transition
   unsigned trans_prompt_help; // colour pair for prompt to help transition
@@ -105,12 +118,15 @@ typedef struct {
   bool beep;       // if true, beep the terminal
   unsigned width;  // current terminal width
   unsigned height; // current terminal height
-  unsigned sbar_width;  // scrollbar width
-  unsigned stat_height; // status bar height
-  unsigned main_width;  // main window width
-  unsigned main_height; // main window height
-  unsigned lmargin;     // size of left margin
-  unsigned rmargin;     // size of right margin
+  unsigned sbar_width;       // scrollbar width
+  unsigned stat_height;      // status bar height
+  unsigned main_width;       // main window width
+  unsigned main_height;      // main window height
+  unsigned imm_width;        // immediate window width
+  unsigned imm_height_short; // height of short immediate windows
+  unsigned imm_height_long;  // height of long immediate windows
+  unsigned lmargin;          // size of left margin
+  unsigned rmargin;          // size of right margin
 } config_layout_t;
 
 // Program configuration: miscellaneous
@@ -260,6 +276,12 @@ extern unsigned page_top;
 // Column where the portion of page displayed to the user begins
 extern unsigned page_left;
 
+// True if last man/apropos/whatis command didn't produce any result
+extern bool err;
+
+// Formatted error message for last man/apropos/whatis failure
+extern wchar_t err_msg[BS_LINE];
+
 // Regular expressions for links to a...
 extern full_regex_t re_man, // manual page
     re_url,                 // http(s) URL
@@ -361,6 +383,10 @@ extern bool history_back(unsigned n);
 // steps in history and return true. Otherwise, return false.
 extern bool history_forward(unsigned n);
 
+// Discard all history entries after history_cur, and make history_top equal to
+// history_cur
+extern void history_reset();
+
 // Execute apropos or whatis, and place their result in dst. Return the number
 // of entries found. Arguments cmd and args respectively specify the command to
 // run and its arguments.
@@ -384,6 +410,9 @@ extern unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
 
 // Render a page that contains an index of all manual pages in dst
 extern unsigned index_page(line_t **dst);
+
+// In case a man/apropos/whatis command fails to produce any results, aprowhat()
+// and man() set err to true and err_msg to an appropriate error message.
 
 // Execute apropos or whatis, and place the final rendered result in dst. Return
 // the number of lines in said output. Arguments cmd and args respectively

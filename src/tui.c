@@ -2,6 +2,7 @@
 
 #include "tui.h"
 #include "lib.h"
+#include "program.h"
 #include <curses.h>
 
 //
@@ -13,6 +14,8 @@ WINDOW *wmain = NULL;
 WINDOW *wsbar = NULL;
 
 WINDOW *wstat = NULL;
+
+WINDOW *wimm = NULL;
 
 action_t action = PA_NULL;
 
@@ -48,47 +51,28 @@ void init_tui() {
   start_color();
   if (COLOUR) {
     start_color();
-    init_pair(config.colours.text.pair, config.colours.text.fg,
-              config.colours.text.bg);
-    init_pair(config.colours.search.pair, config.colours.search.fg,
-              config.colours.search.bg);
-    init_pair(config.colours.link_man.pair, config.colours.link_man.fg,
-              config.colours.link_man.bg);
-    init_pair(config.colours.link_man_f.pair, config.colours.link_man_f.fg,
-              config.colours.link_man_f.bg);
-    init_pair(config.colours.link_http.pair, config.colours.link_http.fg,
-              config.colours.link_http.bg);
-    init_pair(config.colours.link_http_f.pair, config.colours.link_http_f.fg,
-              config.colours.link_http_f.bg);
-    init_pair(config.colours.link_email.pair, config.colours.link_email.fg,
-              config.colours.link_email.bg);
-    init_pair(config.colours.link_email_f.pair, config.colours.link_email_f.fg,
-              config.colours.link_email_f.bg);
-    init_pair(config.colours.link_ls.pair, config.colours.link_ls.fg,
-              config.colours.link_ls.bg);
-    init_pair(config.colours.link_ls_f.pair, config.colours.link_ls_f.fg,
-              config.colours.link_ls_f.bg);
-    init_pair(config.colours.sb_line.pair, config.colours.sb_line.fg,
-              config.colours.sb_line.bg);
-    init_pair(config.colours.sb_block.pair, config.colours.sb_block.fg,
-              config.colours.sb_block.bg);
-    init_pair(config.colours.stat_indic_mode.pair,
-              config.colours.stat_indic_mode.fg,
-              config.colours.stat_indic_mode.bg);
-    init_pair(config.colours.stat_indic_name.pair,
-              config.colours.stat_indic_name.fg,
-              config.colours.stat_indic_name.bg);
-    init_pair(config.colours.stat_indic_loc.pair,
-              config.colours.stat_indic_loc.fg,
-              config.colours.stat_indic_loc.bg);
-    init_pair(config.colours.stat_input_prompt.pair,
-              config.colours.stat_input_prompt.fg,
-              config.colours.stat_input_prompt.bg);
-    init_pair(config.colours.stat_input_help.pair,
-              config.colours.stat_input_help.fg,
-              config.colours.stat_input_help.bg);
-    init_pair(config.colours.stat_input_em.pair,
-              config.colours.stat_input_em.fg, config.colours.stat_input_em.bg);
+    // Initialize colour pairs
+    init_colour(config.colours.text);
+    init_colour(config.colours.search);
+    init_colour(config.colours.link_man);
+    init_colour(config.colours.link_man_f);
+    init_colour(config.colours.link_http);
+    init_colour(config.colours.link_http_f);
+    init_colour(config.colours.link_email);
+    init_colour(config.colours.link_email_f);
+    init_colour(config.colours.link_ls);
+    init_colour(config.colours.link_ls_f);
+    init_colour(config.colours.sb_line);
+    init_colour(config.colours.sb_block);
+    init_colour(config.colours.stat_indic_mode);
+    init_colour(config.colours.stat_indic_name);
+    init_colour(config.colours.stat_indic_loc);
+    init_colour(config.colours.stat_input_prompt);
+    init_colour(config.colours.stat_input_help);
+    init_colour(config.colours.stat_input_em);
+    init_colour(config.colours.imm_border);
+    init_colour(config.colours.imm_title);
+    // Initialize colour pairs used for transitions
     init_pair(config.colours.trans_mode_name, config.colours.stat_indic_mode.bg,
               config.colours.stat_indic_name.bg);
     init_pair(config.colours.trans_name_loc, config.colours.stat_indic_name.bg,
@@ -129,11 +113,31 @@ bool termsize_changed() {
     config.layout.height = height;
     config.layout.main_width = width - config.layout.sbar_width;
     config.layout.main_height = height - config.layout.stat_height;
+    config.layout.imm_width = config.layout.width - 20;
+    config.layout.imm_height_long = config.layout.height - 8;
 
     return true;
   }
 
   return false;
+}
+
+void draw_box(WINDOW *w, unsigned tl_y, unsigned tl_x, unsigned br_y,
+              unsigned br_x) {
+  unsigned i;
+
+  mvwaddnwstr(w, tl_y, tl_x, config.chars.box_tl, 1);
+  mvwaddnwstr(w, tl_y, br_x, config.chars.box_tr, 1);
+  mvwaddnwstr(w, br_y, tl_x, config.chars.box_bl, 1);
+  mvwaddnwstr(w, br_y, br_x, config.chars.box_br, 1);
+  for (i = tl_y + 1; i < br_y; i++) {
+    mvwaddnwstr(w, i, tl_x, config.chars.box_vline, 1);
+    mvwaddnwstr(w, i, br_x, config.chars.box_vline, 1);
+  }
+  for (i = tl_x + 1; i < br_x; i++) {
+    mvwaddnwstr(w, tl_y, i, config.chars.box_hline, 1);
+    mvwaddnwstr(w, br_y, i, config.chars.box_hline, 1);
+  }
 }
 
 void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
@@ -223,10 +227,13 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
 
 void draw_sbar(unsigned lines_len, unsigned lines_top) {
   unsigned height = getmaxy(wsbar); // scrollbar height
-  unsigned block_pos =
-      MIN(height - 2, 1 + (height - 2) * lines_top /
-                              (lines_len - height + 1)); // block position
-  unsigned i;                                            // iterator
+  unsigned block_pos;               // block position
+  if (height > lines_len)
+    block_pos = 1;
+  else
+    block_pos = MIN(height - 2,
+                    1 + (height - 2) * lines_top / (lines_len - height + 1));
+  unsigned i; // iterator
 
   werase(wsbar);
 
@@ -294,6 +301,58 @@ void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
   wnoutrefresh(wstat);
 }
 
+void draw_imm(bool is_long, wchar_t *title) {
+  unsigned height, width, y, x;
+
+  timeout(-1);
+
+  if (is_long) {
+    height = config.layout.imm_height_long;
+    y = (config.layout.height - height) / 2;
+  } else {
+    height = config.layout.imm_height_short;
+    y = (config.layout.height - height) / 4;
+  }
+  width = config.layout.imm_width;
+  x = (config.layout.width - width) / 2;
+
+  if (NULL != wimm)
+    delwin(wimm);
+  wimm = newwin(height, width, y, x);
+
+  werase(wimm);
+
+  change_colour(wimm, config.colours.imm_border);
+  draw_box(wimm, 0, 0, height - 1, width - 1);
+  change_colour(wimm, config.colours.imm_title);
+  wchar_t *tmp = walloca(width - 2);
+  swprintf(tmp, width - 1, L" %-*ls", width - 2, title);
+  mvwaddnwstr(wimm, 1, 1, tmp, width - 2);
+
+  wnoutrefresh(wimm);
+}
+
+void del_imm() {
+  if (NULL != wimm)
+    delwin(wimm);
+  wimm = NULL;
+  timeout(2000);
+}
+
+bool get_str(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
+             unsigned trgt_len) {
+  int res;
+
+  echo();
+  res = mvwgetn_wstr(w, y, x, (wint_t *)trgt, trgt_len);
+  noecho();
+
+  if (OK == res)
+    return true;
+  else
+    return false;
+}
+
 action_t get_action(int chr) {
   action_t i;
   unsigned j;
@@ -329,6 +388,19 @@ void winddown_tui() {
 //
 // Functions (handlers)
 //
+
+void tui_redraw() {
+  unsigned pos = page_flink.line;
+
+  if (pos < page_top || pos >= page_top + config.layout.main_height)
+    pos = page_top;
+
+  draw_page(page, page_len, page_top, page_flink);
+  draw_sbar(page_len, page_top);
+  draw_stat(request_type_str(history[history_cur].request_type), page_title,
+            page_len, pos + 1, L":", L"Press 'h' for help or 'q' to quit",
+            NULL);
+}
 
 void tui_error(wchar_t *em) {
   unsigned pos = page_flink.line;
@@ -426,7 +498,8 @@ bool tui_pgdn() {
   if (page_top + 2 * config.layout.main_height < page_len) {
     // If there's space, scroll down one window height
     page_top += config.layout.main_height;
-  } else if (page_top + config.layout.main_height < page_len) {
+  } else if (page_top + config.layout.main_height < page_len &&
+             config.layout.main_height <= page_len) {
     // If not, but we're still not at the very bottom, go there
     page_top = page_len - config.layout.main_height;
   } else {
@@ -467,7 +540,8 @@ bool tui_home() {
 
 bool tui_end() {
   // Go to the very bottom
-  page_top = page_len - config.layout.main_height;
+  if (config.layout.main_height <= page_len)
+    page_top = page_len - config.layout.main_height;
 
   // Focus on the last link in the visible portion
   link_loc_t ll = last_link(page, page_len, page_top,
@@ -492,6 +566,14 @@ bool tui_open() {
              page[page_flink.line].links[page_flink.link].trgt);
     history_push(RT_MAN, wtrgt);
     populate_page();
+    if (err) {
+      history_back(1);
+      history_reset();
+      populate_page();
+      tui_redraw();
+      tui_error(err_msg);
+      return false;
+    }
     page_top = 0;
     page_flink = first_link(page, page_len, page_top,
                             page_top + config.layout.main_height - 1);
@@ -532,6 +614,14 @@ bool tui_open_apropos() {
     } else {
       history_push(RT_APROPOS, wtrgt);
       populate_page();
+      if (err) {
+        history_back(1);
+        history_reset();
+        populate_page();
+        tui_redraw();
+        tui_error(err_msg);
+        return false;
+      }
       page_top = 0;
       page_flink = first_link(page, page_len, page_top,
                               page_top + config.layout.main_height - 1);
@@ -559,6 +649,14 @@ bool tui_open_whatis() {
     } else {
       history_push(RT_WHATIS, wtrgt);
       populate_page();
+      if (err) {
+        history_back(1);
+        history_reset();
+        populate_page();
+        tui_redraw();
+        tui_error(err_msg);
+        return false;
+      }
       page_top = 0;
       page_flink = first_link(page, page_len, page_top,
                               page_top + config.layout.main_height - 1);
@@ -570,9 +668,51 @@ bool tui_open_whatis() {
   }
 }
 
+bool tui_sp_open(request_type_t rt) {
+  wchar_t inpt[BS_SHORT - 2];
+  wchar_t trgt[BS_SHORT];
+  bool got_inpt;
+
+  if (RT_MAN == rt)
+    draw_imm(false, L"Manual page to open?");
+  else if (RT_APROPOS == rt)
+    draw_imm(false, L"Apropos what?");
+  else if (RT_WHATIS == rt)
+    draw_imm(false, L"Whatis what?");
+  doupdate();
+
+  change_colour(wimm, config.colours.text);
+  got_inpt =
+      get_str(wimm, 2, 2, inpt, MIN(BS_SHORT - 3, config.layout.imm_width - 1));
+  del_imm();
+
+  if (got_inpt) {
+    swprintf(trgt, BS_SHORT, L"'%ls'", inpt);
+    history_push(rt, trgt);
+    populate_page();
+    if (err) {
+      history_back(1);
+      history_reset();
+      populate_page();
+      tui_redraw();
+      tui_error(err_msg);
+      return false;
+    }
+    page_top = 0;
+    page_flink = first_link(page, page_len, page_top,
+                            page_top + config.layout.main_height - 1);
+    return true;
+  } else {
+    tui_error(L"Unable to retrieve string");
+    return false;
+  }
+}
+
 bool tui_index() {
   history_push(RT_INDEX, NULL);
   populate_page();
+  if (err)
+    winddown(ES_OPER_ERROR, err_msg);
   page_top = 0;
   page_flink = first_link(page, page_len, page_top,
                           page_top + config.layout.main_height - 1);
@@ -583,6 +723,8 @@ bool tui_index() {
 bool tui_back() {
   if (history_back(1)) {
     populate_page();
+    if (err)
+      winddown(ES_OPER_ERROR, err_msg);
     return true;
   } else {
     tui_error(L"Already at the first page in history");
@@ -593,6 +735,8 @@ bool tui_back() {
 bool tui_fwrd() {
   if (history_forward(1)) {
     populate_page();
+    if (err)
+      winddown(ES_OPER_ERROR, err_msg);
     return true;
   } else {
     tui_error(L"Already at the last page in history");
@@ -610,8 +754,10 @@ void tui() {
   termsize_changed();
   init_windows();
 
-  // Initialize content, position, and focus
+  // Initialize page, page_len, page_top, page_left, and page_flink
   populate_page();
+  if (err)
+    winddown(ES_NOT_FOUND, err_msg);
   page_top = 0;
   page_left = 0;
   page_flink = next_link(page, page_len, page_flink);
@@ -624,21 +770,14 @@ void tui() {
     if (termsize_changed()) {
       init_windows();
       populate_page();
+      if (err)
+        winddown(ES_OPER_ERROR, err_msg);
       redraw = true;
     }
 
     // If redraw is necessary, redraw
     if (redraw) {
-      unsigned pos = page_flink.line;
-      if (pos < page_top || pos >= page_top + config.layout.main_height)
-        pos = page_top;
-
-      draw_page(page, page_len, page_top, page_flink);
-      draw_sbar(page_len, page_top);
-      draw_stat(request_type_str(history[history_cur].request_type), page_title,
-                page_len, pos + 1, L":", L"Press 'h' for help or 'q' to quit",
-                NULL);
-
+      tui_redraw();
       redraw = false;
     }
     doupdate();
@@ -675,6 +814,15 @@ void tui() {
       break;
     case PA_OPEN_WHATIS:
       redraw = tui_open_whatis();
+      break;
+    case PA_SP_OPEN:
+      redraw = tui_sp_open(RT_MAN);
+      break;
+    case PA_SP_APROPOS:
+      redraw = tui_sp_open(RT_APROPOS);
+      break;
+    case PA_SP_WHATIS:
+      redraw = tui_sp_open(RT_WHATIS);
       break;
     case PA_INDEX:
       redraw = tui_index();

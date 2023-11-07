@@ -52,6 +52,10 @@ unsigned page_top = 0;
 
 unsigned page_left = 0;
 
+bool err = false;
+
+wchar_t err_msg[BS_LINE];
+
 full_regex_t re_man, re_http, re_email;
 
 //
@@ -173,6 +177,12 @@ void init() {
   config.chars.trans_mode_name = L"┇";
   config.chars.trans_name_loc = L"┇";
   config.chars.trans_prompt_help = L"┇";
+  config.chars.box_hline = L"━";
+  config.chars.box_vline = L"┃";
+  config.chars.box_tl = L"┏";
+  config.chars.box_tr = L"┓";
+  config.chars.box_bl = L"┗";
+  config.chars.box_br = L"┛";
   config.colours.text.fg = COLOR_WHITE;
   config.colours.text.bold = false;
   config.colours.text.bg = COLOR_BLACK;
@@ -245,6 +255,14 @@ void init() {
   config.colours.stat_input_em.bold = true;
   config.colours.stat_input_em.bg = COLOR_BLACK;
   config.colours.stat_input_em.pair = 55;
+  config.colours.imm_border.fg = COLOR_YELLOW;
+  config.colours.imm_border.bold = true;
+  config.colours.imm_border.bg = COLOR_BLACK;
+  config.colours.imm_border.pair = 60;
+  config.colours.imm_title.fg = COLOR_YELLOW;
+  config.colours.imm_title.bold = true;
+  config.colours.imm_title.bg = COLOR_RED;
+  config.colours.imm_title.pair = 61;
   config.colours.trans_mode_name = 100 * config.colours.stat_indic_mode.pair +
                                    config.colours.stat_indic_name.pair;
   config.colours.trans_name_loc = 100 * config.colours.stat_indic_name.pair +
@@ -264,6 +282,9 @@ void init() {
   config.layout.stat_height = 2;
   config.layout.main_width = 79;
   config.layout.main_height = 23;
+  config.layout.imm_width = 59;
+  config.layout.imm_height_short = 4;
+  config.layout.imm_height_long = 15;
   config.layout.lmargin = 2;
   config.layout.rmargin = 2;
   config.misc.program_name = xwcsdup(L"qman");
@@ -284,8 +305,11 @@ void init() {
   arr8(config.keys[PA_HOME], KEY_HOME, (int)'g', 0, 0, 0, 0, 0, 0);
   arr8(config.keys[PA_END], KEY_END, (int)'G', 0, 0, 0, 0, 0, 0);
   arr8(config.keys[PA_OPEN], KEY_ENTER, (int)'\n', (int)'o', 0, 0, 0, 0, 0);
-  arr8(config.keys[PA_OPEN_APROPOS], (int)'a', (int)'A', 0, 0, 0, 0, 0, 0);
-  arr8(config.keys[PA_OPEN_WHATIS], (int)'w', (int)'W', 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_OPEN_APROPOS], (int)'a', 0, 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_OPEN_WHATIS], (int)'w', 0, 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_SP_OPEN], (int)'O', 0, 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_SP_APROPOS], (int)'A', 0, 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_SP_WHATIS], (int)'W', 0, 0, 0, 0, 0, 0, 0);
   arr8(config.keys[PA_INDEX], (int)'i', (int)'I', 0, 0, 0, 0, 0, 0);
   arr8(config.keys[PA_BACK], KEY_BACKSPACE, (int)'\b', (int)'[', 0, 0, 0, 0, 0);
   arr8(config.keys[PA_FWRD], (int)']', 0, 0, 0, 0, 0, 0, 0);
@@ -554,6 +578,19 @@ bool history_forward(unsigned n) {
   return false;
 }
 
+void history_reset() {
+  unsigned i;
+
+  for (i = history_cur + 1; i <= history_top; i++) {
+    if (NULL != history[i].args) {
+      free(history[i].args);
+      history[i].args = NULL;
+    }
+  }
+
+  history_top = history_cur;
+}
+
 unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
                        const wchar_t *args) {
   // Prepare apropos/whatis command
@@ -612,14 +649,14 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
 
   xfclose(fp);
 
-  // Exit the program gracefully, if no results were returned by apropos/whatis
-  static wchar_t errmsg[BS_LINE];
+  // If no results were returned by apropos/whatis, set err and err_msg
+  err = false;
   if (0 == lines) {
+    err = true;
     if (AW_WHATIS == cmd)
-      swprintf(errmsg, BS_LINE, L"Whatis %ls: nothing apropriate", args);
+      swprintf(err_msg, BS_LINE, L"Whatis %ls: nothing apropriate", args);
     else
-      swprintf(errmsg, BS_LINE, L"Apropos %ls: nothing apropriate", args);
-    winddown(ES_NOT_FOUND, errmsg);
+      swprintf(err_msg, BS_LINE, L"Apropos %ls: nothing apropriate", args);
   }
 
   *dst = res;
@@ -940,10 +977,11 @@ unsigned man(line_t **dst, const wchar_t *args) {
   free(tmpw);
   free(tmps);
 
-  static wchar_t errmsg[BS_LINE];
+  // If no resulst were returned by man, set err and err_msg
+  err = false;
   if (0 == ln) {
-    swprintf(errmsg, BS_LINE, L"No manual page for %ls", args);
-    winddown(ES_NOT_FOUND, errmsg);
+    err = true;
+    swprintf(err_msg, BS_LINE, L"No manual page for %ls", args);
   }
 
   *dst = res;

@@ -23,6 +23,9 @@ extern WINDOW *wsbar;
 // Status bar window
 extern WINDOW *wstat;
 
+// Immediate (popup) window
+extern WINDOW *wimm;
+
 extern action_t action;
 
 //
@@ -31,6 +34,9 @@ extern action_t action;
 
 // True if the terminal supports at least 8 colours
 #define COLOUR (has_colors() && COLORS >= 8)
+
+// Initialize colour pair col
+#define init_colour(col) init_pair(col.pair, col.fg, col.bg);
 
 // Change the colour for window win to col (a variable of type colour_t)
 #define change_colour(win, col)                                                \
@@ -69,6 +75,10 @@ extern void init_windows();
 // true. Otherwise, return false.
 extern bool termsize_changed();
 
+// Draw a box in w, starting at (tl_y, tl_x) and ending at (br_y, br_x)
+extern void draw_box(WINDOW *w, unsigned tl_y, unsigned tl_x, unsigned br_y,
+                     unsigned br_x);
+
 // Draw the portion of a page the user is supposed to see in wmain. The page is
 // contained in lines and is lines_len long. lines_top specifies the line where
 // the portion begins. flink indicates the location of the focused link.
@@ -94,6 +104,17 @@ extern void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
                       unsigned lines_pos, wchar_t *prompt, wchar_t *help,
                       wchar_t *em);
 
+// Draw an immediate window. is_long specifies whether the window is long or
+// short, while title is quite obvious.
+void draw_imm(bool is_long, wchar_t *title);
+
+// Delete the immediate window previously drawn with draw_imm()
+void del_imm();
+
+// Move to (y, x) in w and read a string into trgt (of length trgt_len)
+extern bool get_str(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
+                    unsigned trgt_len);
+
 // Return the program action number that corresponds to input character chr. If
 // no such action, return -1.
 extern action_t get_action(int chr);
@@ -108,6 +129,10 @@ extern void winddown_tui();
 //
 // Functions (handlers)
 //
+
+// Redraw everythhing on the screen, calling draw_page(), draw_sbar() and
+// draw_reset()
+extern void tui_redraw();
 
 // Error handler: display em in the status bar, and call cbeep();
 void tui_error(wchar_t *em);
@@ -138,6 +163,11 @@ extern bool tui_open_apropos();
 
 // Handler of PA_OPEN_WHATIS
 extern bool tui_open_whatis();
+
+// Handler for PA_SP_OPEN, PA_SP_APROPOS, and PA_SP_WHATIS. Opens a manual,
+// apropos, or whatis page (based on the value or rt) that is specified by the
+// user in a pop-up window.
+extern bool tui_sp_open(request_type_t rt);
 
 // Handler for PA_INDEX
 extern bool tui_index();
