@@ -4,6 +4,7 @@
 #include "lib.h"
 #include "program.h"
 #include <curses.h>
+#include <wchar.h>
 
 //
 // Global variables
@@ -90,16 +91,19 @@ void init_windows() {
   if (NULL != wmain)
     delwin(wmain);
   wmain = newwin(config.layout.main_height, config.layout.main_width, 0, 0);
+  keypad(wmain, true);
 
   if (NULL != wsbar)
     delwin(wsbar);
   wsbar = newwin(config.layout.main_height, config.layout.sbar_width, 0,
                  config.layout.main_width);
+  keypad(wsbar, true);
 
   if (NULL != wstat)
     delwin(wstat);
   wstat = newwin(config.layout.stat_height, config.layout.width,
                  config.layout.main_height, 0);
+  keypad(wstat, true);
 
   wnoutrefresh(stdscr);
 }
@@ -320,6 +324,7 @@ void draw_imm(bool is_long, wchar_t *title) {
     delwin(wimm);
   wimm = newwin(height, width, y, x);
 
+  keypad(wimm, true);
   werase(wimm);
 
   change_colour(wimm, config.colours.imm_border);
@@ -351,6 +356,68 @@ bool get_str(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
     return true;
   else
     return false;
+}
+
+int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
+                 unsigned trgt_len) {
+  static wchar_t *res;     // copy of trgt
+  static unsigned res_len; // copy of trgt_len
+  static unsigned pos;     // position in res/trgt
+  int ret;                 // next return value
+  wint_t chr = L'\0';      // user character input
+  int wget_stat;           // mvwget_wch() return value
+
+  if (NULL != trgt) {
+    // First call; initialize res, res_len, and pos
+    res = trgt;
+    res_len = trgt_len;
+    pos = 0;
+  }
+
+  // Get input from user
+  wget_stat = mvwget_wch(w, y, x + pos, &chr);
+
+  switch (chr) {
+  case KEY_ENTER:
+  case L'\n':
+    // User hit enter
+    res[pos] = L'\0';
+    ret = pos;
+    break;
+  case KEY_END:
+  case L'\e':
+  case KEY_BREAK:
+  case 0x03:
+    // User hit ESC or CTRL-C
+    res[0] = L'\0';
+    ret = 0;
+    break;
+  case KEY_BACKSPACE:
+  case L'\b':
+    // User hit backspace
+    if (pos > 0)
+      pos--;
+    else
+      cbeep();
+    res[pos] = L'\0';
+    mvwaddnwstr(w, y, x + pos, L" ", 1);
+    ret = -1;
+    break;
+  default:
+    // User typed a character
+    if (OK != wget_stat)
+      cbeep();
+    else if (pos < res_len) {
+      res[pos] = (wchar_t)chr;
+      mvwaddnwstr(w, y, x + pos, &res[pos], 1);
+      pos++;
+    } else
+      cbeep();
+    ret = -1;
+  }
+
+  wrefresh(w);
+  return ret;
 }
 
 action_t get_action(int chr) {
@@ -671,7 +738,7 @@ bool tui_open_whatis() {
 bool tui_sp_open(request_type_t rt) {
   wchar_t inpt[BS_SHORT - 2];
   wchar_t trgt[BS_SHORT];
-  bool got_inpt;
+  int got_inpt;
 
   if (RT_MAN == rt)
     draw_imm(false, L"Manual page to open?");
@@ -682,11 +749,14 @@ bool tui_sp_open(request_type_t rt) {
   doupdate();
 
   change_colour(wimm, config.colours.text);
-  got_inpt =
-      get_str(wimm, 2, 2, inpt, MIN(BS_SHORT - 3, config.layout.imm_width - 1));
+  got_inpt = get_str_next(wimm, 2, 2, inpt,
+                          MIN(BS_SHORT - 3, config.layout.imm_width - 4));
+  while (-1 == got_inpt) {
+    got_inpt = get_str_next(wimm, 2, 2, NULL, 0);
+  }
   del_imm();
 
-  if (got_inpt) {
+  if (got_inpt > 0) {
     swprintf(trgt, BS_SHORT, L"'%ls'", inpt);
     history_push(rt, trgt);
     populate_page();
@@ -703,7 +773,8 @@ bool tui_sp_open(request_type_t rt) {
                             page_top + config.layout.main_height - 1);
     return true;
   } else {
-    tui_error(L"Unable to retrieve string");
+    tui_redraw();
+    tui_error(L"Aborted");
     return false;
   }
 }

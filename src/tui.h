@@ -115,6 +115,19 @@ void del_imm();
 extern bool get_str(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
                     unsigned trgt_len);
 
+// Interactive version of get_str() that returns after each keystroke. Use like
+// strtok(), i.e. specify trgt and trgt_len on first call, and set them to NULL
+// and 0 respectively on subsequent calls. The function updates trgt and returns
+// whenever the user types something. Return value varies depending on the
+// user's action:
+// - -1, if the user typed a charcter or hit BACKSPACE. This signals that the
+//   function must be called again.
+// - 0, if the user hit ESC or CTRL-C. This signals that the input has failed.
+// - n, if the user hit ENTER, where n is the total number of typed characters.
+//   This signals that the input was successful.
+extern int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
+                        unsigned trgt_len);
+
 // Return the program action number that corresponds to input character chr. If
 // no such action, return -1.
 extern action_t get_action(int chr);
