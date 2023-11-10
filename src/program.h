@@ -98,6 +98,9 @@ typedef struct {
   colour_t stat_input_em;     // error message section of status bar input line
   colour_t imm_border;        // immediate window border
   colour_t imm_title;         // immediate title bar
+  colour_t sp_input;          // input field in tui_sp_open() window
+  colour_t sp_text;           // text in tui_sp_open() window
+  colour_t sp_text_f;         // focuesd text in tui_sp_open() window
   unsigned trans_mode_name;   // colour pair for mode to name transition
   unsigned trans_name_loc;    // colour pair for name to location transition
   unsigned trans_prompt_help; // colour pair for prompt to help transition
@@ -183,6 +186,7 @@ typedef enum { AW_APROPOS, AW_WHATIS } aprowhat_cmd_t;
 typedef struct {
   wchar_t *page;    // Manual page
   wchar_t *section; // Section
+  wchar_t *ident;   // Combined <manual page>(<section>)
   wchar_t *descr;   // Description
 } aprowhat_t;
 
@@ -407,6 +411,12 @@ extern unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
                                 unsigned sc_len, const wchar_t *key,
                                 const wchar_t *title, const wchar_t *ver,
                                 const wchar_t *date);
+
+// Search for elements of hayst (of length hayst_len), whose ident starts with
+// needle. Return the first matching position in hayst after pos, or -1 if
+// nothing can be matched.
+extern int aprowhat_search(const wchar_t *needle, const aprowhat_t *hayst,
+                           unsigned hayst_len, unsigned pos);
 
 // Render a page that contains an index of all manual pages in dst
 extern unsigned index_page(line_t **dst);

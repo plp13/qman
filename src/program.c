@@ -263,6 +263,18 @@ void init() {
   config.colours.imm_title.bold = true;
   config.colours.imm_title.bg = COLOR_RED;
   config.colours.imm_title.pair = 61;
+  config.colours.sp_input.fg = COLOR_WHITE;
+  config.colours.sp_input.bold = true;
+  config.colours.sp_input.bg = COLOR_BLACK;
+  config.colours.sp_input.pair = 70;
+  config.colours.sp_text.fg = COLOR_BLACK;
+  config.colours.sp_text.bold = true;
+  config.colours.sp_text.bg = COLOR_BLACK;
+  config.colours.sp_text.pair = 71;
+  config.colours.sp_text_f.fg = COLOR_BLACK;
+  config.colours.sp_text_f.bold = false;
+  config.colours.sp_text_f.bg = COLOR_MAGENTA;
+  config.colours.sp_text_f.pair = 72;
   config.colours.trans_mode_name = 100 * config.colours.stat_indic_mode.pair +
                                    config.colours.stat_indic_name.pair;
   config.colours.trans_name_loc = 100 * config.colours.stat_indic_name.pair +
@@ -332,9 +344,11 @@ void init() {
   // initialize regular expressions
   fr_init(&re_man, "[a-zA-Z0-9\\.:@_-]+\\([a-zA-Z0-9]+\\)");
   fr_init(&re_http, "https?:\\/\\/[a-zA-Z0-9\\.\\/\\?\\+:@_#%=-]+");
-  fr_init(&re_email, "[a-zA-Z0-9\\.\\$\\*\\+\\?\\^\\|!#%&'/"
-                     "=_`{}~-][a-zA-Z0-9\\.\\$\\*\\+\\/\\?\\^\\|\\.!#%&'"
-                     "=_`{}~-]*@[a-zA-Z0-9-][a-zA-Z0-9\\.-]*");
+  fr_init(
+      &re_email,
+      "[a-zA-Z0-9\\.\\$\\*\\+\\?\\^\\|!#%&'/=_`{}~-][a-zA-Z0-9\\.\\$\\*\\+\\/"
+      "\\?\\^\\|\\.!#%&'=_`{}~-]*@[a-zA-Z0-9-][a-zA-Z0-9-]+\\.[a-zA-Z0-9-][a-"
+      "zA-Z0-9\\.-]+");
 }
 
 int parse_options(int argc, char *const *argv) {
@@ -643,6 +657,9 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
     mbstowcs(res[i].page, page, page_len);
     res[i].section = walloc(section_len);
     mbstowcs(res[i].section, section, section_len);
+    res[i].ident = walloc(page_len + section_len + 3);
+    swprintf(res[i].ident, page_len + section_len + 3, L"%s(%s)", page,
+             section);
     res[i].descr = walloc(descr_len);
     mbstowcs(res[i].descr, descr, descr_len);
   }
@@ -802,15 +819,14 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
                     rmargin_width); // used in place of line_width; might be
                                     // longer, in which case we'll scroll
 
-        // Page name and section
+        // Page name and section (ident)
         inc_ln;
         line_alloc(res[ln], spcl_width);
-        swprintf(tmp, page_width + 1, L"%ls(%ls)", aw[j].page, aw[j].section);
         swprintf(res[ln].text, spcl_width + 1, L"%*s%-*ls", //
                  lmargin_width, "",                         //
-                 lc_width, tmp);
-        add_link(&res[ln], lmargin_width, lmargin_width + wcslen(tmp), LT_MAN,
-                 tmp);
+                 lc_width, aw[j].ident);
+        add_link(&res[ln], lmargin_width, lmargin_width + wcslen(aw[j].ident),
+                 LT_MAN, aw[j].ident);
 
         // Description
         wcscpy(tmp, aw[j].descr);
@@ -861,6 +877,17 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
 
   *dst = res;
   return ln + 1;
+}
+
+int aprowhat_search(const wchar_t *needle, const aprowhat_t *hayst,
+                    unsigned hayst_len, unsigned pos) {
+  unsigned i;
+
+  for (i = pos; i < hayst_len; i++)
+    if (NULL != needle && wcsstr(hayst[i].ident, needle) == hayst[i].ident)
+      return i;
+
+  return -1;
 }
 
 unsigned index_page(line_t **dst) {

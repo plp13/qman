@@ -120,11 +120,11 @@ extern bool get_str(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
 // and 0 respectively on subsequent calls. The function updates trgt and returns
 // whenever the user types something. Return value varies depending on the
 // user's action:
-// - -1, if the user typed a charcter or hit BACKSPACE. This signals that the
-//   function must be called again.
-// - 0, if the user hit ESC or CTRL-C. This signals that the input has failed.
-// - n, if the user hit ENTER, where n is the total number of typed characters.
-//   This signals that the input was successful.
+// - 0, if the user hit ESC or CTRL-C
+// - n, if the user hit ENTER, where n is the total number of typed characters
+// - -0x08, if the user hit BACKSPACE
+// - -0x09, if the user hit TAB
+// - -chr, if the user typed any other character chr
 extern int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
                         unsigned trgt_len);
 
@@ -178,8 +178,8 @@ extern bool tui_open_apropos();
 extern bool tui_open_whatis();
 
 // Handler for PA_SP_OPEN, PA_SP_APROPOS, and PA_SP_WHATIS. Opens a manual,
-// apropos, or whatis page (based on the value or rt) that is specified by the
-// user in a pop-up window.
+// apropos, or whatis page (depending on the value of rt) that is specified by
+// the user in an immediate (pop-up) window.
 extern bool tui_sp_open(request_type_t rt);
 
 // Handler for PA_INDEX

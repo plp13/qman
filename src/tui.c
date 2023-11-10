@@ -35,6 +35,50 @@ action_t action = PA_NULL;
     return false;                                                              \
   }
 
+// Helper of tui_sp_open(). Show quick search results as the user types.
+void aw_quick_search(wchar_t *needle) {
+  // Search aw_all for needle and store the results in res;
+  unsigned lines =
+      config.layout.imm_height_long - 5; // maximum no. of lines to display
+  unsigned *res =
+      aalloca(lines, unsigned); // search results as positions in aw_all
+  unsigned pos = 0;             // current position in aw_all
+  unsigned ln = 0;              // current line
+  pos = aprowhat_search(needle, aw_all, aw_all_len, pos);
+  FILE *fp = fopen("qman.out", "a");
+  fwprintf(fp, L"%ls %d\n", needle, pos);
+  fclose(fp);
+  while (-1 != pos && ln < lines) {
+    res[ln] = pos;
+    pos = aprowhat_search(needle, aw_all, aw_all_len, ++pos);
+    FILE *fp = fopen("qman.out", "a");
+    fwprintf(fp, L"%ls %d\n", needle, pos);
+    fclose(fp);
+    ln++;
+  }
+  lines = ln; // lines becomes exact no. of lines to display
+
+  // Display the search results
+  unsigned width = config.layout.imm_width - 4; // immediate window width
+  wchar_t *tmp = walloca(width - 4);            // temporary
+  unsigned ident_len = 0; // space dedicated to ident column
+  unsigned descr_len;     // space left for descr column
+  for (ln = 0; ln < lines; ln++)
+    ident_len = MAX(ident_len, wcslen(aw_all[res[ln]].ident));
+  descr_len = width - ident_len - 5;
+  for (ln = 0; ln < lines; ln++) {
+    swprintf(tmp, width - 3, L"%-*ls %-*ls", ident_len, aw_all[res[ln]].ident,
+             descr_len, aw_all[res[ln]].descr);
+    mvwaddnwstr(wimm, ln + 4, 2, tmp, width - 4);
+  }
+  for (ln = lines; ln < config.layout.imm_height_long - 5; ln++) {
+    swprintf(tmp, width - 3, L"%*ls", width - 4, L"");
+    mvwaddnwstr(wimm, ln + 4, 2, tmp, width - 4);
+  }
+
+  wnoutrefresh(wimm);
+}
+
 //
 // Functions (utility)
 //
@@ -73,6 +117,9 @@ void init_tui() {
     init_colour(config.colours.stat_input_em);
     init_colour(config.colours.imm_border);
     init_colour(config.colours.imm_title);
+    init_colour(config.colours.sp_input);
+    init_colour(config.colours.sp_text);
+    init_colour(config.colours.sp_text_f);
     // Initialize colour pairs used for transitions
     init_pair(config.colours.trans_mode_name, config.colours.stat_indic_mode.bg,
               config.colours.stat_indic_name.bg);
@@ -115,10 +162,26 @@ bool termsize_changed() {
   if (width != config.layout.width || height != config.layout.height) {
     config.layout.width = width;
     config.layout.height = height;
-    config.layout.main_width = width - config.layout.sbar_width;
-    config.layout.main_height = height - config.layout.stat_height;
-    config.layout.imm_width = config.layout.width - 20;
-    config.layout.imm_height_long = config.layout.height - 8;
+
+    if (width > config.layout.sbar_width)
+      config.layout.main_width = width - config.layout.sbar_width;
+    else
+      config.layout.main_width = 0;
+
+    if (height > config.layout.stat_height)
+      config.layout.main_height = height - config.layout.stat_height;
+    else
+      config.layout.main_height = 0;
+
+    if (config.layout.width > 60)
+      config.layout.imm_width = config.layout.width - 20;
+    else
+      config.layout.imm_width = 40;
+
+    if (config.layout.height > 18)
+      config.layout.imm_height_long = config.layout.height - 8;
+    else
+      config.layout.imm_height_long = 10;
 
     return true;
   }
@@ -364,7 +427,7 @@ int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
   static unsigned res_len; // copy of trgt_len
   static unsigned pos;     // position in res/trgt
   int ret;                 // next return value
-  wint_t chr = L'\0';      // user character input
+  int chr = '\0';          // user character input
   int wget_stat;           // mvwget_wch() return value
 
   if (NULL != trgt) {
@@ -375,7 +438,7 @@ int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
   }
 
   // Get input from user
-  wget_stat = mvwget_wch(w, y, x + pos, &chr);
+  wget_stat = mvwget_wch(w, y, x + pos, (wint_t *)&chr);
 
   switch (chr) {
   case KEY_ENTER:
@@ -401,22 +464,28 @@ int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
       cbeep();
     res[pos] = L'\0';
     mvwaddnwstr(w, y, x + pos, L" ", 1);
-    ret = -1;
+    ret = -0x08;
+    break;
+  case L'\t':
+    cbeep();
+    ret = -0x09;
     break;
   default:
     // User typed a character
-    if (OK != wget_stat)
+    if (OK != wget_stat) {
+      // Reject function keys, arrow keys, etc.
       cbeep();
-    else if (pos < res_len) {
+    } else if (pos < res_len) {
       res[pos] = (wchar_t)chr;
+      res[pos + 1] = L'\0';
       mvwaddnwstr(w, y, x + pos, &res[pos], 1);
       pos++;
     } else
       cbeep();
-    ret = -1;
+    ret = -chr;
   }
 
-  wrefresh(w);
+  wnoutrefresh(w);
   return ret;
 }
 
@@ -736,27 +805,37 @@ bool tui_open_whatis() {
 }
 
 bool tui_sp_open(request_type_t rt) {
-  wchar_t inpt[BS_SHORT - 2];
-  wchar_t trgt[BS_SHORT];
+  wchar_t inpt[BS_SHORT - 2]; // string typed by user
+  wchar_t trgt[BS_SHORT]; // final string that specifies the page to be opened
   int got_inpt;
 
+  // Draw window and title bar
   if (RT_MAN == rt)
-    draw_imm(false, L"Manual page to open?");
+    draw_imm(true, L"Manual page to open?");
   else if (RT_APROPOS == rt)
-    draw_imm(false, L"Apropos what?");
+    draw_imm(true, L"Apropos what?");
   else if (RT_WHATIS == rt)
-    draw_imm(false, L"Whatis what?");
+    draw_imm(true, L"Whatis what?");
   doupdate();
 
-  change_colour(wimm, config.colours.text);
+  // Get input (and show quick search results as the user types)
+  change_colour(wimm, config.colours.sp_text);
+  aw_quick_search(inpt);
+  doupdate();
+  change_colour(wimm, config.colours.sp_input);
   got_inpt = get_str_next(wimm, 2, 2, inpt,
                           MIN(BS_SHORT - 3, config.layout.imm_width - 4));
-  while (-1 == got_inpt) {
+  while (got_inpt < 0) {
+    change_colour(wimm, config.colours.sp_text);
+    aw_quick_search(inpt);
+    doupdate();
+    change_colour(wimm, config.colours.sp_input);
     got_inpt = get_str_next(wimm, 2, 2, NULL, 0);
   }
   del_imm();
 
   if (got_inpt > 0) {
+    // Input succeeded; show requested page
     swprintf(trgt, BS_SHORT, L"'%ls'", inpt);
     history_push(rt, trgt);
     populate_page();
@@ -773,6 +852,7 @@ bool tui_sp_open(request_type_t rt) {
                             page_top + config.layout.main_height - 1);
     return true;
   } else {
+    // User hit ESC or CTRL-C; abort
     tui_redraw();
     tui_error(L"Aborted");
     return false;
