@@ -230,14 +230,14 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
         break;
 
       // Set text attributes
-      if (bget(lines[ly].reg, x))
-        wattrset(wmain, WA_NORMAL);
       if (bget(lines[ly].bold, x))
         wattrset(wmain, WA_BOLD);
       if (bget(lines[ly].italic, x))
         wattrset(wmain, WA_STANDOUT);
       if (bget(lines[ly].uline, x))
         wattrset(wmain, WA_UNDERLINE);
+      if (bget(lines[ly].reg, x))
+        wattrset(wmain, WA_NORMAL);
 
       // Place character on screen
       mvwaddnwstr(wmain, y, x, &lines[ly].text[x], 1);
@@ -441,13 +441,6 @@ int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
   wget_stat = mvwget_wch(w, y, x + pos, (wint_t *)&chr);
 
   switch (chr) {
-  case KEY_ENTER:
-  case L'\n':
-    // User hit enter
-    res[pos] = L'\0';
-    ret = pos;
-    break;
-  case KEY_END:
   case L'\e':
   case KEY_BREAK:
   case 0x03:
@@ -455,20 +448,35 @@ int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
     res[0] = L'\0';
     ret = 0;
     break;
+  case KEY_ENTER:
+  case L'\n':
+    // User hit ENTER
+    res[pos] = L'\0';
+    ret = pos;
+    break;
   case KEY_BACKSPACE:
   case L'\b':
-    // User hit backspace
+    // User hit BACKSPACE
     if (pos > 0)
       pos--;
     else
       cbeep();
     res[pos] = L'\0';
     mvwaddnwstr(w, y, x + pos, L" ", 1);
-    ret = -0x08;
+    ret = -KEY_BACKSPACE;
     break;
   case L'\t':
-    cbeep();
+    // User hit TAB
     ret = -0x09;
+    break;
+  case KEY_UP:
+  case KEY_DOWN:
+  case KEY_PPAGE:
+  case KEY_NPAGE:
+  case KEY_HOME:
+  case KEY_END:
+    // Key hit UP, DOWN, PGUP, PGDN, HOME, or END
+    ret = -chr;
     break;
   default:
     // User typed a character

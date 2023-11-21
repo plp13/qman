@@ -2,6 +2,7 @@
 
 #include "lib.h"
 #include "program.h"
+#include <wchar.h>
 
 //
 // Functions
@@ -101,9 +102,13 @@ FILE *xtmpfile() {
 char *xfgets(char *s, int size, FILE *stream) {
   char *res = fgets(s, size, stream);
   if (ferror(stream)) {
-    static wchar_t errmsg[BS_SHORT];
-    serror(errmsg, L"Unable to fgets()");
-    winddown(ES_OPER_ERROR, errmsg);
+    // Ugly hack: this function sometimes gets rudley interrupted by ncurses; if
+    // that happens, we simply ignore the error and return NULL
+    if (EINTR != errno) {
+      static wchar_t errmsg[BS_SHORT];
+      serror(errmsg, L"Unable to fgets()");
+      winddown(ES_OPER_ERROR, errmsg);
+    }
   }
 
   return res;
@@ -384,4 +389,16 @@ range_t fr_search(const full_regex_t *re, wchar_t *src) {
   }
 
   return res;
+}
+
+void loggit(const char *msg) {
+  static FILE *lfp = NULL;
+
+  time_t now;
+
+  if (NULL == lfp)
+    lfp = fopen(F_LOG, "w");
+
+  time(&now);
+  fwprintf(lfp, L"[%s] %s\n", strtok(ctime(&now), "\n"), msg);
 }

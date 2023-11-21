@@ -121,10 +121,17 @@ extern bool get_str(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
 // whenever the user types something. Return value varies depending on the
 // user's action:
 // - 0, if the user hit ESC or CTRL-C
-// - n, if the user hit ENTER, where n is the total number of typed characters
-// - -0x08, if the user hit BACKSPACE
-// - -0x09, if the user hit TAB
-// - -chr, if the user typed any other character chr
+// - n, if the user hit ENTER, where n is the total number of typed
+//   characters
+// - -KEY_UP, if the user hit the UP arrow key
+// - -KEY_DOWN, if the user hit the DOWN arrow key
+// - -KEY_PPAGE, if the user hit PGUP
+// - -KEY_NPAGE, if the user hit PGDN
+// - -KEY_HOME, if the user hit HOME
+// - -KEY_END, if the user hit END
+// - -0x09 (TAB in ASCII), if the user hit TAB
+// - -KEY_BACKSPACE, if the user hit BACKSPACE 
+// - -chr, if the user typed any text character chr
 extern int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
                         unsigned trgt_len);
 

@@ -40,6 +40,9 @@ typedef struct {
 #define BS_SHORT 128 // length of a short array
 #define BS_LINE 1024 // length of an array that is suitable for a line of text
 
+// Rudimentary logging, used for debugging
+#define F_LOG "./qman.log" // log file
+
 //
 // Macros
 //
@@ -206,5 +209,8 @@ extern void fr_init(full_regex_t *re, char *str);
 // a range_t. If not, return { 0, 0 }. This function uses libc regular
 // expressions, and has plumbing to make it work on wchar_t* strings.
 extern range_t fr_search(const full_regex_t *re, wchar_t *src);
+
+// Log msg, together with a timestamp, into F_LOG
+extern void loggit(const char *msg);
 
 #endif

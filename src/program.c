@@ -122,44 +122,55 @@ void discover_links(const full_regex_t *re, line_t *line, link_type_t type) {
 
 // All got_... macros are helpers of man()
 
-// true if we tmpw[i] contains a 'bold' terminal escape sequence
+// true if tmpw[i] contains a 'bold' terminal escape sequence
 #define got_bold                                                               \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'1') && (tmpw[i + 3] == L'm'))
 
-// true if we tmpw[i] contains a 'not bold' terminal escape sequence
+// true if tmpw[i] contains a 'not bold' terminal escape sequence
 #define got_not_bold                                                           \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'0') && (tmpw[i + 3] == L'm'))
 
-// true if we tmpw[i] contains a 'italic' terminal escape sequence
+// true if tmpw[i] contains a 'italic' terminal escape sequence
 #define got_italic                                                             \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'3') && (tmpw[i + 3] == L'm'))
 
-// true if we tmpw[i] contains a 'not italic' terminal escape sequence
+// true if tmpw[i] contains a 'not italic' terminal escape sequence
 #define got_not_italic                                                         \
   ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'3') && (tmpw[i + 4] == L'm'))
 
-// true if we tmpw[i] contains a 'underline' terminal escape sequence
+// true if tmpw[i] contains a 'underline' terminal escape sequence
 #define got_uline                                                              \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'4') && (tmpw[i + 3] == L'm'))
 
-// true if we tmpw[i] contains a 'not underline' terminal escape sequence
+// true if tmpw[i] contains a 'not underline' terminal escape sequence
 #define got_not_uline                                                          \
   ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'4') && (tmpw[i + 4] == L'm'))
 
-// true if we tmpw[i] contains a 'normal / not dim' terminal escape sequence
+// true if tmpw[i] contains a 'normal / not dim' terminal escape sequence
 #define got_normal                                                             \
   ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'2') && (tmpw[i + 4] == L'm'))
 
-// true if we tmpw[i] contains any terminal escape sequence that resets it to
-// normal text
-#define got_reg (got_not_bold || got_not_italic || got_not_uline || got_normal)
+// true if tmpw[i] contains any single-digit terminal formatting sequence
+#define got_any_1                                                              \
+  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 3] == L'm'))
+
+// true if tmpw[i] contains any two-digit terminal formatting sequence
+#define got_any_2                                                              \
+  ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 4] == L'm'))
+
+// true if tmpw[i] contains any single-digit terminal formatting sequence
+#define got_any_3                                                              \
+  ((i + 6 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 5] == L'm'))
 
 //
 // Functions
@@ -959,13 +970,22 @@ unsigned man(line_t **dst, const wchar_t *args) {
   // For each line...
   xfgets(tmps, BS_LINE, pp);
   while (!feof(pp)) {
+    // Ugly hack: sometimes ncurses rudely interrupts xfgets(), which causes its
+    // return value to return NULL. If that happens, we skip the current loop
+    // step.
+    if (NULL == tmps)
+      continue;
+    
     // Process text and formatting attirbutes
     len = mbstowcs(tmpw, tmps, BS_LINE);
     line_alloc(res[ln], config.layout.lmargin + len);
     for (j = 0; j < config.layout.lmargin; j++)
       res[ln].text[j] = L' ';
     for (i = 0; i < len; i++) {
-      if (got_reg) {
+      if (got_not_bold) {
+        bset(res[ln].reg, j);
+        i += 3;
+      } else if (got_not_italic || got_not_uline || got_normal) {
         bset(res[ln].reg, j);
         i += 4;
       } else if (got_bold) {
@@ -977,7 +997,13 @@ unsigned man(line_t **dst, const wchar_t *args) {
       } else if (got_uline) {
         bset(res[ln].uline, j);
         i += 3;
-      } else if (tmpw[i] != '\n') {
+      } else if (got_any_1) {
+        i += 3;
+      } else if (got_any_2) {
+        i += 4;
+      } else if (got_any_3) {
+        i += 5;
+      } else if (tmpw[i] != L'\n') {
         res[ln].text[j] = tmpw[i];
         j++;
       }
