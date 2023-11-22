@@ -56,6 +56,10 @@ bool err = false;
 
 wchar_t err_msg[BS_LINE];
 
+result_t *results = NULL;
+
+unsigned results_len = 0;
+
 full_regex_t re_man, re_http, re_email;
 
 //
@@ -69,6 +73,15 @@ full_regex_t re_man, re_http, re_email;
   if (ln == res_len) {                                                         \
     res_len += 1024;                                                           \
     res = xreallocarray(res, res_len, sizeof(line_t));                         \
+  }
+
+// Helper of search(). Increase i, and reallocate res in memory, if i has
+// exceeded its size.
+#define inc_i                                                                  \
+  i++;                                                                         \
+  if (i == res_len) {                                                          \
+    res_len += 1024;                                                           \
+    res = xreallocarray(res, res_len, sizeof(result_t));                       \
   }
 
 // Helper of man() and aprowhat_render(). Add a link to a line. Allocate memory
@@ -336,7 +349,11 @@ void init() {
   arr8(config.keys[PA_INDEX], (int)'i', (int)'I', 0, 0, 0, 0, 0, 0);
   arr8(config.keys[PA_BACK], KEY_BACKSPACE, (int)'\b', (int)'[', 0, 0, 0, 0, 0);
   arr8(config.keys[PA_FWRD], (int)']', 0, 0, 0, 0, 0, 0, 0);
-  arr8(config.keys[PA_HELP], (int)'h', (int)'H', (int)'?', 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_SEARCH], (int)'/', 0, 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_SEARCH_BACK], (int)'?', 0, 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_SEARCH_NEXT], (int)'n', 0, 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_SEARCH_PREV], (int)'N', 0, 0, 0, 0, 0, 0, 0);
+  arr8(config.keys[PA_HELP], (int)'h', (int)'H', 0, 0, 0, 0, 0, 0);
   arr8(config.keys[PA_QUIT], KEY_BREAK, (int)'q', (int)'Q', 0, 0, 0, 0, 0);
 
   // Initialize history
@@ -975,7 +992,7 @@ unsigned man(line_t **dst, const wchar_t *args) {
     // step.
     if (NULL == tmps)
       continue;
-    
+
     // Process text and formatting attirbutes
     len = mbstowcs(tmpw, tmps, BS_LINE);
     line_alloc(res[ln], config.layout.lmargin + len);
@@ -1159,6 +1176,64 @@ link_loc_t last_link(line_t *lines, unsigned lines_len, unsigned start,
   return res;
 }
 
+unsigned search(result_t **dst, wchar_t *needle, line_t *lines,
+                unsigned lines_len) {
+  unsigned ln;                          // current line no.
+  unsigned i = 0;                       // current result no.
+  unsigned needle_len = wcslen(needle); // length of needle
+  wchar_t *cur_hayst;      // current haystuck (i.e. text of current line)
+  wchar_t *hit = NULL;     // current return value of wcsstr()
+  unsigned res_len = 1024; // result buffer length
+  result_t *res = aalloc(res_len, result_t); // result buffer
+
+  // For each line...
+  for (ln = 0; ln < lines_len; ln++) {
+    // Start at the beginning of the line's text
+    cur_hayst = lines[ln].text;
+    // Search for needle
+    hit = wcsstr(cur_hayst, needle);
+    // While needle has been found...
+    while (NULL != hit) {
+      // Add the search result to res[i]
+      res[i].line = ln;
+      res[i].start = hit - lines[ln].text;
+      res[i].end = res[i].start + needle_len;
+      // Go to the part of the line's text that follows needle
+      cur_hayst = hit + needle_len;
+      // And search for needle again (except in case of overflow)
+      if (cur_hayst - lines[ln].text < lines[ln].length)
+        hit = wcsstr(cur_hayst, needle);
+      else
+       hit = NULL;
+      // Increment i (and reallocate memory if necessary)
+      inc_i;
+    }
+  }
+
+  *dst = res;
+  return i;
+}
+
+int search_next(result_t *res, unsigned res_len, unsigned from) {
+  unsigned i;
+
+  for (i = 0; i < res_len; i++)
+    if (res[i].line >= from)
+      return res[i].line;
+
+  return -1;
+}
+
+int search_prev(result_t *res, unsigned res_len, unsigned from) {
+  unsigned i;
+  unsigned prev_line = -1;
+
+  for (i = 0; i < res_len && res[i].line < from; i++)
+    prev_line = res[i].line;
+
+  return prev_line;
+}
+
 void populate_page() {
   // If page is already populated, free its allocated memory
   if (NULL != page && page_len > 0) {
@@ -1190,6 +1265,12 @@ void populate_page() {
     page_len = aprowhat(&page, AW_WHATIS, history[history_cur].args, L"WHATIS",
                         page_title);
   }
+
+  // Reset search results
+  if (NULL != results && results_len > 0)
+    free(results);
+  results = NULL;
+  results_len = 0;
 }
 
 void requests_free(request_t *reqs, unsigned reqs_len) {
@@ -1256,6 +1337,10 @@ void winddown(int ec, const wchar_t *em) {
   // Deallocate memory used by page global
   if (NULL != page && page_len > 0)
     lines_free(page, page_len);
+
+  // Deallocate memory used by results
+  if (NULL != results && results_len > 0)
+    free(results);
 
   // Deallocate memory used by re_... regular expression globals
   regfree(&re_man.re);

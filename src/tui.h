@@ -198,6 +198,14 @@ extern bool tui_back();
 // Handler for PA_FWRD
 extern bool tui_fwrd();
 
+// Handler for PA_SEARCH (whenever back is set to true) or PA_SEARCH_BACK
+// (whenever back is set to false)
+extern bool tui_search(bool back);
+
+// Handler for PA_SEARCH_PREV (whenever back is set to true) or PA_SEARCH_NEXT
+// (whenever back is set to false)
+extern bool tui_search_next(bool back);
+
 // Main handler/loop for the TUI
 extern void tui();
 

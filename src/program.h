@@ -53,6 +53,10 @@ typedef enum {
   PA_INDEX,        // go to index (home) page
   PA_BACK,         // go back one step in history
   PA_FWRD,         // go forward one step in history
+  PA_SEARCH,       // search forward
+  PA_SEARCH_BACK,  // search backward
+  PA_SEARCH_NEXT,  // go to next search result
+  PA_SEARCH_PREV,  // go to previous search result
   PA_HELP,         // go to keyboard help page
   PA_QUIT          // exit the program (must be last member of action_t)
 } action_t;
@@ -219,6 +223,13 @@ typedef struct {
   bitarr_t uline;  // underlined
 } line_t;
 
+// A search result
+typedef struct {
+  unsigned line;  // line number
+  unsigned start; // character no. where the result starts
+  unsigned end;   // character no. where the result ends
+} result_t;
+
 //
 // Constants
 //
@@ -285,6 +296,12 @@ extern bool err;
 
 // Formatted error message for last man/apropos/whatis failure
 extern wchar_t err_msg[BS_LINE];
+
+// Search results in current page
+extern result_t *results;
+
+// Total number of search results in current page
+extern unsigned results_len;
 
 // Regular expressions for links to a...
 extern full_regex_t re_man, // manual page
@@ -454,6 +471,19 @@ extern link_loc_t first_link(line_t *lines, unsigned lines_len, unsigned start,
 // number range [start, stop]
 extern link_loc_t last_link(line_t *lines, unsigned lines_len, unsigned start,
                             unsigned stop);
+
+// Search for needle in lines (of length lines_len). Place all results into dst
+// and return total number of results.
+extern unsigned search(result_t **dst, wchar_t *needle, line_t *lines,
+                       unsigned lines_len);
+
+// Return the line number of the member of res that immediately follows line
+// number from. If no such line exists, return -1. res_len is the length of res.
+extern int search_next(result_t *res, unsigned res_len, unsigned from);
+
+// Return the line number of the member of res that immediately precedes line
+// number from. If no such line exists, return -1. res_len is the length of res.
+extern int search_prev(result_t *res, unsigned res_len, unsigned from);
 
 // Populate page, page_title, and page_len, based on the contents of
 // history[history_cur].

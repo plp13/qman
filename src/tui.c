@@ -213,10 +213,11 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
   change_colour(wmain, config.colours.text);
   wattrset(wmain, WA_NORMAL);
 
-  unsigned y;  // current terminal row
-  unsigned ly; // current line
-  unsigned x;  // current column (in both line and terminal)
-  unsigned i;  // current link
+  unsigned y;     // current terminal row
+  unsigned ly;    // current line
+  unsigned x;     // current column (in both line and terminal)
+  unsigned l;     // current link
+  unsigned s = 0; // current search result
 
   // For each terminal row...
   for (y = 0; y < getmaxy(wmain); y++) {
@@ -244,13 +245,13 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
     }
 
     // For each link...
-    for (i = 0; i < lines[ly].links_length; i++) {
-      link_t link = lines[ly].links[i];
+    for (l = 0; l < lines[ly].links_length; l++) {
+      link_t link = lines[ly].links[l];
 
       // Choose the the appropriate colour, based on link type and whether the
       // link is focused
       colour_t col;
-      if (flink.ok && flink.line == ly && flink.link == i) {
+      if (flink.ok && flink.line == ly && flink.link == l) {
         // Current link is the focused link
         switch (link.type) {
         case LT_MAN:
@@ -286,6 +287,17 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
 
       // Apply said colour
       apply_colour(wmain, y, link.start, link.end - link.start, col);
+    }
+
+    // Skip all search results prior to current line
+    while (s < results_len && results[s].line < ly)
+      s++;
+
+    // Go through all search results for current line, and highlight them
+    while (s < results_len && results[s].line == ly) {
+      apply_colour(wmain, y, results[s].start,
+                   results[s].end - results[s].start, config.colours.search);
+      s++;
     }
   }
 
@@ -815,9 +827,9 @@ bool tui_open_whatis() {
 bool tui_sp_open(request_type_t rt) {
   wchar_t inpt[BS_SHORT - 2]; // string typed by user
   wchar_t trgt[BS_SHORT]; // final string that specifies the page to be opened
-  int got_inpt;
+  int got_inpt;           // current return value of get_str_next()
 
-  // Draw window and title bar
+  // Draw immediate window and title bar
   if (RT_MAN == rt)
     draw_imm(true, L"Manual page to open?");
   else if (RT_APROPOS == rt)
@@ -901,7 +913,133 @@ bool tui_fwrd() {
     tui_error(L"Already at the last page in history");
     return false;
   }
-  cbeep();
+}
+
+bool tui_search(bool back) {
+  wchar_t *prompt; // search prompt
+  if (back)
+    prompt = L"? ";
+  else
+    prompt = L"/ ";
+  wchar_t inpt[BS_SHORT - 2]; // search string
+  wchar_t pout[BS_SHORT];     // search prompt and string printout
+  unsigned width = config.layout.width / 2 - 2; // search string width
+  int got_inpt; // current return value of get_str_next()
+  unsigned my_top =
+      page_top; // temporary page_top that will be set to the line noumber of
+                // the first search result, as the user types
+
+  // Get search string
+  swprintf(pout, BS_SHORT, prompt);
+  draw_stat(L"SEARCH", page_title, page_len, page_top + 1, pout,
+            L"Enter search string (CTRL-C to exit)", NULL);
+  got_inpt = get_str_next(wstat, 1, 2, inpt, MIN(BS_SHORT - 3, width));
+
+  // As the user types something...
+  while (got_inpt < 0) {
+    // Free previous results
+    if (NULL != results && results_len > 0)
+      free(results);
+
+    // Populate results and results_len
+    if (0 == wcslen(inpt)) {
+      // Input is empty; set results to NULL, results_len to 0, and my_top to
+      // page_top
+      results = NULL;
+      results_len = 0;
+      my_top = page_top;
+    } else {
+      // Input is not empty; populate results and results_len from input, and
+      // set my_top to the location of the first match
+      results_len = search(&results, inpt, page, page_len);
+      if (back) {
+        int tmp = search_prev(results, results_len, my_top);
+        my_top = -1 == tmp ? my_top : tmp;
+      } else {
+        int tmp = search_next(results, results_len, my_top);
+        my_top = -1 == tmp ? my_top : tmp;
+      }
+      if (my_top + config.layout.main_height > page_len) {
+        if (page_len >= config.layout.main_height)
+          my_top = MIN(my_top, page_len - config.layout.main_height);
+        else
+          my_top = 0;
+      }
+    }
+
+    // Redraw all windows, scrolling over to my_top
+    draw_page(page, page_len, my_top, page_flink);
+    draw_sbar(page_len, my_top);
+    swprintf(pout, BS_SHORT, L"%ls%ls", prompt, inpt);
+    if (0 == results_len) {
+      draw_stat(L"SEARCH", page_title, page_len, my_top + 1, pout, NULL,
+                L"Search string not found");
+      cbeep();
+    } else {
+      draw_stat(L"SEARCH", page_title, page_len, my_top + 1, pout,
+                L"Enter search string (CTRL-C to exit)", NULL);
+    }
+    doupdate();
+
+    // Get next user input
+    got_inpt = get_str_next(wstat, 1, 2, NULL, 0);
+  }
+
+  if (got_inpt > 0) {
+    // User entered a string and hit ENTER; retain search results
+    page_top = my_top;
+    page_flink = first_link(page, page_len, page_top,
+                            page_top + config.layout.main_height - 1);
+    return true;
+  } else {
+    // User hit ESC or CTRL-C; clear search results
+    if (NULL != results && results_len > 0)
+      free(results);
+    results = NULL;
+    results_len = 0;
+    tui_redraw();
+    tui_error(L"Aborted");
+    return false;
+  }
+}
+
+bool tui_search_next(bool back) {
+  unsigned my_top;
+
+  // Store the previous/next search result into my_top
+  if (back)
+    my_top = search_prev(results, results_len, MAX(0, page_top - 1));
+  else
+    my_top = search_next(results, results_len, MIN(page_len - 1, page_top + 1));
+
+  // If result wasn't found, show error message
+  if (-1 == my_top) {
+    tui_redraw();
+    tui_error(L"No more search results");
+    return false;
+  }
+
+  // Massage my_top to avoid scrolling out of page_len
+  if (my_top + config.layout.main_height > page_len) {
+    if (page_len >= config.layout.main_height)
+      my_top = MIN(my_top, page_len - config.layout.main_height);
+    else
+      my_top = 0;
+  }
+
+  // If result was found, but we have reached the end of page, show error
+  // message
+  if (page_top == my_top) {
+    tui_redraw();
+    tui_error(L"No more search results");
+    return false;
+  }
+
+  // Set page_top and page_flink to jump to the search result
+  page_top = my_top;
+  page_flink = first_link(page, page_len, page_top,
+                          page_top + config.layout.main_height - 1);
+  return true;
 }
 
 void tui() {
@@ -991,6 +1129,18 @@ void tui() {
       break;
     case PA_FWRD:
       redraw = tui_fwrd();
+      break;
+    case PA_SEARCH:
+      redraw = tui_search(false);
+      break;
+    case PA_SEARCH_BACK:
+      redraw = tui_search(true);
+      break;
+    case PA_SEARCH_NEXT:
+      redraw = tui_search_next(false);
+      break;
+    case PA_SEARCH_PREV:
+      redraw = tui_search_next(true);
       break;
     case PA_NULL:
       redraw = true;
