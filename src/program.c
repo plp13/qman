@@ -104,8 +104,8 @@ void discover_links(const full_regex_t *re, line_t *line, link_type_t type) {
   unsigned loff = 0; // offset (in line text) to start searching for links
   range_t lrng = fr_search(re, &line->text[loff]); // location of link in line
   wchar_t trgt[BS_LINE];                           // link target
-  wchar_t *sc;  // temporary; holds manual page section of link target
-  wchar_t *buf; // temporary
+  wchar_t *sc;        // temporary; holds manual page section of link target
+  wchar_t *tmp, *buf; // temporary
 
   while (lrng.beg != lrng.end) {
     // While a link has been found, add it to the line
@@ -114,11 +114,13 @@ void discover_links(const full_regex_t *re, line_t *line, link_type_t type) {
     if (LT_MAN == type) {
       // Ugly hack: if type is LT_MAN, check that the link's section is listed
       // in global lc_all before adding it
-      sc = wcstok(trgt, L"()", &buf);
+      tmp = xwcsdup(trgt);
+      sc = wcstok(tmp, L"()", &buf);
       if (NULL != sc)
         sc = wcstok(NULL, L"()", &buf);
       if (NULL != sc && wcasememberof(sc_all, sc, sc_all_len))
         add_link(line, loff + lrng.beg, loff + lrng.end, type, trgt);
+      free(tmp);
     } else
       add_link(line, loff + lrng.beg, loff + lrng.end, type, trgt);
     loff += lrng.end;
@@ -194,19 +196,19 @@ void init() {
   setlocale(LC_ALL, "");
 
   // Initialize config with sane defaults
-  config.chars.sbar_top = L"┳";
-  config.chars.sbar_vline = L"┃";
-  config.chars.sbar_bottom = L"┻";
+  config.chars.sbar_top = L"┬";
+  config.chars.sbar_vline = L"│";
+  config.chars.sbar_bottom = L"┴";
   config.chars.sbar_block = L"█";
-  config.chars.trans_mode_name = L"┇";
-  config.chars.trans_name_loc = L"┇";
-  config.chars.trans_prompt_help = L"┇";
-  config.chars.box_hline = L"━";
-  config.chars.box_vline = L"┃";
-  config.chars.box_tl = L"┏";
-  config.chars.box_tr = L"┓";
-  config.chars.box_bl = L"┗";
-  config.chars.box_br = L"┛";
+  config.chars.trans_mode_name = L"│";
+  config.chars.trans_name_loc = L"│";
+  config.chars.trans_prompt_help = L" ";
+  config.chars.box_hline = L"─";
+  config.chars.box_vline = L"│";
+  config.chars.box_tl = L"┌";
+  config.chars.box_tr = L"┐";
+  config.chars.box_bl = L"└";
+  config.chars.box_br = L"┘";
   config.colours.text.fg = COLOR_WHITE;
   config.colours.text.bold = false;
   config.colours.text.bg = COLOR_BLACK;
@@ -1204,7 +1206,7 @@ unsigned search(result_t **dst, wchar_t *needle, line_t *lines,
       if (cur_hayst - lines[ln].text < lines[ln].length)
         hit = wcsstr(cur_hayst, needle);
       else
-       hit = NULL;
+        hit = NULL;
       // Increment i (and reallocate memory if necessary)
       inc_i;
     }
