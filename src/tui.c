@@ -918,12 +918,12 @@ bool tui_fwrd() {
 bool tui_search(bool back) {
   wchar_t *prompt; // search prompt
   if (back)
-    prompt = L"? ";
+    prompt = L"?";
   else
-    prompt = L"/ ";
+    prompt = L"/";
   wchar_t inpt[BS_SHORT - 2]; // search string
   wchar_t pout[BS_SHORT];     // search prompt and string printout
-  unsigned width = config.layout.width / 2 - 2; // search string width
+  unsigned width = config.layout.width / 2 - 1; // search string width
   int got_inpt; // current return value of get_str_next()
   unsigned my_top =
       page_top; // temporary page_top that will be set to the line noumber of
@@ -933,7 +933,7 @@ bool tui_search(bool back) {
   swprintf(pout, BS_SHORT, prompt);
   draw_stat(L"SEARCH", page_title, page_len, page_top + 1, pout,
             L"Enter search string (CTRL-C to exit)", NULL);
-  got_inpt = get_str_next(wstat, 1, 2, inpt, MIN(BS_SHORT - 3, width));
+  got_inpt = get_str_next(wstat, 1, 1, inpt, MIN(BS_SHORT - 3, width));
 
   // As the user types something...
   while (got_inpt < 0) {
@@ -982,7 +982,7 @@ bool tui_search(bool back) {
     doupdate();
 
     // Get next user input
-    got_inpt = get_str_next(wstat, 1, 2, NULL, 0);
+    got_inpt = get_str_next(wstat, 1, 1, NULL, 0);
   }
 
   if (got_inpt > 0) {
@@ -1142,9 +1142,9 @@ void tui() {
     case PA_SEARCH_PREV:
       redraw = tui_search_next(true);
       break;
-    case PA_NULL:
-      redraw = true;
     case PA_QUIT:
+      break;
+    case PA_NULL:
       break;
     default:
       tui_error(L"Invalid keystroke; press 'h' for help");
