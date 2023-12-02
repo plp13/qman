@@ -709,45 +709,65 @@ bool tui_end() {
 }
 
 bool tui_open() {
-  wchar_t wtrgt[BS_SHORT];
-  char strgt[BS_SHORT];
-
   error_on_invalid_flink;
 
   // Open the link
   switch (page[page_flink.line].links[page_flink.link].type) {
   case LT_MAN:
     // The link is a manual page; add a new page request to show it
-    swprintf(wtrgt, BS_SHORT, L"'%ls'",
-             page[page_flink.line].links[page_flink.link].trgt);
-    history_push(RT_MAN, wtrgt);
-    populate_page();
-    if (err) {
-      history_back(1);
-      history_reset();
+    {
+      wchar_t trgt[BS_SHORT];
+      swprintf(trgt, BS_SHORT, L"'%ls'",
+               page[page_flink.line].links[page_flink.link].trgt);
+      history_push(RT_MAN, trgt);
       populate_page();
-      tui_redraw();
-      tui_error(err_msg);
-      return false;
+      if (err) {
+        history_back(1);
+        history_reset();
+        populate_page();
+        tui_redraw();
+        tui_error(err_msg);
+        return false;
+      }
+      page_top = 0;
+      page_flink = first_link(page, page_len, page_top,
+                              page_top + config.layout.main_height - 1);
     }
-    page_top = 0;
-    page_flink = first_link(page, page_len, page_top,
-                            page_top + config.layout.main_height - 1);
     break;
   case LT_HTTP:
     // The link is http(s); open it with the external web browser
-    snprintf(strgt, BS_SHORT, "%s '%ls'", config.misc.browser_path,
-             page[page_flink.line].links[page_flink.link].trgt);
-    system(strgt);
+    {
+      char trgt[BS_SHORT];
+      snprintf(trgt, BS_SHORT, "%s '%ls'", config.misc.browser_path,
+               page[page_flink.line].links[page_flink.link].trgt);
+      system(trgt);
+    }
     break;
   case LT_EMAIL:
     // The link is an email address; open it with the external mailer
-    snprintf(strgt, BS_SHORT, "%s '%ls'", config.misc.mailer_path,
-             page[page_flink.line].links[page_flink.link].trgt);
-    system(strgt);
+    {
+      char trgt[BS_SHORT];
+      snprintf(trgt, BS_SHORT, "%s '%ls'", config.misc.mailer_path,
+               page[page_flink.line].links[page_flink.link].trgt);
+      system(trgt);
+    }
     break;
   case LT_LS:
-    // TBD
+    // The link is a local search link; jump to the appropriate page location
+    {
+      result_t *sr;
+      unsigned sr_len;
+      sr_len = search(&sr, page[page_flink.line].links[page_flink.link].trgt,
+                      page, page_len);
+      if (0 == sr_len) {
+        tui_error(L"Unable to open link");
+        return false;
+      }
+      page_top = MIN(sr[0].line, page_len - config.layout.main_height);
+      page_flink = first_link(page, page_len, page_top,
+                              page_top + config.layout.main_height - 1);
+      free(sr);
+    }
     break;
   }
 
