@@ -57,7 +57,7 @@ typedef enum {
   PA_SEARCH_BACK,  // search backward
   PA_SEARCH_NEXT,  // go to next search result
   PA_SEARCH_PREV,  // go to previous search result
-  PA_HELP,         // go to keyboard help page
+  PA_HELP,         // show help message
   PA_QUIT          // exit the program (must be last member of action_t)
 } action_t;
 
@@ -104,7 +104,9 @@ typedef struct {
   colour_t imm_title;         // immediate title bar
   colour_t sp_input;          // input field in tui_sp_open() window
   colour_t sp_text;           // text in tui_sp_open() window
-  colour_t sp_text_f;         // focuesd text in tui_sp_open() window
+  colour_t sp_text_f;         // focused text in tui_sp_open() window
+  colour_t help_text;         // help text
+  colour_t help_text_f;       // focused line of help text
   unsigned trans_mode_name;   // colour pair for mode to name transition
   unsigned trans_name_loc;    // colour pair for name to location transition
   unsigned trans_prompt_help; // colour pair for prompt to help transition
@@ -307,6 +309,10 @@ extern unsigned results_len;
 extern full_regex_t re_man, // manual page
     re_url,                 // http(s) URL
     re_email;               // email address
+
+// Help text for program actions and their corresponding key character mappings.
+// Make sure that this corresponds to action_t precisely.
+extern const wchar_t *keys_help[PA_QUIT + 1];
 
 //
 // Macros

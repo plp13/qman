@@ -62,6 +62,31 @@ unsigned results_len = 0;
 
 full_regex_t re_man, re_http, re_email;
 
+const wchar_t *keys_help[PA_QUIT + 1] = {
+  L"Do nothing",
+  L"Scroll up one line",
+  L"Scroll down one line",
+  L"Scroll up one page",
+  L"Scroll down one page",
+  L"Go to page top",
+  L"Go to page end",
+  L"Open focused link",
+  L"Perform apropos on focused link",
+  L"Perform whatis on focused link",
+  L"Open a manual page using a dialog",
+  L"Perform apropos on a manual page using a dialog",
+  L"Perform whatis on a manual page using a dialog",
+  L"Go to index (home) page",
+  L"Go back one step in history",
+  L"Go forward one step in history",
+  L"Search forward",
+  L"Search backward",
+  L"Go to next search result",
+  L"Go to previous search result",
+  L"Show this help message",
+  L"Exit the program"
+};
+
 //
 // Helper macros and functions
 //
@@ -301,6 +326,14 @@ void init() {
   config.colours.sp_text_f.bold = false;
   config.colours.sp_text_f.bg = COLOR_MAGENTA;
   config.colours.sp_text_f.pair = 72;
+  config.colours.help_text.fg = COLOR_WHITE;
+  config.colours.help_text.bold = false;
+  config.colours.help_text.bg = COLOR_BLACK;
+  config.colours.help_text.pair = 80;
+  config.colours.help_text_f.fg = COLOR_BLACK;
+  config.colours.help_text_f.bold = false;
+  config.colours.help_text_f.bg = COLOR_WHITE;
+  config.colours.help_text_f.pair = 81;
   config.colours.trans_mode_name = 100 * config.colours.stat_indic_mode.pair +
                                    config.colours.stat_indic_name.pair;
   config.colours.trans_name_loc = 100 * config.colours.stat_indic_name.pair +

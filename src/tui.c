@@ -79,6 +79,135 @@ void aw_quick_search(wchar_t *needle) {
   wnoutrefresh(wimm);
 }
 
+// Helper of tui_help(). Return a string representation of key mapping k.
+wchar_t *ch2name(int k) {
+  wchar_t *ret; // return value
+  unsigned i;   // iterator
+
+  // Navigation and "special" keys
+  switch (k) {
+  case KEY_UP:
+    return xwcsdup(L"UP");
+    break;
+  case KEY_DOWN:
+    return xwcsdup(L"DOWN");
+    break;
+  case KEY_LEFT:
+    return xwcsdup(L"LEFT");
+    break;
+  case KEY_RIGHT:
+    return xwcsdup(L"RIGHT");
+    break;
+  case KEY_PPAGE:
+    return xwcsdup(L"PGUP");
+    break;
+  case KEY_NPAGE:
+    return xwcsdup(L"PGDN");
+    break;
+  case KEY_HOME:
+    return xwcsdup(L"HOME");
+    break;
+  case KEY_END:
+    return xwcsdup(L"END");
+    break;
+  case '\e':
+    return xwcsdup(L"ESC");
+    break;
+  case KEY_BREAK:
+  case 0x03:
+    return xwcsdup(L"CTRL-C");
+    break;
+  case KEY_ENTER:
+  case '\n':
+    return xwcsdup(L"ENTER");
+    break;
+  case KEY_BACKSPACE:
+  case '\b':
+    return xwcsdup(L"BACKSPACE");
+    break;
+  case '\t':
+    return xwcsdup(L"TAB");
+    break;
+  case ' ':
+    return xwcsdup(L"SPACE");
+    break;
+  }
+
+  // F1 to F9
+  for (i = 1; i <= 9; i++) {
+    if (KEY_F(i) == k) {
+      ret = walloc(2);
+      ret[0] = L'F';
+      ret[1] = i + 48;
+      ret[2] = L'\0';
+      return ret;
+    }
+  }
+
+  // F10 to F12
+  for (i = 10; i <= 12; i++) {
+    if (KEY_F(i) == k) {
+      ret = walloc(3);
+      ret[0] = L'F';
+      ret[1] = L'1';
+      ret[2] = i + 38;
+      ret[3] = L'\0';
+      return ret;
+    }
+  }
+
+  // All other keys
+  ret = walloc(3);
+  if (k >= 33 && k <= 126) {
+    // Key corresponds to a printable character; return it
+    ret[0] = L'\'';
+    ret[1] = k;
+    ret[2] = L'\'';
+  } else {
+    // Key does not correspond to a printable character; return "???"
+    ret[0] = '?';
+    ret[1] = '?';
+    ret[2] = '?';
+  }
+  ret[3] = L'\0';
+  return ret;
+}
+
+// Helper of tui_help(). Draw the help text into wimm. keys_names contains the
+// string representations of key character mappings corresponding to all program
+// actions, keys_names_max is the length of the longest string in keys_names,
+// top is the first action to print help for, and focus is the action to focus
+// on.
+void draw_help(wchar_t *const *keys_names, unsigned keys_names_max,
+               unsigned top, unsigned focus) {
+  unsigned width = getmaxx(wimm);                 // help window width
+  unsigned height = getmaxy(wimm);                // help window height
+  unsigned start = MAX(1, MIN(PA_QUIT + 1, top)); // first record no. to show
+  unsigned stop =
+      MIN(PA_QUIT + 1,
+          start + height - 3);       // one after last help record no. to show
+  wchar_t *buf = walloca(width - 2); // temporary
+  unsigned i;                        // iterator
+
+  for (i = start; i < stop; i++) {
+    swprintf(buf, width - 1, L" %-*ls  %-*.*ls ", keys_names_max, keys_names[i],
+             width - keys_names_max - 6, width - keys_names_max - 6,
+             keys_help[i]);
+    if (i == focus) {
+      change_colour(wimm, config.colours.help_text_f);
+    } else {
+      change_colour(wimm, config.colours.help_text);
+    }
+    mvwaddnwstr(wimm, i + 1, 1, buf, width - 1);
+  }
+
+  mvwaddnwstr(wimm, height - 2, 2,
+              L"UP/DOWN: choose action  ENTER: execute  ESC/CTRL-C: abort",
+              width - 4);
+
+  wnoutrefresh(wimm);
+}
+
 //
 // Functions (utility)
 //
@@ -120,6 +249,8 @@ void init_tui() {
     init_colour(config.colours.sp_input);
     init_colour(config.colours.sp_text);
     init_colour(config.colours.sp_text_f);
+    init_colour(config.colours.help_text);
+    init_colour(config.colours.help_text_f);
     // Initialize colour pairs used for transitions
     init_pair(config.colours.trans_mode_name, config.colours.stat_indic_mode.bg,
               config.colours.stat_indic_name.bg);
@@ -173,8 +304,10 @@ bool termsize_changed() {
     else
       config.layout.main_height = 0;
 
-    if (config.layout.width > 60)
+    if (config.layout.width > 100)
       config.layout.imm_width = config.layout.width - 20;
+    else if (config.layout.width > 60)
+      config.layout.imm_width = config.layout.width - 6;
     else
       config.layout.imm_width = 40;
 
@@ -1062,6 +1195,54 @@ bool tui_search_next(bool back) {
   return true;
 }
 
+bool tui_help() {
+  unsigned i, j, k;                 // iterators
+  wchar_t *keys_names[PA_QUIT + 1]; // string representations of key character
+                                    // mappings corresponding to all program
+                                    // actions (as unified strings)
+  unsigned keys_names_max = 0;      // length of longest string in keys_names
+  wchar_t *cur_key_names[8] = {
+      NULL, NULL, NULL, NULL, NULL,
+      NULL, NULL, NULL}; // string representations of key character mappings
+                         // corresponding to the current action (as array of
+                         // strings)
+  wchar_t *tmp;          // temporary
+
+  // For each action...
+  for (i = 0; i <= PA_QUIT; i++) {
+    // Populate cur_key_name
+    j = 0;
+    while (j < 8 && 0 != config.keys[i][j]) {
+      tmp = ch2name(config.keys[i][j]);
+      if (!in8(tmp, cur_key_names, wcsequal))
+        cur_key_names[j] = tmp;
+      j++;
+    }
+
+    // Produce keys_names[i] and update keys_names_max, using cur_wstrs
+    keys_names[i] = walloca(BS_SHORT);
+    wcscpy(keys_names[i], L"");
+    for (k = 0; NULL != cur_key_names[k]; k++) {
+      if (0 != k)
+        wcscat(keys_names[i], L", ");
+      wcscat(keys_names[i], cur_key_names[k]);
+      free(cur_key_names[k]);
+      cur_key_names[k] = NULL;
+    }
+    keys_names_max = MAX(keys_names_max, wcslen(keys_names[i]));
+  }
+
+  // Draw the help window
+  draw_imm(true, L"Program actions and associated keyboard mappings");
+  draw_help(keys_names, keys_names_max, 1, 1);
+
+  doupdate();
+  getch();
+  del_imm();
+
+  return true;
+}
+
 void tui() {
   int input;          // keyboard/mouse input from user
   bool redraw = true; // set this to true to redraw the screen
@@ -1161,6 +1342,9 @@ void tui() {
       break;
     case PA_SEARCH_PREV:
       redraw = tui_search_next(true);
+      break;
+    case PA_HELP:
+      redraw = tui_help();
       break;
     case PA_QUIT:
       break;

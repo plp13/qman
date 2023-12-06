@@ -79,7 +79,7 @@ typedef struct {
 // Allocate stack memory for a bit array bitarr_t that is len bits long
 #define balloca(len) alloca(len % 8 == 0 ? len / 8 : 1 + len / 8)
 
-// assign the value { v0, v1, ..., v7 } to 8-value array trgt
+// Assign the value { v0, v1, ..., v7 } to 8-value array trgt
 #define arr8(trgt, v0, v1, v2, v3, v4, v5, v6, v7)                             \
   trgt[0] = v0;                                                                \
   trgt[1] = v1;                                                                \
@@ -89,6 +89,17 @@ typedef struct {
   trgt[5] = v5;                                                                \
   trgt[6] = v6;                                                                \
   trgt[7] = v7;
+
+// True if v is in array va (of length 8), false otherwise. f is the comparison
+// function/macro used to compare v with members of va.
+#define in8(v, va, f)                                                          \
+  (f(v, va[0]) || f(v, va[1]) || f(v, va[2]) || f(v, va[3]) || f(v, va[4]) ||  \
+   f(v, va[5]) || f(v, va[6]) || f(v, va[7]))
+
+// True if wide strings w1 and w2 are equal, false otherwise
+#define wcsequal(w1, w2)                                                       \
+  ((NULL == w1 && NULL == w2) ||                                               \
+   (NULL != w1 && NULL != w2 && 0 == wcscmp(w1, w2)))
 
 //
 // Functions

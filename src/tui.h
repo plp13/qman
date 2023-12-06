@@ -130,7 +130,7 @@ extern bool get_str(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
 // - -KEY_HOME, if the user hit HOME
 // - -KEY_END, if the user hit END
 // - -0x09 (TAB in ASCII), if the user hit TAB
-// - -KEY_BACKSPACE, if the user hit BACKSPACE 
+// - -KEY_BACKSPACE, if the user hit BACKSPACE
 // - -chr, if the user typed any text character chr
 extern int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
                         unsigned trgt_len);
@@ -205,6 +205,9 @@ extern bool tui_search(bool back);
 // Handler for PA_SEARCH_PREV (whenever back is set to true) or PA_SEARCH_NEXT
 // (whenever back is set to false)
 extern bool tui_search_next(bool back);
+
+// Handler for PA_HELP
+extern bool tui_help();
 
 // Main handler/loop for the TUI
 extern void tui();
