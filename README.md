@@ -9,6 +9,7 @@ Linux manual pages are lovely. They are concise, well-written, complete, and dow
 - Apropos and whatis pages
 - Hyperlinks to other manual pages
 - Hyperlinks for URLs and email addresses (handled with xdg-open)
+- Free text search
 - Command-line options similar to those of 'man' (most importantly, '-k' and '-f')
 - Keyboard mapping similar to that of 'less'
 - Navigation history
