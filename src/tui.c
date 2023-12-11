@@ -35,7 +35,8 @@ action_t action = PA_NULL;
     return false;                                                              \
   }
 
-// Helper of tui_sp_open(). Show quick search results as the user types.
+// Helper of tui_sp_open(). Print quick search results in wimm as the user
+// types.
 void aw_quick_search(wchar_t *needle) {
   // Search aw_all for needle and store the results in res;
   unsigned lines =
@@ -180,16 +181,15 @@ wchar_t *ch2name(int k) {
 // on.
 void draw_help(wchar_t *const *keys_names, unsigned keys_names_max,
                unsigned top, unsigned focus) {
-  unsigned width = getmaxx(wimm);                 // help window width
-  unsigned height = getmaxy(wimm);                // help window height
-  unsigned start = MAX(1, MIN(PA_QUIT + 1, top)); // first record no. to show
-  unsigned stop =
-      MIN(PA_QUIT + 1,
-          start + height - 3);       // one after last help record no. to show
-  wchar_t *buf = walloca(width - 2); // temporary
-  unsigned i;                        // iterator
+  unsigned width = getmaxx(wimm);  // help window width
+  unsigned height = getmaxy(wimm); // help window height
+  unsigned end = MIN(PA_QUIT,
+                     top + height - 4); // last action to print help for
+  wchar_t *buf = walloca(width - 2);    // temporary
+  unsigned i, j;                        // iterator
 
-  for (i = start; i < stop; i++) {
+  j = 2;
+  for (i = top; i <= end; i++) {
     swprintf(buf, width - 1, L" %-*ls  %-*.*ls ", keys_names_max, keys_names[i],
              width - keys_names_max - 6, width - keys_names_max - 6,
              keys_help[i]);
@@ -198,9 +198,11 @@ void draw_help(wchar_t *const *keys_names, unsigned keys_names_max,
     } else {
       change_colour(wimm, config.colours.help_text);
     }
-    mvwaddnwstr(wimm, i + 1, 1, buf, width - 1);
+    mvwaddnwstr(wimm, j, 1, buf, width - 1);
+    j++;
   }
 
+  change_colour(wimm, config.colours.help_text);
   mvwaddnwstr(wimm, height - 2, 2,
               L"UP/DOWN: choose action  ENTER: execute  ESC/CTRL-C: abort",
               width - 4);
@@ -605,7 +607,7 @@ int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
     if (pos > 0)
       pos--;
     else
-      cbeep();
+      ctbeep();
     res[pos] = L'\0';
     mvwaddnwstr(w, y, x + pos, L" ", 1);
     ret = -KEY_BACKSPACE;
@@ -627,14 +629,14 @@ int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
     // User typed a character
     if (OK != wget_stat) {
       // Reject function keys, arrow keys, etc.
-      cbeep();
+      ctbeep();
     } else if (pos < res_len) {
       res[pos] = (wchar_t)chr;
       res[pos + 1] = L'\0';
       mvwaddnwstr(w, y, x + pos, &res[pos], 1);
       pos++;
     } else
-      cbeep();
+      ctbeep();
     ret = -chr;
   }
 
@@ -660,6 +662,14 @@ action_t get_action(int chr) {
 void cbeep() {
   if (config.layout.beep)
     beep();
+}
+
+void ctbeep() {
+  int width = getmaxx(stdscr);
+  int height = getmaxy(stdscr);
+
+  if (width == config.layout.width && height == config.layout.height)
+    cbeep();
 }
 
 void winddown_tui() {
@@ -999,6 +1009,26 @@ bool tui_sp_open(request_type_t rt) {
   got_inpt = get_str_next(wimm, 2, 2, inpt,
                           MIN(BS_SHORT - 3, config.layout.imm_width - 4));
   while (got_inpt < 0) {
+    // If terminal size has changed, regenerate page and redraw everything
+    if (termsize_changed()) {
+      del_imm();
+      init_windows();
+      populate_page();
+      if (err)
+        winddown(ES_OPER_ERROR, err_msg);
+      tui_redraw();
+      if (RT_MAN == rt)
+        draw_imm(true, L"Manual page to open?");
+      else if (RT_APROPOS == rt)
+        draw_imm(true, L"Apropos what?");
+      else if (RT_WHATIS == rt)
+        draw_imm(true, L"Whatis what?");
+      change_colour(wimm, config.colours.sp_input);
+      mvwaddnwstr(wimm, 2, 2, inpt, wcslen(inpt));
+      aw_quick_search(inpt);
+      doupdate();
+    }
+
     change_colour(wimm, config.colours.sp_text);
     aw_quick_search(inpt);
     doupdate();
@@ -1090,6 +1120,16 @@ bool tui_search(bool back) {
 
   // As the user types something...
   while (got_inpt < 0) {
+    // If terminal size has changed, regenerate page and redraw everything
+    if (termsize_changed()) {
+      init_windows();
+      populate_page();
+      if (err)
+        winddown(ES_OPER_ERROR, err_msg);
+      tui_redraw();
+      doupdate();
+    }
+
     // Free previous results
     if (NULL != results && results_len > 0)
       free(results);
@@ -1207,38 +1247,100 @@ bool tui_help() {
                          // corresponding to the current action (as array of
                          // strings)
   wchar_t *tmp;          // temporary
+  int hinput;            // keyboard/mouse input from the user
+  action_t haction = PA_NULL; // program action corresponding to hinput
+  unsigned top = 1;           // first action to be printed
+  unsigned focus = 1;         // focused action
+  unsigned height;            // help window height
 
   // For each action...
   for (i = 0; i <= PA_QUIT; i++) {
-    // Populate cur_key_name
-    j = 0;
-    while (j < 8 && 0 != config.keys[i][j]) {
+    // Populate cur_key_names
+    k = 0;
+    for (j = 0; j < 8 && 0 != config.keys[i][j]; j++) {
       tmp = ch2name(config.keys[i][j]);
-      if (!in8(tmp, cur_key_names, wcsequal))
-        cur_key_names[j] = tmp;
-      j++;
+      if (!in8(tmp, cur_key_names, wcsequal)) {
+        cur_key_names[k] = tmp;
+        k++;
+      }
     }
 
-    // Produce keys_names[i] and update keys_names_max, using cur_wstrs
+    // Produce keys_names[i] and update keys_names_max, using cur_key_names
     keys_names[i] = walloca(BS_SHORT);
     wcscpy(keys_names[i], L"");
-    for (k = 0; NULL != cur_key_names[k]; k++) {
-      if (0 != k)
+    for (j = 0; NULL != cur_key_names[j]; j++) {
+      if (0 != j)
         wcscat(keys_names[i], L", ");
-      wcscat(keys_names[i], cur_key_names[k]);
-      free(cur_key_names[k]);
-      cur_key_names[k] = NULL;
+      wcscat(keys_names[i], cur_key_names[j]);
+      free(cur_key_names[j]);
+      cur_key_names[j] = NULL;
     }
     keys_names_max = MAX(keys_names_max, wcslen(keys_names[i]));
   }
 
-  // Draw the help window
-  draw_imm(true, L"Program actions and associated keyboard mappings");
-  draw_help(keys_names, keys_names_max, 1, 1);
+  // Create the help window, and retrieve its height
+  draw_imm(true, L"Program Actions and Keyboard Help");
+  height = getmaxy(wimm);
 
-  doupdate();
-  getch();
-  del_imm();
+  // Main loop
+  while (true) {
+    // Draw the help text in the help window
+    draw_help(keys_names, keys_names_max, top, focus);
+    doupdate();
+
+    // Get user input
+    hinput = getch();
+    if ('\e' == hinput || KEY_BREAK == hinput || 0x03 == hinput) {
+      // User hit ESC or CTRL-C; abort
+      del_imm();
+      tui_error(L"Aborted");
+      tui_redraw();
+      return false;
+    }
+    haction = get_action(hinput);
+
+    // Perform the requested action
+    switch (haction) {
+    case PA_UP:
+      focus--;
+      if (0 == focus)
+        focus = PA_QUIT;
+      break;
+    case PA_DOWN:
+      focus++;
+      if (PA_QUIT + 1 == focus)
+        focus = 1;
+      break;
+    case PA_OPEN:
+      del_imm();
+      ungetch(config.keys[focus][0]);
+      return true;
+      break;
+    case PA_NULL:
+    default:
+      break;
+    }
+
+    // Adjust top (in case the entire menu won't fit in the immediate window)
+    if (focus < top)
+      top = focus;
+    else if (focus > top + height - 5)
+      top = focus - height + 5;
+
+    // If terminal size has changed, regenerate page and redraw everything
+    if (termsize_changed()) {
+      del_imm();
+      init_windows();
+      populate_page();
+      if (err)
+        winddown(ES_OPER_ERROR, err_msg);
+      tui_redraw();
+      draw_imm(true, L"Program Actions and Keyboard Help");
+      draw_help(keys_names, keys_names_max, top, focus);
+      doupdate();
+      height = getmaxy(wimm);
+    }
+  }
 
   return true;
 }
@@ -1349,6 +1451,7 @@ void tui() {
     case PA_QUIT:
       break;
     case PA_NULL:
+      redraw = true;
       break;
     default:
       tui_error(L"Invalid keystroke; press 'h' for help");

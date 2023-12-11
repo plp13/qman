@@ -139,8 +139,11 @@ extern int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
 // no such action, return -1.
 extern action_t get_action(int chr);
 
-// Beeo if config.layout.beep is true
+// Beep if config.layout.beep is true
 extern void cbeep();
+
+// Beep if config.layout.beep is true, and terminal size has not been changed
+extern void ctbeep();
 
 // Delete all windows and wind down ncurses. No need to call this function
 // normally, as it's called by winddown().
