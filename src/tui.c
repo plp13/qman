@@ -462,6 +462,7 @@ void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
                unsigned lines_pos, wchar_t *prompt, wchar_t *help,
                wchar_t *em) {
   werase(wstat);
+  wbkgd(wstat, COLOR_PAIR(config.colours.stat_input_prompt.pair));
 
   unsigned width = getmaxx(wstat); // width of both status lines
 
