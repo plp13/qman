@@ -47,6 +47,16 @@ extern action_t action;
       wattr_set(win, WA_NORMAL, col.pair, NULL);                               \
   }
 
+// Change the colour for window win to col, and also set text attribute for
+// window win to attr
+#define change_colour_attr(win, col, attr)                                     \
+  {                                                                            \
+    if (COLOUR)                                                                \
+      wattr_set(win, attr, col.pair, NULL);                                    \
+    else                                                                       \
+      wattrset(win, attr);                                                     \
+  }
+
 // Apply colour col to n characters, starting at location (y, x) in window w
 #define apply_colour(win, y, x, n, col)                                        \
   if (COLOUR) {                                                                \
@@ -105,8 +115,8 @@ extern void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
                       wchar_t *em);
 
 // Draw an immediate window. is_long specifies whether the window is long or
-// short, while title is quite obvious.
-void draw_imm(bool is_long, wchar_t *title);
+// short. The title and help strings is quite obvious what they are.
+void draw_imm(bool is_long, wchar_t *title, wchar_t *help);
 
 // Delete the immediate window previously drawn with draw_imm()
 void del_imm();

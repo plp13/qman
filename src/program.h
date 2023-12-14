@@ -237,11 +237,15 @@ typedef struct {
 //
 
 // Exit statuses (same as those of man command)
-#define ES_SUCCESS 0     // successful completion
-#define ES_USAGE_ERROR 1 // user provided wrong command-line option
-#define ES_OPER_ERROR 2  // program error
-#define ES_CHILD_ERROR 3 // child process error
-#define ES_NOT_FOUND 16  // manual page(s) not found
+#define ES_SUCCESS 0      // successful completion
+#define ES_USAGE_ERROR 1  // user provided wrong command-line option
+#define ES_OPER_ERROR 2   // program error
+#define ES_CHILD_ERROR 3  // child process error
+#define ES_CONFIG_ERROR 4 // configuration file parse error
+#define ES_NOT_FOUND 16   // manual page(s) not found
+
+// Alternate configuration file locations
+#define CONFIG_PATHS [ "~/.config/qman.conf", "/etc/xdg/qman.conf" ]
 
 //
 // Global variables
@@ -387,6 +391,13 @@ extern void parse_args(int argc, char *const *argv);
 
 // Print usage information
 extern void usage();
+
+// Read the configuration file and set members of config appropriately. This
+// function tries to find the config file in the following locations:
+// (1) value of config.misc.config_path, set with '-C'
+// (2) ~/.config/qman.conf
+// (3) /etc/xdg/qman.conf
+extern void configure();
 
 // All history_...() functions also save and restore page_top and page_flink
 // inside the history entries they manipulate, to keep track of the user's

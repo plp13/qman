@@ -3,8 +3,6 @@
 #include "tui.h"
 #include "lib.h"
 #include "program.h"
-#include <curses.h>
-#include <wchar.h>
 
 //
 // Global variables
@@ -40,7 +38,7 @@ action_t action = PA_NULL;
 void aw_quick_search(wchar_t *needle) {
   // Search aw_all for needle and store the results in res;
   unsigned lines =
-      config.layout.imm_height_long - 5; // maximum no. of lines to display
+      config.layout.imm_height_long - 7; // maximum no. of lines to display
   unsigned *res =
       aalloca(lines, unsigned); // search results as positions in aw_all
   unsigned pos = 0;             // current position in aw_all
@@ -72,7 +70,7 @@ void aw_quick_search(wchar_t *needle) {
              descr_len, aw_all[res[ln]].descr);
     mvwaddnwstr(wimm, ln + 4, 2, tmp, width - 4);
   }
-  for (ln = lines; ln < config.layout.imm_height_long - 5; ln++) {
+  for (ln = lines; ln < config.layout.imm_height_long - 7; ln++) {
     swprintf(tmp, width - 3, L"%*ls", width - 4, L"");
     mvwaddnwstr(wimm, ln + 4, 2, tmp, width - 4);
   }
@@ -202,11 +200,7 @@ void draw_help(wchar_t *const *keys_names, unsigned keys_names_max,
     j++;
   }
 
-  change_colour(wimm, config.colours.help_text);
-  mvwaddnwstr(wimm, height - 2, 2,
-              L"UP/DOWN: choose action  ENTER: execute  ESC/CTRL-C: abort",
-              width - 4);
-
+  wmove(wimm, height - 2, width - 2);
   wnoutrefresh(wimm);
 }
 
@@ -226,7 +220,6 @@ void init_tui() {
   // Initialize colour (if available)
   start_color();
   if (COLOUR) {
-    start_color();
     // Initialize colour pairs
     init_colour(config.colours.text);
     init_colour(config.colours.search);
@@ -345,8 +338,8 @@ void draw_box(WINDOW *w, unsigned tl_y, unsigned tl_x, unsigned br_y,
 void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
                link_loc_t flink) {
   werase(wmain);
-  change_colour(wmain, config.colours.text);
-  wattrset(wmain, WA_NORMAL);
+  wbkgd(wmain, COLOR_PAIR(config.colours.text.pair));
+  change_colour_attr(wmain, config.colours.text, WA_NORMAL);
 
   unsigned y;     // current terminal row
   unsigned ly;    // current line
@@ -367,13 +360,13 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
 
       // Set text attributes
       if (bget(lines[ly].bold, x))
-        wattrset(wmain, WA_BOLD);
+        change_colour_attr(wmain, config.colours.text, WA_BOLD);
       if (bget(lines[ly].italic, x))
-        wattrset(wmain, WA_STANDOUT);
+        change_colour_attr(wmain, config.colours.text, WA_STANDOUT);
       if (bget(lines[ly].uline, x))
-        wattrset(wmain, WA_UNDERLINE);
+        change_colour_attr(wmain, config.colours.text, WA_UNDERLINE);
       if (bget(lines[ly].reg, x))
-        wattrset(wmain, WA_NORMAL);
+        change_colour_attr(wmain, config.colours.text, WA_NORMAL);
 
       // Place character on screen
       mvwaddnwstr(wmain, y, x, &lines[ly].text[x], 1);
@@ -515,7 +508,7 @@ void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
   wnoutrefresh(wstat);
 }
 
-void draw_imm(bool is_long, wchar_t *title) {
+void draw_imm(bool is_long, wchar_t *title, wchar_t *help) {
   unsigned height, width, y, x;
 
   timeout(-1);
@@ -536,6 +529,7 @@ void draw_imm(bool is_long, wchar_t *title) {
 
   keypad(wimm, true);
   werase(wimm);
+  wbkgd(wimm, COLOR_PAIR(config.colours.help_text.pair));
 
   change_colour(wimm, config.colours.imm_border);
   draw_box(wimm, 0, 0, height - 1, width - 1);
@@ -543,6 +537,8 @@ void draw_imm(bool is_long, wchar_t *title) {
   wchar_t *tmp = walloca(width - 2);
   swprintf(tmp, width - 1, L" %-*ls", width - 2, title);
   mvwaddnwstr(wimm, 1, 1, tmp, width - 2);
+  change_colour(wimm, config.colours.help_text);
+  mvwaddnwstr(wimm, height - 2, 2, help, width - 4);
 
   wnoutrefresh(wimm);
 }
@@ -690,15 +686,17 @@ void winddown_tui() {
 
 void tui_redraw() {
   unsigned pos = page_flink.line;
+  wchar_t help[BS_SHORT];
 
   if (pos < page_top || pos >= page_top + config.layout.main_height)
     pos = page_top;
 
   draw_page(page, page_len, page_top, page_flink);
   draw_sbar(page_len, page_top);
+  swprintf(help, BS_SHORT, L"Press %ls for help or %ls to quit",
+           ch2name(config.keys[PA_HELP][0]), ch2name(config.keys[PA_QUIT][0]));
   draw_stat(request_type_str(history[history_cur].request_type), page_title,
-            page_len, pos + 1, L":", L"Press 'h' for help or 'q' to quit",
-            NULL);
+            page_len, pos + 1, L":", help, NULL);
 }
 
 void tui_error(wchar_t *em) {
@@ -990,15 +988,18 @@ bool tui_open_whatis() {
 bool tui_sp_open(request_type_t rt) {
   wchar_t inpt[BS_SHORT - 2]; // string typed by user
   wchar_t trgt[BS_SHORT]; // final string that specifies the page to be opened
-  int got_inpt;           // current return value of get_str_next()
+  wchar_t help[BS_SHORT]; // help message
+  swprintf(help, BS_SHORT, L"%ls query string (%ls/%ls to abort)",
+           ch2name(KEY_ENTER), ch2name(KEY_BREAK), ch2name('\e'));
+  int got_inpt; // current return value of get_str_next()
 
   // Draw immediate window and title bar
   if (RT_MAN == rt)
-    draw_imm(true, L"Manual page to open?");
+    draw_imm(true, L"Manual page to open?", help);
   else if (RT_APROPOS == rt)
-    draw_imm(true, L"Apropos what?");
+    draw_imm(true, L"Apropos what?", help);
   else if (RT_WHATIS == rt)
-    draw_imm(true, L"Whatis what?");
+    draw_imm(true, L"Whatis what?", help);
   doupdate();
 
   // Get input (and show quick search results as the user types)
@@ -1018,11 +1019,11 @@ bool tui_sp_open(request_type_t rt) {
         winddown(ES_OPER_ERROR, err_msg);
       tui_redraw();
       if (RT_MAN == rt)
-        draw_imm(true, L"Manual page to open?");
+        draw_imm(true, L"Manual page to open?", help);
       else if (RT_APROPOS == rt)
-        draw_imm(true, L"Apropos what?");
+        draw_imm(true, L"Apropos what?", help);
       else if (RT_WHATIS == rt)
-        draw_imm(true, L"Whatis what?");
+        draw_imm(true, L"Whatis what?", help);
       change_colour(wimm, config.colours.sp_input);
       mvwaddnwstr(wimm, 2, 2, inpt, wcslen(inpt));
       aw_quick_search(inpt);
@@ -1104,6 +1105,9 @@ bool tui_search(bool back) {
     prompt = L"?";
   else
     prompt = L"/";
+  wchar_t help[BS_SHORT]; // help message
+  swprintf(help, BS_SHORT, L"%ls search string (%ls/%ls to abort)",
+           ch2name(KEY_ENTER), ch2name(KEY_BREAK), ch2name('\e'));
   wchar_t inpt[BS_SHORT - 2]; // search string
   wchar_t pout[BS_SHORT];     // search prompt and string printout
   unsigned width = config.layout.width / 2 - 1; // search string width
@@ -1114,8 +1118,7 @@ bool tui_search(bool back) {
 
   // Get search string
   swprintf(pout, BS_SHORT, prompt);
-  draw_stat(L"SEARCH", page_title, page_len, page_top + 1, pout,
-            L"Enter search string (CTRL-C to exit)", NULL);
+  draw_stat(L"SEARCH", page_title, page_len, page_top + 1, pout, help, NULL);
   got_inpt = get_str_next(wstat, 1, 1, inpt, MIN(BS_SHORT - 3, width));
 
   // As the user types something...
@@ -1169,8 +1172,7 @@ bool tui_search(bool back) {
                 L"Search string not found");
       cbeep();
     } else {
-      draw_stat(L"SEARCH", page_title, page_len, my_top + 1, pout,
-                L"Enter search string (CTRL-C to exit)", NULL);
+      draw_stat(L"SEARCH", page_title, page_len, my_top + 1, pout, help, NULL);
     }
     doupdate();
 
@@ -1243,11 +1245,16 @@ bool tui_help() {
   unsigned keys_names_max = 0;      // length of longest string in keys_names
   wchar_t *cur_key_names[8] = {
       NULL, NULL, NULL, NULL, NULL,
-      NULL, NULL, NULL}; // string representations of key character mappings
-                         // corresponding to the current action (as array of
-                         // strings)
-  wchar_t *tmp;          // temporary
-  int hinput;            // keyboard/mouse input from the user
+      NULL, NULL, NULL};  // string representations of key character mappings
+                          // corresponding to the current action (as array of
+                          // strings)
+  wchar_t *tmp;           // temporary
+  wchar_t help[BS_SHORT]; // help message
+  swprintf(help, BS_SHORT,
+           L"%ls/%ls: choose action   %ls: fire   %ls/%ls: abort",
+           ch2name(config.keys[PA_UP][0]), ch2name(config.keys[PA_DOWN][0]),
+           ch2name(config.keys[PA_OPEN][0]), ch2name(KEY_BREAK), ch2name('\e'));
+  int hinput;                 // keyboard/mouse input from the user
   action_t haction = PA_NULL; // program action corresponding to hinput
   unsigned top = 1;           // first action to be printed
   unsigned focus = 1;         // focused action
@@ -1279,7 +1286,7 @@ bool tui_help() {
   }
 
   // Create the help window, and retrieve its height
-  draw_imm(true, L"Program Actions and Keyboard Help");
+  draw_imm(true, L"Program Actions and Keyboard Help", help);
   height = getmaxy(wimm);
 
   // Main loop
@@ -1335,7 +1342,7 @@ bool tui_help() {
       if (err)
         winddown(ES_OPER_ERROR, err_msg);
       tui_redraw();
-      draw_imm(true, L"Program Actions and Keyboard Help");
+      draw_imm(true, L"Program Actions and Keyboard Help", help);
       draw_help(keys_names, keys_names_max, top, focus);
       doupdate();
       height = getmaxy(wimm);
@@ -1346,8 +1353,11 @@ bool tui_help() {
 }
 
 void tui() {
-  int input;          // keyboard/mouse input from user
-  bool redraw = true; // set this to true to redraw the screen
+  int input;                // keyboard/mouse input from user
+  bool redraw = true;       // set this to true to redraw the screen
+  wchar_t errmsg[BS_SHORT]; // error message
+  wprintf(errmsg, BS_SHORT, L"Invalid keystroke; press %ls for help",
+          ch2name(config.keys[PA_HELP][0]));
 
   // Initialize TUI
   init_tui();
@@ -1454,7 +1464,7 @@ void tui() {
       redraw = true;
       break;
     default:
-      tui_error(L"Invalid keystroke; press 'h' for help");
+      tui_error(errmsg);
       break;
     }
   }

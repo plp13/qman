@@ -4,8 +4,6 @@
 #include "lib.h"
 #include "program.h"
 #include "tui.h"
-#include <curses.h>
-#include <wchar.h>
 
 // Where the magic happens
 int main(int argc, char **argv) {
@@ -16,6 +14,8 @@ int main(int argc, char **argv) {
   int clean_argc = argc - noopt_argc;
   char **clean_argv = &argv[noopt_argc];
   parse_args(clean_argc, clean_argv);
+
+  configure();
 
   // Run the main handler
   if (config.layout.tui)

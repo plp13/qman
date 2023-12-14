@@ -2,7 +2,6 @@
 
 #include "lib.h"
 #include "program.h"
-#include <wchar.h>
 
 //
 // Functions

@@ -22,5 +22,6 @@
 #include <time.h>
 #include <regex.h>
 #include <curses.h>
+#include <ini.h>
 
 #endif
