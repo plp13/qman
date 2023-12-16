@@ -7,7 +7,7 @@ date: December 15, 2023
 ---
 
 # NAME
-qman - A more modern manual page viewer for our terminals
+**Qman** - A more modern manual page viewer for our terminals
 
 # SYNOPSIS
 **qman** [_options_]  
