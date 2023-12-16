@@ -17,6 +17,8 @@ option_t options[] = {
      OA_NONE, true},
     {"whatis", 'f', L"Show all pages whose name matches PAGE (whatis)", OA_NONE,
      true},
+    {"local-file", 'l', L"Interpret PAGE argument(s) as local filename(s)",
+     OA_NONE, true},
     {"cli", 'T', L"Suppress the TUI and output directly to the terminal",
      OA_NONE, true},
     {"config-path", 'C', L"Use ARG as the configuration file path", OA_REQUIRED,
@@ -840,6 +842,10 @@ int parse_options(int argc, char *const *argv) {
       // -f or --whatis was passed; try to show whatis results
       history_replace(RT_WHATIS, NULL);
       break;
+    case 'l':
+      // -l or --local-file was passed; try to show a man page from a local file
+      history_replace(RT_MAN_LOCAL, NULL);
+      break;
     case 'T':
       // -T or --cli was passed; do not launch the TUI
       config.layout.tui = false;
@@ -882,6 +888,7 @@ void parse_args(int argc, char *const *argv) {
       // Exit with error message
       switch (history[history_top].request_type) {
       case RT_MAN:
+      case RT_MAN_LOCAL:
         winddown(ES_USAGE_ERROR, L"What manual page do you want?");
         break;
       case RT_APROPOS:
@@ -1400,7 +1407,7 @@ unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const wchar_t *args,
   return res_len;
 }
 
-unsigned man(line_t **dst, const wchar_t *args) {
+unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   unsigned ln = 0; // current line number
   unsigned len;    // length of current line text
   // range_t lrng;    // location of a link found in current line
@@ -1423,8 +1430,12 @@ unsigned man(line_t **dst, const wchar_t *args) {
 
   // Prepare man command
   char cmdstr[BS_SHORT];
-  sprintf(cmdstr, "%s --warnings='!all' %ls 2>>/dev/null", config.misc.man_path,
-          args);
+  if (local_file)
+    sprintf(cmdstr, "%s --warnings='!all' --local-file %ls 2>>/dev/null",
+            config.misc.man_path, args);
+  else
+    sprintf(cmdstr, "%s --warnings='!all' %ls 2>>/dev/null",
+            config.misc.man_path, args);
 
   // Execute man and, read its output, and process it into res
   FILE *pp = xpopen(cmdstr, "r");
@@ -1696,7 +1707,12 @@ void populate_page() {
   case RT_MAN:
     swprintf(page_title, BS_SHORT, L"Manual page(s) for: %ls",
              history[history_cur].args);
-    page_len = man(&page, history[history_cur].args);
+    page_len = man(&page, history[history_cur].args, false);
+    break;
+  case RT_MAN_LOCAL:
+    swprintf(page_title, BS_SHORT, L"Manual page(s) in local file(s): %ls",
+             history[history_cur].args);
+    page_len = man(&page, history[history_cur].args, true);
     break;
   case RT_APROPOS:
     swprintf(page_title, BS_SHORT, L"Apropos for: %ls",

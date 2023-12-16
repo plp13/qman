@@ -169,10 +169,11 @@ typedef struct {
 
 // Page request type
 typedef enum {
-  RT_INDEX,   // show a list of all manual pages
-  RT_MAN,     // show a manual page
-  RT_APROPOS, // search for manual pages and their descriptions
-  RT_WHATIS   // show all available manual pages with this name
+  RT_INDEX,     // show a list of all manual pages
+  RT_MAN,       // show a manual page
+  RT_MAN_LOCAL, // show a manual page stored in a local file
+  RT_APROPOS,   // search for manual pages and their descriptions
+  RT_WHATIS     // show all available manual pages with this name
 } request_type_t;
 
 // A page request
@@ -372,7 +373,7 @@ extern const wchar_t *keys_help[PA_QUIT + 1];
 #define request_type_str(t)                                                    \
   RT_INDEX == t                                                                \
       ? L"INDEX"                                                               \
-      : (RT_MAN == t ? L"MAN" : (RT_APROPOS == t ? L"APROPOS" : L"WHATIS"))
+      : (RT_MAN == t ? L"MAN" : (RT_MAN_LOCAL == t ? L"LOCAL" : (RT_APROPOS == t ? L"APROPOS" : L"WHATIS")))
 //
 // Functions
 //
@@ -467,7 +468,8 @@ extern unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const wchar_t *args,
 
 // Execute man, and place its final rendeered output in dst. Return the number
 // of lines in said output. args specifies the arguments for the man command.
-extern unsigned man(line_t **dst, const wchar_t *args);
+// local_file signifies whether to pass the --local-file option to man.
+extern unsigned man(line_t **dst, const wchar_t *args, bool local_file);
 
 // Find the previous link in lines (of linegth lines_len), starting at location
 // start. Return said link's location.
