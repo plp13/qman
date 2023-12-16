@@ -45,8 +45,8 @@ pager such as **less(1)**, and from an ncurses-based browser such as
 **links(1)**. Manual, apropos, and whatis pages are adorned with links to other
 manual pages, HTTP locations, e-mail addresses, or in-page locations. These
 links can be selected and opened. The program also offers incremental search
-facilities for locating manual pages pages and for searching through the text
-of the page currently being displayed, together with on-line help.
+facilities for locating manual pages, and for searching through the text of the
+page currently being displayed, together with on-line help.
 
 The table below summarizes the program's actions and their default associated
 keyboard mappings:
