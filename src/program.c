@@ -1750,6 +1750,7 @@ void aprowhat_free(aprowhat_t *aw, unsigned aw_len) {
   for (i = 0; i < aw_len; i++) {
     free(aw[i].page);
     free(aw[i].section);
+    free(aw[i].ident);
     free(aw[i].descr);
   }
 
@@ -1811,6 +1812,12 @@ void winddown(int ec, const wchar_t *em) {
     free(config.misc.whatis_path);
   if (NULL != config.misc.apropos_path)
     free(config.misc.apropos_path);
+  if (NULL != config.misc.browser_path)
+    free(config.misc.browser_path);
+  if (NULL != config.misc.mailer_path)
+    free(config.misc.mailer_path);
+  if (NULL != config.misc.config_path)
+    free(config.misc.config_path);
 
   // Deallocate memory used by history global
   requests_free(history, config.misc.history_size);

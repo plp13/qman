@@ -80,62 +80,61 @@ void aw_quick_search(wchar_t *needle) {
 
 // Helper of tui_help(). Return a string representation of key mapping k.
 wchar_t *ch2name(int k) {
-  wchar_t *ret; // return value
-  unsigned i;   // iterator
+  static wchar_t ret[4]; // return value
+  unsigned i;            // iterator
 
   // Navigation and "special" keys
   switch (k) {
   case KEY_UP:
-    return xwcsdup(L"UP");
+    return L"UP";
     break;
   case KEY_DOWN:
-    return xwcsdup(L"DOWN");
+    return L"DOWN";
     break;
   case KEY_LEFT:
-    return xwcsdup(L"LEFT");
+    return L"LEFT";
     break;
   case KEY_RIGHT:
-    return xwcsdup(L"RIGHT");
+    return L"RIGHT";
     break;
   case KEY_PPAGE:
-    return xwcsdup(L"PGUP");
+    return L"PGUP";
     break;
   case KEY_NPAGE:
-    return xwcsdup(L"PGDN");
+    return L"PGDN";
     break;
   case KEY_HOME:
-    return xwcsdup(L"HOME");
+    return L"HOME";
     break;
   case KEY_END:
-    return xwcsdup(L"END");
+    return L"END";
     break;
   case '\e':
-    return xwcsdup(L"ESC");
+    return L"ESC";
     break;
   case KEY_BREAK:
   case 0x03:
-    return xwcsdup(L"CTRL-C");
+    return L"CTRL-C";
     break;
   case KEY_ENTER:
   case '\n':
-    return xwcsdup(L"ENTER");
+    return L"ENTER";
     break;
   case KEY_BACKSPACE:
   case '\b':
-    return xwcsdup(L"BACKSPACE");
+    return L"BACKSPACE";
     break;
   case '\t':
-    return xwcsdup(L"TAB");
+    return L"TAB";
     break;
   case ' ':
-    return xwcsdup(L"SPACE");
+    return L"SPACE";
     break;
   }
 
   // F1 to F9
   for (i = 1; i <= 9; i++) {
     if (KEY_F(i) == k) {
-      ret = walloc(2);
       ret[0] = L'F';
       ret[1] = i + 48;
       ret[2] = L'\0';
@@ -146,7 +145,6 @@ wchar_t *ch2name(int k) {
   // F10 to F12
   for (i = 10; i <= 12; i++) {
     if (KEY_F(i) == k) {
-      ret = walloc(3);
       ret[0] = L'F';
       ret[1] = L'1';
       ret[2] = i + 38;
@@ -156,7 +154,6 @@ wchar_t *ch2name(int k) {
   }
 
   // All other keys
-  ret = walloc(3);
   if (k >= 33 && k <= 126) {
     // Key corresponds to a printable character; return it
     ret[0] = L'\'';
@@ -1357,8 +1354,8 @@ void tui() {
   int input;                // keyboard/mouse input from user
   bool redraw = true;       // set this to true to redraw the screen
   wchar_t errmsg[BS_SHORT]; // error message
-  wprintf(errmsg, BS_SHORT, L"Invalid keystroke; press %ls for help",
-          ch2name(config.keys[PA_HELP][0]));
+  swprintf(errmsg, BS_SHORT, L"Invalid keystroke; press %ls for help",
+           ch2name(config.keys[PA_HELP][0]));
 
   // Initialize TUI
   init_tui();
