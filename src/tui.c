@@ -1277,7 +1277,6 @@ bool tui_help() {
       if (0 != j)
         wcscat(keys_names[i], L", ");
       wcscat(keys_names[i], cur_key_names[j]);
-      free(cur_key_names[j]);
       cur_key_names[j] = NULL;
     }
     keys_names_max = MAX(keys_names_max, wcslen(keys_names[i]));
