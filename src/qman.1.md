@@ -241,7 +241,7 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 | history_size | unsigned int | Maximum number of history entries              |
 
 # ENVIRONMENT
-When invoked using **-C**, the program tries to set the page width to the value
+When invoked using **-T**, the program tries to set the page width to the value
 of the **MANWIDTH** environment variable. If **MANWIDTH** hasn't been set, it
 tries to set it to the value of **COLUMNS** and, if that also fails, it sets
 it to the default value of 80.
