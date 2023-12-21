@@ -1254,7 +1254,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
     sc_lines++;
   for (i = 0; i < sc_lines; i++) {
     inc_ln;
-    line_alloc(res[ln], line_width + 1); // +1 because of wcscat()
+    line_alloc(res[ln], line_width + 4); // +4 for section margin
     swprintf(res[ln].text, line_width + 1, L"%*s", lmargin_width, "");
     for (j = 0; j < sc_cols; j++) {
       sc_i = sc_cols * i + j;
@@ -1518,6 +1518,12 @@ link_loc_t prev_link(line_t *lines, unsigned lines_len, link_loc_t start) {
   unsigned i;
   link_loc_t res;
 
+  // If start was not found, return not found
+  if (!start.ok) {
+    res.ok = false;
+    return res;
+  }
+
   // If line no. start.line has a link before start.link, return that link
   if (start.link > 0) {
     res.ok = true;
@@ -1545,6 +1551,12 @@ link_loc_t prev_link(line_t *lines, unsigned lines_len, link_loc_t start) {
 link_loc_t next_link(line_t *lines, unsigned lines_len, link_loc_t start) {
   unsigned i;
   link_loc_t res;
+
+  // If start was not found, return not found
+  if (!start.ok) {
+    res.ok = false;
+    return res;
+  }
 
   // If start.line is larger than lines_len, return not found
   if (start.line >= lines_len) {

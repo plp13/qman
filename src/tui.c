@@ -683,11 +683,12 @@ void winddown_tui() {
 //
 
 void tui_redraw() {
-  unsigned pos = page_flink.line;
-  wchar_t help[BS_SHORT];
-
+  unsigned pos = page_top;
+  if (page_flink.ok)
+    pos = page_flink.line;
   if (pos < page_top || pos >= page_top + config.layout.main_height)
     pos = page_top;
+  wchar_t help[BS_SHORT];
 
   draw_page(page, page_len, page_top, page_flink);
   draw_sbar(page_len, page_top);
@@ -698,7 +699,10 @@ void tui_redraw() {
 }
 
 void tui_error(wchar_t *em) {
-  unsigned pos = page_flink.line;
+  unsigned pos = page_top;
+  if (page_flink.ok)
+    pos = page_flink.line;
+
   if (pos < page_top || pos >= page_top + config.layout.main_height)
     pos = page_top;
 
@@ -903,8 +907,10 @@ bool tui_open() {
         return false;
       }
       page_top = MIN(sr[0].line, page_len - config.layout.main_height);
-      page_flink = first_link(page, page_len, page_top,
-                              page_top + config.layout.main_height - 1);
+      link_loc_t fl = first_link(page, page_len, page_top,
+                                 page_top + config.layout.main_height - 1);
+      if (fl.ok)
+        page_flink = fl;
       free(sr);
     }
     break;
@@ -984,7 +990,7 @@ bool tui_open_whatis() {
 }
 
 bool tui_sp_open(request_type_t rt) {
-  wchar_t inpt[BS_SHORT - 2]; // string typed by user
+  wchar_t inpt[BS_SHORT - 2] = L""; // string typed by user
   wchar_t trgt[BS_SHORT]; // final string that specifies the page to be opened
   wchar_t help[BS_SHORT]; // help message
   swprintf(help, BS_SHORT, L"%ls query string (%ls/%ls to abort)",
@@ -1181,8 +1187,10 @@ bool tui_search(bool back) {
   if (got_inpt > 0) {
     // User entered a string and hit ENTER; retain search results
     page_top = my_top;
-    page_flink = first_link(page, page_len, page_top,
-                            page_top + config.layout.main_height - 1);
+    link_loc_t fl = first_link(page, page_len, page_top,
+                               page_top + config.layout.main_height - 1);
+    if (fl.ok)
+      page_flink = fl;
     return true;
   } else {
     // User hit ESC or CTRL-C; clear search results
@@ -1230,8 +1238,10 @@ bool tui_search_next(bool back) {
 
   // Set page_top and page_flink to jump to the search result
   page_top = my_top;
-  page_flink = first_link(page, page_len, page_top,
-                          page_top + config.layout.main_height - 1);
+  link_loc_t fl = first_link(page, page_len, page_top,
+                             page_top + config.layout.main_height - 1);
+  if (fl.ok)
+    page_flink = fl;
   return true;
 }
 
