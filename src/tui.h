@@ -5,7 +5,6 @@
 #define TUI_H
 
 #include "lib.h"
-#include "program.h"
 
 //
 // Global variables

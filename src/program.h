@@ -5,7 +5,6 @@
 #define PROGRAM_H
 
 #include "lib.h"
-#include "util.h"
 
 //
 // Types

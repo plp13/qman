@@ -1,7 +1,6 @@
 // Command line interface (implementation)
 
 #include "lib.h"
-#include "program.h"
 
 //
 // Functions (utility)

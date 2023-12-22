@@ -51,6 +51,7 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-# Meson and clangd junk
+# Tooling junk
 build/
 .cache/
+.ccls-cache/

@@ -4,10 +4,6 @@
 
 #define LIB_H
 
-//
-// Includes
-//
-
 #include <assert.h>
 #include <alloca.h>
 #include <errno.h>
@@ -23,5 +19,10 @@
 #include <regex.h>
 #include <curses.h>
 #include <ini.h>
+
+#include "util.h"
+#include "program.h"
+#include "cli.h"
+#include "tui.h"
 
 #endif

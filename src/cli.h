@@ -5,7 +5,6 @@
 #define CLI_H
 
 #include "lib.h"
-#include "program.h"
 
 //
 // Functions (utility)
@@ -25,4 +24,3 @@ extern void print_page(line_t *lines, unsigned lines_len);
 extern void cli();
 
 #endif
-

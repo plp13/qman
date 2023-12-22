@@ -1,9 +1,6 @@
 // Main programs
 
-#include "cli.h"
 #include "lib.h"
-#include "program.h"
-#include "tui.h"
 
 // Where the magic happens
 int main(int argc, char **argv) {

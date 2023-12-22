@@ -1,8 +1,6 @@
 // Text user interface (implementation)
 
-#include "tui.h"
 #include "lib.h"
-#include "program.h"
 
 //
 // Global variables

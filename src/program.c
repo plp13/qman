@@ -1,8 +1,6 @@
 // Program-specific infrastructure (implementation)
 
-#include "program.h"
 #include "lib.h"
-#include "tui.h"
 
 //
 // Global variables
