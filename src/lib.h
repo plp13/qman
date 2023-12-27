@@ -21,6 +21,7 @@
 #include <ini.h>
 
 #include "util.h"
+#include "config.h"
 #include "program.h"
 #include "cli.h"
 #include "tui.h"
