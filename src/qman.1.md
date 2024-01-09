@@ -62,9 +62,9 @@ keyboard mappings:
 | OPEN            | Open focused link                     | ENTER, 'o'         |
 | OPEN_APROPOS    | Perform apropos on focused link       | 'a'                |
 | OPEN_WHATIS     | Perform whatis on focused link        | 'w'                |
-| SP_OPEN         | Open a manual page using a dialog     | 'O'                |
-| SP_APROPOS      | Perform apropos on a manual page using a dialog |  'A'     |
-| SP_WHATIS       | Perform whatis on a manual page using a dialog  |  'W'     |
+| SP_OPEN         | Open a manual page using a dialogue   | 'O'                |
+| SP_APROPOS      | Perform apropos on a manual page using a dialogue | 'A'    |
+| SP_WHATIS       | Perform whatis on a manual page using a dialogue  | 'W'    |
 | INDEX           | Go to index (home) page               | 'i', 'I'           |
 | BACK            | Go back one step in history           | BACKSPACE, '['     |
 | FWRD            | Go forward one step in history        | ']'                |
@@ -72,7 +72,7 @@ keyboard mappings:
 | SEARCH_BACK     | (Free text) search backward           | '?'                |
 | SEARCH_NEXT     | Go to next search result              | 'n'                |
 | SEARCH_PREV     | Go to previous search result          | 'N'                |
-| HELP            | Show the help message dialog          | 'h', 'H'           |
+| HELP            | Show the help message dialogue        | 'h', 'H'           |
 | QUIT            | Exit the program                      | 'q', 'Q'           |
 
 All of the aforementioned keyboard mappings are customizable. For more
@@ -138,12 +138,12 @@ following sections and configuration options are accepted:
 | trans_name_loc    | transition between the name and location sections of the status bar |
 | trans_prompt_help | transition between the prompt and help sections of the status bar |
 | trans_prompt_em   | transition between the prompt and error message sections of the status bar|
-| box_hline         | dialog box horizontal line                               |
-| box_vline         | dialog box vertical line                                 |
-| box_tl            | dialog box top left corner                               |
-| box_tr            | dialog box top right corner                              |
-| box_bl            | dialog box bottom left corner                            |
-| box_br            | dialog box bottom right corner                           |
+| box_hline         | dialogue box horizontal line                             |
+| box_vline         | dialogue box vertical line                               |
+| box_tl            | dialogue box top left corner                             |
+| box_tr            | dialogue box top right corner                            |
+| box_bl            | dialogue box bottom left corner                          |
+| box_br            | dialogue box bottom right corner                         |
 
 Each configuration option value in this section must consist of a single
 Unicode character.

@@ -1,0 +1,131 @@
+// Configuration and configuration file handling (definition)
+
+#ifndef CONFIG_H
+
+#define CONFIG_H
+
+#include "lib.h"
+
+//
+// Types
+//
+
+// A colour
+typedef struct {
+  short fg;   // foreground colour no.
+  bool bold;  // true if foreground colour is bold, false otherwise
+  short bg;   // background colour no.
+  short pair; // pair no.
+} colour_t;
+
+// A program action
+typedef enum {
+  PA_NULL,         // do nothing (must be first member of action_t)
+  PA_UP,           // scroll up one line and/or focus on previous link
+  PA_DOWN,         // scroll down one line and/or focus on next link
+  PA_PGUP,         // scroll up one page
+  PA_PGDN,         // scroll down one page
+  PA_HOME,         // go to page top
+  PA_END,          // go to page bottom
+  PA_OPEN,         // open focused link
+  PA_OPEN_APROPOS, // perform apropos on focused link
+  PA_OPEN_WHATIS,  // perform whatis on focused link
+  PA_SP_OPEN,      // open a manual page using a dialogue
+  PA_SP_APROPOS,   // perform apropos on a manual page using a dialogue
+  PA_SP_WHATIS,    // perform whatis on a manual page using a dialogue
+  PA_INDEX,        // go to index (home) page
+  PA_BACK,         // go back one step in history
+  PA_FWRD,         // go forward one step in history
+  PA_SEARCH,       // (free text) search forward
+  PA_SEARCH_BACK,  // (free text) search backward
+  PA_SEARCH_NEXT,  // go to next search result
+  PA_SEARCH_PREV,  // go to previous search result
+  PA_HELP,         // show help message
+  PA_QUIT          // exit the program (must be last member of action_t)
+} action_t;
+
+/*[[[cog
+
+import cog
+import config_def
+
+for section, options in config_def.config_def.items():
+  cog.outl("// Configuration structure for section '" + section + "'")
+
+  # Section "keys" is special and is defined as an array, not a structure
+  if section == "keys":
+    cog.outl("typedef int config_keys_t[PA_QUIT + 1][8];")
+    cog.outl()
+    continue
+
+  # All other sections are defined as structures
+  cog.outl("typedef struct {")
+  first_option = True
+  for option, option_def in options.items():
+    if first_option:
+      first_option = False
+    else:
+      cog.outl()
+
+    (type, default_value, in_config, comment) = option_def
+
+    cog.outl("  // " + comment)
+
+    if type[0] == "bool":
+      cog.outl("  bool " + option + ";")
+    elif type[0] == "int":
+      cog.outl("  unsigned " + option + ";")
+    elif type[0] == "string":
+      cog.outl("  char *" + option + ";")
+    elif type[0] == "wstring":
+      cog.outl("  wchar_t *" + option + ";")
+    elif type[0] == "colour":
+      cog.outl("  colour_t " + option + ";")
+    else:
+      raise NameError("Unknown type '{}' for option '{}'".format(type[0], option))
+
+  cog.outl("} config_" + section + "_t;")
+  cog.outl()
+
+]]]
+
+[[[end]]]*/
+
+// Main configuration structure
+typedef struct {
+  config_chars_t chars;
+  config_colours_t colours;
+  config_keys_t keys;
+  config_layout_t layout;
+  config_misc_t misc;
+} config_t;
+
+//
+// Constants
+//
+
+// Alternate configuration file locations
+#define CONFIG_PATHS [ "~/.config/qman.conf", "/etc/xdg/qman.conf" ]
+
+//
+// Global variables
+//
+
+// Program configuration
+extern config_t config;
+
+//
+// Functions
+//
+
+// Initialize configuration to sane defaults
+extern void conf_init();
+
+// Read the configuration file and set members of config appropriately. This
+// function tries to find the config file in the following locations:
+// (1) value of config.misc.config_path, set with '-C'
+// (2) ~/.config/qman.conf
+// (3) /etc/xdg/qman.conf
+extern void configure();
+
+#endif

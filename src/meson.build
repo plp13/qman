@@ -4,10 +4,25 @@ project('qman', 'c',
   version: 'nightly'
 )
 
+# Configuration subsystem sources (generated from config_def.py using cog)
+cog = find_program('cog')
+cog_cmd = [cog, '-d', '-o', '@OUTPUT@', '@INPUT@']
+config_h = custom_target('config.h',
+  input: 'config.h.cog',
+  output: 'config.h',
+  command: cog_cmd
+)
+config_c = custom_target('config.c',
+  input: 'config.c.cog',
+  output: 'config.c',
+  command: cog_cmd
+)
+
 # Executable
 src = [
+  config_h,
+  config_c,
   'util.c',
-  'config.c',
   'program.c',
   'cli.c',
   'tui.c',
