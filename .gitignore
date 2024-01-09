@@ -54,3 +54,4 @@ dkms.conf
 # Meson and clangd junk
 build/
 .cache/
+.ccls-cache/

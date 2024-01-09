@@ -44,15 +44,9 @@ void aw_quick_search(wchar_t *needle) {
   unsigned pos = 0;             // current position in aw_all
   unsigned ln = 0;              // current line
   pos = aprowhat_search(needle, aw_all, aw_all_len, pos);
-  FILE *fp = fopen("qman.out", "a");
-  fwprintf(fp, L"%ls %d\n", needle, pos);
-  fclose(fp);
   while (-1 != pos && ln < lines) {
     res[ln] = pos;
     pos = aprowhat_search(needle, aw_all, aw_all_len, ++pos);
-    FILE *fp = fopen("qman.out", "a");
-    fwprintf(fp, L"%ls %d\n", needle, pos);
-    fclose(fp);
     ln++;
   }
   lines = ln; // lines becomes exact no. of lines to display
