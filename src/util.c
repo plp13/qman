@@ -14,7 +14,7 @@ void serror(wchar_t *dst, const wchar_t *s) {
 }
 
 void *xcalloc(size_t nmemb, size_t size) {
-  void *res = calloc(nmemb, size);
+  void *const res = calloc(nmemb, size);
 
   if (NULL == res) {
     static wchar_t errmsg[BS_SHORT];
@@ -26,7 +26,7 @@ void *xcalloc(size_t nmemb, size_t size) {
 }
 
 void *xreallocarray(void *ptr, size_t nmemb, size_t size) {
-  void *res = reallocarray(ptr, nmemb, size);
+  void *const res = reallocarray(ptr, nmemb, size);
 
   if (NULL == res) {
     static wchar_t errmsg[BS_SHORT];
@@ -38,7 +38,7 @@ void *xreallocarray(void *ptr, size_t nmemb, size_t size) {
 }
 
 FILE *xpopen(const char *command, const char *type) {
-  FILE *pipe = popen(command, type);
+  FILE *const pipe = popen(command, type);
 
   if (NULL == pipe) {
     static wchar_t errmsg[BS_SHORT];
@@ -50,7 +50,7 @@ FILE *xpopen(const char *command, const char *type) {
 }
 
 int xpclose(FILE *stream) {
-  int status = pclose(stream);
+  const int status = pclose(stream);
 
   if (-1 == status) {
     static wchar_t errmsg[BS_SHORT];
@@ -62,7 +62,7 @@ int xpclose(FILE *stream) {
 }
 
 FILE *xfopen(const char *pathname, const char *mode) {
-  FILE *file = fopen(pathname, mode);
+  FILE *const file = fopen(pathname, mode);
 
   if (NULL == file) {
     static wchar_t errmsg[BS_SHORT];
@@ -74,7 +74,7 @@ FILE *xfopen(const char *pathname, const char *mode) {
 }
 
 int xfclose(FILE *stream) {
-  int status = fclose(stream);
+  const int status = fclose(stream);
 
   if (EOF == status) {
     static wchar_t errmsg[BS_SHORT];
@@ -86,7 +86,7 @@ int xfclose(FILE *stream) {
 }
 
 FILE *xtmpfile() {
-  FILE *file = tmpfile();
+  FILE *const file = tmpfile();
 
   if (NULL == file) {
     static wchar_t errmsg[BS_SHORT];
@@ -98,7 +98,8 @@ FILE *xtmpfile() {
 }
 
 char *xfgets(char *s, int size, FILE *stream) {
-  char *res = fgets(s, size, stream);
+  char *const res = fgets(s, size, stream);
+
   if (ferror(stream)) {
     // Ugly hack: this function sometimes gets rudley interrupted by ncurses; if
     // that happens, we simply ignore the error and return NULL
@@ -113,7 +114,8 @@ char *xfgets(char *s, int size, FILE *stream) {
 }
 
 size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
-  size_t cnt = fwrite(ptr, size, nmemb, stream);
+  const size_t cnt = fwrite(ptr, size, nmemb, stream);
+
   if (ferror(stream)) {
     static wchar_t errmsg[BS_SHORT];
     serror(errmsg, L"Unable to write()");
@@ -124,7 +126,7 @@ size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
 }
 
 char *xstrdup(const char *s) {
-  char *res = strdup(s);
+  char *const res = strdup(s);
 
   if (NULL == res) {
     static wchar_t errmsg[BS_SHORT];
@@ -136,7 +138,7 @@ char *xstrdup(const char *s) {
 }
 
 wchar_t *xwcsdup(const wchar_t *s) {
-  wchar_t *res = wcsdup(s);
+  wchar_t *const res = wcsdup(s);
 
   if (NULL == res) {
     static wchar_t errmsg[BS_SHORT];
@@ -148,36 +150,37 @@ wchar_t *xwcsdup(const wchar_t *s) {
 }
 
 int getenvi(const char *name) {
-  char *val = getenv(name);
+  const char *const val = getenv(name);
+
   if (NULL == val)
     return 0;
   else
     return atoi(val);
 }
 
-bool bget(bitarr_t ba, unsigned i) {
-  unsigned seg = i / 8;
-  unsigned mask = 1 << (i % 8);
+bool bget(const bitarr_t ba, unsigned i) {
+  const unsigned seg = i / 8;
+  const unsigned mask = 1 << (i % 8);
 
   return ba[seg] & mask;
 }
 
 void bset(bitarr_t ba, unsigned i) {
-  unsigned seg = i / 8;
-  unsigned mask = 1 << (i % 8);
+  const unsigned seg = i / 8;
+  const unsigned mask = 1 << (i % 8);
 
   ba[seg] = ba[seg] | mask;
 }
 
 void bclear(bitarr_t ba, unsigned i) {
-  unsigned seg = i / 8;
-  unsigned mask = 1 << (i % 8);
+  const unsigned seg = i / 8;
+  const unsigned mask = 1 << (i % 8);
 
   ba[seg] = ba[seg] & (0xff - mask);
 }
 
 void bclearall(bitarr_t ba, unsigned ba_len) {
-  unsigned ba_bytes = ba_len % 8 == 0 ? ba_len / 8 : 1 + ba_len / 8;
+  const unsigned ba_bytes = ba_len % 8 == 0 ? ba_len / 8 : 1 + ba_len / 8;
 
   for (unsigned i = 0; i < ba_bytes; i++)
     ba[i] = 0;
@@ -215,8 +218,9 @@ unsigned wccnt(const wchar_t *hayst, wchar_t needle) {
 
 void wcrepl(wchar_t *dst, const wchar_t *hayst, wchar_t needle,
             const wchar_t *repl) {
-  wchar_t *hayst_start = (wchar_t *)hayst;
-  unsigned offset = 0, repl_cnt = 0, repl_len = wcslen(repl);
+  const wchar_t *const hayst_start = (wchar_t *)hayst;
+  unsigned offset = 0, repl_cnt = 0;
+  const unsigned repl_len = wcslen(repl);
 
   wcscpy(dst, hayst);
 
@@ -234,7 +238,8 @@ void wcrepl(wchar_t *dst, const wchar_t *hayst, wchar_t needle,
 }
 
 void wwrap(wchar_t *trgt, unsigned cols) {
-  unsigned len = wcslen(trgt), line_start = 0, line_end;
+  const unsigned len = wcslen(trgt);
+  unsigned line_start = 0, line_end;
 
   while (len > line_start + cols) {
     for (line_end = line_start + cols;
@@ -249,7 +254,7 @@ void wwrap(wchar_t *trgt, unsigned cols) {
   }
 }
 
-bool wcasememberof(wchar_t *const *hayst, const wchar_t *needle,
+bool wcasememberof(const wchar_t *const *hayst, const wchar_t *needle,
                    unsigned hayst_len) {
   unsigned i;
 
@@ -261,7 +266,7 @@ bool wcasememberof(wchar_t *const *hayst, const wchar_t *needle,
   return false;
 }
 
-bool wmemberof(wchar_t *const *hayst, const wchar_t *needle,
+bool wmemberof(const wchar_t *const *hayst, const wchar_t *needle,
                unsigned hayst_len) {
   unsigned i;
 
@@ -305,7 +310,7 @@ void wsort(wchar_t **trgt, unsigned trgt_len, bool rev) {
   }
 }
 
-unsigned wmaxlen(wchar_t *const *src, unsigned src_len) {
+unsigned wmaxlen(const wchar_t *const *src, unsigned src_len) {
   unsigned maxlen = 0, i;
 
   for (i = 0; i < src_len; i++)
@@ -353,7 +358,7 @@ void fr_init(full_regex_t *re, char *str) {
   }
 }
 
-range_t fr_search(const full_regex_t *re, wchar_t *src) {
+range_t fr_search(const full_regex_t *re, const wchar_t *src) {
   char ssrc[BS_LINE]; // char* version of src
   wcstombs(ssrc, src, BS_LINE);
   regmatch_t pmatch[1]; // regex match

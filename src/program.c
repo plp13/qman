@@ -110,7 +110,7 @@ const wchar_t *keys_help[PA_QUIT + 1] = {
 // using line_realloc_link() to do so. Use start, end, type, and trgt to
 // populate the new link's members.
 void add_link(line_t *line, unsigned start, unsigned end, link_type_t type,
-              wchar_t *trgt) {
+              const wchar_t *trgt) {
   unsigned trgt_len = wcslen(trgt);
 
   line_realloc_link((*line), trgt_len);
@@ -140,7 +140,7 @@ void discover_links(const full_regex_t *re, line_t *line, link_type_t type) {
       sc = wcstok(tmp, L"()", &buf);
       if (NULL != sc)
         sc = wcstok(NULL, L"()", &buf);
-      if (NULL != sc && wcasememberof(sc_all, sc, sc_all_len))
+      if (NULL != sc && wcasememberof((const wchar_t **)sc_all, sc, sc_all_len))
         add_link(line, loff + lrng.beg, loff + lrng.end, type, trgt);
       free(tmp);
     } else
@@ -248,6 +248,7 @@ int parse_options(int argc, char *const *argv) {
   char optstring[3 * asizeof(options)];
   struct option *longopts = aalloc(1 + asizeof(options), struct option);
   unsigned i, optstring_i = 0;
+
   for (i = 0; i < asizeof(options); i++) {
     optstring[optstring_i] = options[i].short_opt;
     optstring_i++;
@@ -407,7 +408,7 @@ void usage() {
           L"mandatory or optional\nfor any corresponding short options.\n");
 }
 
-void history_replace(request_type_t rt, wchar_t *args) {
+void history_replace(request_type_t rt, const wchar_t *args) {
   history[history_cur].request_type = rt;
 
   if (NULL != history[history_cur].args)
@@ -423,7 +424,7 @@ void history_replace(request_type_t rt, wchar_t *args) {
   history[history_cur].flink = (link_loc_t){false, 0, 0};
 }
 
-void history_push(request_type_t rt, wchar_t *args) {
+void history_push(request_type_t rt, const wchar_t *args) {
   unsigned i;
 
   // Save user's position
@@ -462,7 +463,7 @@ bool history_back(unsigned n) {
   history[history_cur].top = page_top;
   history[history_cur].flink = page_flink;
 
-  int pos = history_cur - n;
+  const int pos = history_cur - n;
 
   if (pos >= 0) {
     history_cur = pos;
@@ -478,7 +479,7 @@ bool history_forward(unsigned n) {
   history[history_cur].top = page_top;
   history[history_cur].flink = page_flink;
 
-  int pos = history_cur + n;
+  const int pos = history_cur + n;
 
   if (pos <= history_top) {
     history_cur = pos;
@@ -516,7 +517,7 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   // the total number of lines copied.
   FILE *pp = xpopen(cmdstr, "r");
   FILE *fp = xtmpfile();
-  unsigned lines = scopylines(pp, fp);
+  const unsigned lines = scopylines(pp, fp);
   xpclose(pp);
   rewind(fp);
 
@@ -586,7 +587,7 @@ unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *aw,
   unsigned res_i = 0;
 
   for (i = 0; i < aw_len && res_i < BS_SHORT; i++) {
-    if (!wmemberof(res, aw[i].section, res_i)) {
+    if (!wmemberof((const wchar_t **)res, aw[i].section, res_i)) {
       res[res_i] = wcsdup(aw[i].section);
       res_i++;
     }
@@ -599,20 +600,21 @@ unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *aw,
 }
 
 unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
-                         wchar_t *const *sc, unsigned sc_len,
+                         const wchar_t *const *sc, unsigned sc_len,
                          const wchar_t *key, const wchar_t *title,
                          const wchar_t *ver, const wchar_t *date) {
 
   // Text blocks widths
-  unsigned line_width = MAX(60, config.layout.main_width);
-  unsigned lmargin_width = config.layout.lmargin; // left margin
-  unsigned rmargin_width = config.layout.rmargin; // right margin
-  unsigned text_width =
+  const unsigned line_width = MAX(60, config.layout.main_width);
+  const unsigned lmargin_width = config.layout.lmargin; // left margin
+  const unsigned rmargin_width = config.layout.rmargin; // right margin
+  const unsigned text_width =
       line_width - lmargin_width - rmargin_width; // main text area
-  unsigned hfc_width =
+  const unsigned hfc_width =
       text_width / 2 + text_width % 2; // header/footer centre area
-  unsigned hfl_width = (text_width - hfc_width) / 2; // header/footer left area
-  unsigned hfr_width =
+  const unsigned hfl_width =
+      (text_width - hfc_width) / 2; // header/footer left area
+  const unsigned hfr_width =
       hfl_width + (text_width - hfc_width) % 2; // header/footer right area
 
   unsigned ln = 0;      // current line number
@@ -626,12 +628,12 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   line_alloc(res[ln], 0);
   inc_ln;
   line_alloc(res[ln], line_width);
-  unsigned title_len = wcslen(title); // title length
-  unsigned key_len = wcslen(key);     // key length
-  unsigned lts_len =
+  const unsigned title_len = wcslen(title); // title length
+  const unsigned key_len = wcslen(key);     // key length
+  const unsigned lts_len =
       (hfc_width - title_len) / 2 +
       (hfc_width - title_len) % 2; // length of space on the left of title
-  unsigned rts_len =
+  const unsigned rts_len =
       (hfc_width - title_len) / 2; // length of space on the right of title
   swprintf(res[ln].text, line_width + 1, L"%*s%-*ls%*s%ls%*s%*ls%*s", //
            lmargin_width, "",                                         //
@@ -663,13 +665,14 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   bset(res[ln].reg, lmargin_width + wcslen(tmp));
 
   // Sections
-  unsigned sc_maxwidth = wmaxlen(sc, sc_len); // length of longest section
-  unsigned sc_cols =
-      text_width / (4 + sc_maxwidth);   // number of columns for sections
-  unsigned sc_lines = sc_len / sc_cols; // number of lines for sections
-  unsigned sc_i;                        // index of current section
-  if (sc_len % sc_cols > 0)
-    sc_lines++;
+  const unsigned sc_maxwidth = wmaxlen(sc, sc_len); // length of longest section
+  const unsigned sc_cols =
+      text_width / (4 + sc_maxwidth); // number of columns for sections
+  const unsigned sc_lines =
+      sc_len % sc_cols > 0
+          ? sc_len / sc_cols
+          : 1 + sc_len / sc_cols; // number of lines for sections
+  unsigned sc_i;                  // index of current section
   for (i = 0; i < sc_lines; i++) {
     inc_ln;
     line_alloc(res[ln], line_width + 4); // +4 for section margin
@@ -707,11 +710,11 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
     for (j = 0; j < aw_len; j++) {
       // If manual page is in current section...
       if (0 == wcscmp(aw[j].section, sc[i])) {
-        unsigned lc_width = text_width / 3;        // left column width
-        unsigned rc_width = text_width - lc_width; // right column width
-        unsigned page_width = wcslen(aw[j].page) + wcslen(aw[j].section) +
-                              2; // width of manual page name and section
-        unsigned spcl_width =
+        const unsigned lc_width = text_width / 3;        // left column width
+        const unsigned rc_width = text_width - lc_width; // right column width
+        const unsigned page_width = wcslen(aw[j].page) + wcslen(aw[j].section) +
+                                    2; // width of manual page name and section
+        const unsigned spcl_width =
             MAX(line_width,
                 lmargin_width + page_width +
                     rmargin_width); // used in place of line_width; might be
@@ -754,11 +757,11 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   // Footer
   inc_ln;
   line_alloc(res[ln], line_width);
-  unsigned date_len = wcslen(date); // date length
-  unsigned lds_len =
+  const unsigned date_len = wcslen(date); // date length
+  const unsigned lds_len =
       (hfc_width - date_len) / 2 +
       (hfc_width - date_len) % 2; // length of space on the left of date
-  unsigned rds_len =
+  const unsigned rds_len =
       (hfc_width - date_len) / 2; // length of space on the right of date
   swprintf(res[ln].text, line_width + 1, L"%*s%-*ls%*s%ls%*s%*ls%*s", //
            lmargin_width, "",                                         //
@@ -796,9 +799,9 @@ unsigned index_page(line_t **dst) {
   wcsftime(date, BS_SHORT, L"%x", gmtime(&now));
 
   line_t *res;
-  unsigned res_len =
-      aprowhat_render(&res, aw_all, aw_all_len, sc_all, sc_all_len, key, title,
-                      config.misc.program_version, date);
+  unsigned res_len = aprowhat_render(&res, aw_all, aw_all_len,
+                                     (const wchar_t **)sc_all, sc_all_len, key,
+                                     title, config.misc.program_version, date);
 
   *dst = res;
   return res_len;
@@ -815,8 +818,9 @@ unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const wchar_t *args,
   wcsftime(date, BS_SHORT, L"%x", gmtime(&now));
 
   line_t *res;
-  unsigned res_len = aprowhat_render(&res, aw, aw_len, sc, sc_len, key, title,
-                                     config.misc.program_version, date);
+  unsigned res_len =
+      aprowhat_render(&res, aw, aw_len, (const wchar_t **)sc, sc_len, key,
+                      title, config.misc.program_version, date);
 
   aprowhat_free(aw, aw_len);
   wafree(sc, sc_len);
@@ -932,7 +936,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   return ln;
 }
 
-link_loc_t prev_link(line_t *lines, unsigned lines_len, link_loc_t start) {
+link_loc_t prev_link(const line_t *lines, unsigned lines_len,
+                     link_loc_t start) {
   unsigned i;
   link_loc_t res;
 
@@ -966,7 +971,8 @@ link_loc_t prev_link(line_t *lines, unsigned lines_len, link_loc_t start) {
   return res;
 }
 
-link_loc_t next_link(line_t *lines, unsigned lines_len, link_loc_t start) {
+link_loc_t next_link(const line_t *lines, unsigned lines_len,
+                     link_loc_t start) {
   unsigned i;
   link_loc_t res;
 
@@ -1006,7 +1012,7 @@ link_loc_t next_link(line_t *lines, unsigned lines_len, link_loc_t start) {
   return res;
 }
 
-link_loc_t first_link(line_t *lines, unsigned lines_len, unsigned start,
+link_loc_t first_link(const line_t *lines, unsigned lines_len, unsigned start,
                       unsigned stop) {
   unsigned i;
   link_loc_t res;
@@ -1034,7 +1040,7 @@ link_loc_t first_link(line_t *lines, unsigned lines_len, unsigned start,
   return res;
 }
 
-link_loc_t last_link(line_t *lines, unsigned lines_len, unsigned start,
+link_loc_t last_link(const line_t *lines, unsigned lines_len, unsigned start,
                      unsigned stop) {
   unsigned i;
   link_loc_t res;
@@ -1062,11 +1068,11 @@ link_loc_t last_link(line_t *lines, unsigned lines_len, unsigned start,
   return res;
 }
 
-unsigned search(result_t **dst, wchar_t *needle, line_t *lines,
+unsigned search(result_t **dst, const wchar_t *needle, const line_t *lines,
                 unsigned lines_len) {
-  unsigned ln;                          // current line no.
-  unsigned i = 0;                       // current result no.
-  unsigned needle_len = wcslen(needle); // length of needle
+  unsigned ln;                                // current line no.
+  unsigned i = 0;                             // current result no.
+  const unsigned needle_len = wcslen(needle); // length of needle
   wchar_t *cur_hayst;      // current haystuck (i.e. text of current line)
   wchar_t *hit = NULL;     // current return value of wcsstr()
   unsigned res_len = 1024; // result buffer length

@@ -152,7 +152,7 @@ extern wchar_t *xwcsdup(const wchar_t *s);
 extern int getenvi(const char *name);
 
 // Return the value of the i'th bit in bit array ba
-extern bool bget(bitarr_t ba, unsigned i);
+extern bool bget(const bitarr_t ba, unsigned i);
 
 // Set the the i'th bit of bit array ba
 extern void bset(bitarr_t ba, unsigned i);
@@ -189,11 +189,11 @@ extern void wwrap(wchar_t *trgt, unsigned cols);
 
 // Return true if needle is in array of (wide) strings hayst, false otherwise.
 // hayst_length is the length of hayst.
-extern bool wmemberof(wchar_t *const *hayst, const wchar_t *needle,
+extern bool wmemberof(const wchar_t *const *hayst, const wchar_t *needle,
                       unsigned hayst_len);
 
 // Case-insensitive version of wmemberof()
-extern bool wcasememberof(wchar_t *const *hayst, const wchar_t *needle,
+extern bool wcasememberof(const wchar_t *const *hayst, const wchar_t *needle,
                           unsigned hayst_len);
 
 // Sort the strings in trgt alphanumerically. trgt_len is trgt's length. Setting
@@ -202,7 +202,7 @@ extern void wsort(wchar_t **trgt, unsigned trgt_len, bool rev);
 
 // Return the length of the longest (wide) string in src. src_len holds the
 // length of src.
-extern unsigned wmaxlen(wchar_t *const *src, unsigned src_len);
+extern unsigned wmaxlen(const wchar_t *const *src, unsigned src_len);
 
 // Copy all data in source into trgt, line by line. Both source and target must
 // be text files. Return the number of lines copied.
@@ -219,9 +219,10 @@ extern void fr_init(full_regex_t *re, char *str);
 // Search src for a string matching re. If found, return its location in src as
 // a range_t. If not, return { 0, 0 }. This function uses libc regular
 // expressions, and has plumbing to make it work on wchar_t* strings.
-extern range_t fr_search(const full_regex_t *re, wchar_t *src);
+extern range_t fr_search(const full_regex_t *re, const wchar_t *src);
 
-// Log msg, together with a timestamp, into F_LOG
+// Log msg, together with a timestamp, into F_LOG. Use this function only
+// temporarily for debugging, not in production.
 extern void loggit(const char *msg);
 
 #endif

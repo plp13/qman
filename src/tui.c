@@ -42,27 +42,21 @@ void aw_quick_search(wchar_t *needle) {
   unsigned pos = 0;             // current position in aw_all
   unsigned ln = 0;              // current line
   pos = aprowhat_search(needle, aw_all, aw_all_len, pos);
-  FILE *fp = fopen("qman.out", "a");
-  fwprintf(fp, L"%ls %d\n", needle, pos);
-  fclose(fp);
   while (-1 != pos && ln < lines) {
     res[ln] = pos;
     pos = aprowhat_search(needle, aw_all, aw_all_len, ++pos);
-    FILE *fp = fopen("qman.out", "a");
-    fwprintf(fp, L"%ls %d\n", needle, pos);
-    fclose(fp);
     ln++;
   }
   lines = ln; // lines becomes exact no. of lines to display
 
   // Display the search results
-  unsigned width = config.layout.imm_width - 4; // immediate window width
-  wchar_t *tmp = walloca(width - 4);            // temporary
+  const unsigned width = config.layout.imm_width - 4; // immediate window width
+  wchar_t *tmp = walloca(width - 4);                  // temporary
   unsigned ident_len = 0; // space dedicated to ident column
-  unsigned descr_len;     // space left for descr column
   for (ln = 0; ln < lines; ln++)
     ident_len = MAX(ident_len, wcslen(aw_all[res[ln]].ident));
-  descr_len = width - ident_len - 5;
+  const unsigned descr_len =
+      width - ident_len - 5; // space left for descr column
   for (ln = 0; ln < lines; ln++) {
     swprintf(tmp, width - 3, L"%-*ls %-*ls", ident_len, aw_all[res[ln]].ident,
              descr_len, aw_all[res[ln]].descr);
@@ -172,14 +166,14 @@ wchar_t *ch2name(int k) {
 // actions, keys_names_max is the length of the longest string in keys_names,
 // top is the first action to print help for, and focus is the action to focus
 // on.
-void draw_help(wchar_t *const *keys_names, unsigned keys_names_max,
+void draw_help(const wchar_t *const *keys_names, unsigned keys_names_max,
                unsigned top, unsigned focus) {
-  unsigned width = getmaxx(wimm);  // help window width
-  unsigned height = getmaxy(wimm); // help window height
-  unsigned end = MIN(PA_QUIT,
-                     top + height - 4); // last action to print help for
-  wchar_t *buf = walloca(width - 2);    // temporary
-  unsigned i, j;                        // iterator
+  const unsigned width = getmaxx(wimm);  // help window width
+  const unsigned height = getmaxy(wimm); // help window height
+  const unsigned end = MIN(PA_QUIT,
+                           top + height - 4); // last action to print help for
+  wchar_t *buf = walloca(width - 2);          // temporary
+  unsigned i, j;                              // iterator
 
   j = 2;
   for (i = top; i <= end; i++) {
@@ -277,8 +271,8 @@ void init_windows() {
 }
 
 bool termsize_changed() {
-  int width = getmaxx(stdscr);
-  int height = getmaxy(stdscr);
+  const int width = getmaxx(stdscr);
+  const int height = getmaxy(stdscr);
 
   if (width != config.layout.width || height != config.layout.height) {
     config.layout.width = width;
@@ -369,7 +363,7 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
 
     // For each link...
     for (l = 0; l < lines[ly].links_length; l++) {
-      link_t link = lines[ly].links[l];
+      const link_t link = lines[ly].links[l];
 
       // Choose the the appropriate colour, based on link type and whether the
       // link is focused
@@ -428,14 +422,14 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
 }
 
 void draw_sbar(unsigned lines_len, unsigned lines_top) {
-  unsigned height = getmaxy(wsbar); // scrollbar height
-  unsigned block_pos;               // block position
-  if (height > lines_len)
-    block_pos = 1;
-  else
-    block_pos = MIN(height - 2,
-                    1 + (height - 2) * lines_top / (lines_len - height + 1));
-  unsigned i; // iterator
+  const unsigned height = getmaxy(wsbar); // scrollbar height
+  const unsigned block_pos =
+      height > lines_len
+          ? 1
+          : MIN(height - 2,
+                1 + (height - 2) * lines_top /
+                        (lines_len - height + 1)); // scrollbar knob position
+  unsigned i;                                      // iterator
 
   werase(wsbar);
 
@@ -453,19 +447,19 @@ void draw_sbar(unsigned lines_len, unsigned lines_top) {
   wnoutrefresh(wsbar);
 }
 
-void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
-               unsigned lines_pos, wchar_t *prompt, wchar_t *help,
-               wchar_t *em) {
+void draw_stat(const wchar_t *mode, const wchar_t *name, unsigned lines_len,
+               unsigned lines_pos, const wchar_t *prompt, const wchar_t *help,
+               const wchar_t *em) {
   werase(wstat);
   wbkgd(wstat, COLOR_PAIR(config.colours.stat_input_prompt.pair));
 
-  unsigned width = getmaxx(wstat); // width of both status lines
+  const unsigned width = getmaxx(wstat); // width of both status lines
 
   // Starting columns and widths of the various sections
-  unsigned mode_col = 0, mode_width = 10, name_col = 10,
-           name_width = width - 24, loc_col = width - 14, loc_width = 14,
-           prompt_col = 0, prompt_width = width / 2, help_col = prompt_width,
-           help_em_width = width - prompt_width;
+  const unsigned mode_col = 0, mode_width = 10, name_col = 10,
+                 name_width = width - 24, loc_col = width - 14, loc_width = 14,
+                 prompt_col = 0, prompt_width = width / 2,
+                 help_col = prompt_width, help_em_width = width - prompt_width;
 
   wchar_t tmp[BS_LINE], tmp2[BS_LINE];
 
@@ -504,7 +498,7 @@ void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
   wnoutrefresh(wstat);
 }
 
-void draw_imm(bool is_long, wchar_t *title, wchar_t *help) {
+void draw_imm(bool is_long, const wchar_t *title, const wchar_t *help) {
   unsigned height, width, y, x;
 
   timeout(-1);
@@ -657,8 +651,8 @@ void cbeep() {
 }
 
 void ctbeep() {
-  int width = getmaxx(stdscr);
-  int height = getmaxy(stdscr);
+  const int width = getmaxx(stdscr);
+  const int height = getmaxy(stdscr);
 
   if (width == config.layout.width && height == config.layout.height)
     cbeep();
@@ -700,7 +694,6 @@ void tui_error(wchar_t *em) {
   unsigned pos = page_top;
   if (page_flink.ok)
     pos = page_flink.line;
-
   if (pos < page_top || pos >= page_top + config.layout.main_height)
     pos = page_top;
 
@@ -711,7 +704,7 @@ void tui_error(wchar_t *em) {
 }
 
 bool tui_up() {
-  link_loc_t pl =
+  const link_loc_t pl =
       prev_link(page, page_len, page_flink); // link right before page_flink
 
   if (pl.ok && pl.line >= page_top &&
@@ -737,7 +730,7 @@ bool tui_up() {
 }
 
 bool tui_down() {
-  link_loc_t nl =
+  const link_loc_t nl =
       next_link(page, page_len, page_flink); // link right after page_flink
 
   if (nl.ok && nl.line >= page_top &&
@@ -771,8 +764,8 @@ bool tui_pgup() {
   } else {
     // None of the above; focus on page's first link, or error out if already
     // there
-    link_loc_t fl = first_link(page, page_len, page_top,
-                               page_top + config.layout.main_height - 1);
+    const link_loc_t fl = first_link(page, page_len, page_top,
+                                     page_top + config.layout.main_height - 1);
     if (fl.ok && (page_flink.line != fl.line || page_flink.link != fl.link)) {
       page_flink = fl;
       return true;
@@ -783,8 +776,8 @@ bool tui_pgup() {
   }
 
   // Focus on the last link in new visible portion
-  link_loc_t ll = last_link(page, page_len, page_top,
-                            page_top + config.layout.main_height - 1);
+  const link_loc_t ll = last_link(page, page_len, page_top,
+                                  page_top + config.layout.main_height - 1);
   if (ll.ok)
     page_flink = ll;
 
@@ -802,8 +795,8 @@ bool tui_pgdn() {
   } else {
     // None of the above; focus on page's last link, or error out if already
     // there
-    link_loc_t ll = last_link(page, page_len, page_top,
-                              page_top + config.layout.main_height - 1);
+    const link_loc_t ll = last_link(page, page_len, page_top,
+                                    page_top + config.layout.main_height - 1);
     if (ll.ok && (page_flink.line != ll.line || page_flink.link != ll.link)) {
       page_flink = ll;
       return true;
@@ -814,8 +807,8 @@ bool tui_pgdn() {
   }
 
   // Focus on the first link in new visible portion
-  link_loc_t fl = first_link(page, page_len, page_top,
-                             page_top + config.layout.main_height - 1);
+  const link_loc_t fl = first_link(page, page_len, page_top,
+                                   page_top + config.layout.main_height - 1);
   if (fl.ok)
     page_flink = fl;
 
@@ -827,8 +820,8 @@ bool tui_home() {
   page_top = 0;
 
   // Focus on the first link in the visible portion
-  link_loc_t fl = first_link(page, page_len, page_top,
-                             page_top + config.layout.main_height - 1);
+  const link_loc_t fl = first_link(page, page_len, page_top,
+                                   page_top + config.layout.main_height - 1);
   if (fl.ok)
     page_flink = fl;
 
@@ -841,8 +834,8 @@ bool tui_end() {
     page_top = page_len - config.layout.main_height;
 
   // Focus on the last link in the visible portion
-  link_loc_t ll = last_link(page, page_len, page_top,
-                            page_top + config.layout.main_height - 1);
+  const link_loc_t ll = last_link(page, page_len, page_top,
+                                  page_top + config.layout.main_height - 1);
   if (ll.ok)
     page_flink = ll;
 
@@ -897,16 +890,16 @@ bool tui_open() {
     // The link is a local search link; jump to the appropriate page location
     {
       result_t *sr;
-      unsigned sr_len;
-      sr_len = search(&sr, page[page_flink.line].links[page_flink.link].trgt,
-                      page, page_len);
+      const unsigned sr_len =
+          search(&sr, page[page_flink.line].links[page_flink.link].trgt, page,
+                 page_len);
       if (0 == sr_len) {
         tui_error(L"Unable to open link");
         return false;
       }
       page_top = MIN(sr[0].line, page_len - config.layout.main_height);
-      link_loc_t fl = first_link(page, page_len, page_top,
-                                 page_top + config.layout.main_height - 1);
+      const link_loc_t fl = first_link(
+          page, page_len, page_top, page_top + config.layout.main_height - 1);
       if (fl.ok)
         page_flink = fl;
       free(sr);
@@ -1102,17 +1095,13 @@ bool tui_fwrd() {
 }
 
 bool tui_search(bool back) {
-  wchar_t *prompt; // search prompt
-  if (back)
-    prompt = L"?";
-  else
-    prompt = L"/";
-  wchar_t help[BS_SHORT]; // help message
+  wchar_t *prompt = back ? L"?" : L"/"; // search prompt
+  wchar_t help[BS_SHORT];               // help message
   swprintf(help, BS_SHORT, L"%ls search string (%ls/%ls to abort)",
            ch2name(KEY_ENTER), ch2name(KEY_BREAK), ch2name('\e'));
   wchar_t inpt[BS_SHORT - 2]; // search string
   wchar_t pout[BS_SHORT];     // search prompt and string printout
-  unsigned width = config.layout.width / 2 - 1; // search string width
+  const unsigned width = config.layout.width / 2 - 1; // search string width
   int got_inpt; // current return value of get_str_next()
   unsigned my_top =
       page_top; // temporary page_top that will be set to the line noumber of
@@ -1151,10 +1140,10 @@ bool tui_search(bool back) {
       // set my_top to the location of the first match
       results_len = search(&results, inpt, page, page_len);
       if (back) {
-        int tmp = search_prev(results, results_len, my_top);
+        const int tmp = search_prev(results, results_len, my_top);
         my_top = -1 == tmp ? my_top : tmp;
       } else {
-        int tmp = search_next(results, results_len, my_top);
+        const int tmp = search_next(results, results_len, my_top);
         my_top = -1 == tmp ? my_top : tmp;
       }
       if (my_top + config.layout.main_height > page_len) {
@@ -1185,8 +1174,8 @@ bool tui_search(bool back) {
   if (got_inpt > 0) {
     // User entered a string and hit ENTER; retain search results
     page_top = my_top;
-    link_loc_t fl = first_link(page, page_len, page_top,
-                               page_top + config.layout.main_height - 1);
+    const link_loc_t fl = first_link(page, page_len, page_top,
+                                     page_top + config.layout.main_height - 1);
     if (fl.ok)
       page_flink = fl;
     return true;
@@ -1236,8 +1225,8 @@ bool tui_search_next(bool back) {
 
   // Set page_top and page_flink to jump to the search result
   page_top = my_top;
-  link_loc_t fl = first_link(page, page_len, page_top,
-                             page_top + config.layout.main_height - 1);
+  const link_loc_t fl = first_link(page, page_len, page_top,
+                                   page_top + config.layout.main_height - 1);
   if (fl.ok)
     page_flink = fl;
   return true;
@@ -1297,7 +1286,7 @@ bool tui_help() {
   // Main loop
   while (true) {
     // Draw the help text in the help window
-    draw_help(keys_names, keys_names_max, top, focus);
+    draw_help((const wchar_t **)keys_names, keys_names_max, top, focus);
     doupdate();
 
     // Get user input
@@ -1348,7 +1337,7 @@ bool tui_help() {
         winddown(ES_OPER_ERROR, err_msg);
       tui_redraw();
       draw_imm(true, L"Program Actions and Keyboard Help", help);
-      draw_help(keys_names, keys_names_max, top, focus);
+      draw_help((const wchar_t **)keys_names, keys_names_max, top, focus);
       doupdate();
       height = getmaxy(wimm);
     }

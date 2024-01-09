@@ -109,13 +109,14 @@ extern void draw_sbar(unsigned lines_len, unsigned lines_top);
 // em -- error message
 // (Normally, we will display help. If, however, help is NULL, we'll display
 // em.)
-extern void draw_stat(wchar_t *mode, wchar_t *name, unsigned lines_len,
-                      unsigned lines_pos, wchar_t *prompt, wchar_t *help,
-                      wchar_t *em);
+extern void draw_stat(const wchar_t *mode, const wchar_t *name,
+                      unsigned lines_len, unsigned lines_pos,
+                      const wchar_t *prompt, const wchar_t *help,
+                      const wchar_t *em);
 
 // Draw an immediate window. is_long specifies whether the window is long or
 // short. The title and help strings is quite obvious what they are.
-void draw_imm(bool is_long, wchar_t *title, wchar_t *help);
+void draw_imm(bool is_long, const wchar_t *title, const wchar_t *help);
 
 // Delete the immediate window previously drawn with draw_imm()
 void del_imm();

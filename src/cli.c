@@ -23,7 +23,7 @@ void init_cli() {
   }
 }
 
-void print_page(line_t *lines, unsigned lines_len) {
+void print_page(const line_t *lines, unsigned lines_len) {
   unsigned i, j; // iterators
   wchar_t *reg =
       L""; // sequence to return from bold/italic/underline to regular text

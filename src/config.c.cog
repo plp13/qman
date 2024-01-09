@@ -53,7 +53,7 @@ int str2int(const char *src) {
 // 'yellow', 'blue', 'magenta', 'cyan', 'white', a positive integer, or
 // '#rrggbb'.
 short str2colour(const char *src) {
-  int srci = str2int(src);
+  const int srci = str2int(src);
   if (srci >= 0)
     return srci;
   else if (0 == strcasecmp(src, "BLACK"))
@@ -165,8 +165,7 @@ int str2ch(const char *src) {
 #define conf_set_colour(n, trgt)                                               \
   if (0 == strcmp(name, n)) {                                                  \
     char fg[10], bg[10], bold[10];                                             \
-    int vals_read;                                                             \
-    vals_read = sscanf(value, "%9s%9s%9s", fg, bg, bold);                      \
+    const int vals_read = sscanf(value, "%9s%9s%9s", fg, bg, bold);            \
     if (3 != vals_read) {                                                      \
       swprintf(errmsg, BS_SHORT,                                               \
                L"Config parse error at %s/%s: invalid colour value '%s'",      \
@@ -200,9 +199,8 @@ int str2ch(const char *src) {
     char *keys[8];                                                             \
     for (i = 0; i < 8; i++)                                                    \
       keys[i] = walloca(BS_SHORT);                                             \
-    int keys_read;                                                             \
-    keys_read = sscanf("%s%s%s%s%s%s%s%s", keys[0], keys[1], keys[2], keys[3], \
-                       keys[4], keys[5], keys[6], keys[7]);                    \
+    const int keys_read = sscanf("%s%s%s%s%s%s%s%s", keys[0], keys[1], keys[2],\
+                                 keys[3], keys[4], keys[5], keys[6], keys[7]); \
     if (0 == keys_read) {                                                      \
       swprintf(errmsg, BS_SHORT,                                               \
                L"Config parse error at %s/%s: invalid key mapping value '%s'", \
@@ -237,7 +235,7 @@ int str2ch(const char *src) {
 // and an upper boundary for value, for error-checking purposes.
 #define conf_set_int(n, trgt, min, max)                                        \
   if (0 == strcmp(name, n)) {                                                  \
-    int val = str2int(value);                                                  \
+    const int val = str2int(value);                                            \
     if (INT_MIN == val) {                                                      \
       swprintf(errmsg, BS_SHORT,                                               \
                L"Config parse error at %s/%s: not an integer", section, name); \
@@ -270,7 +268,7 @@ int str2ch(const char *src) {
 // equal to n.
 #define conf_set_wstring(n, trgt)                                              \
   if (0 == strcmp(name, n)) {                                                  \
-    unsigned value_len = strlen(value);                                        \
+    const unsigned value_len = strlen(value);                                  \
     if (NULL != trgt)                                                          \
       free(trgt);                                                              \
     if (NULL == value)                                                         \
@@ -408,8 +406,8 @@ void configure() {
     }
   } else {
     // No -C option; try to open specified config file at the standard locations
-    char *home = getenv("HOME");
-    unsigned hc_len = strlen(home) + 19;
+    const char *home = getenv("HOME");
+    const unsigned hc_len = strlen(home) + 19;
     char *hc = salloca(hc_len);
     snprintf(hc, hc_len, "%s/.config/qman.conf", home);
     fp = fopen(hc, "r");

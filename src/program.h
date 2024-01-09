@@ -233,7 +233,10 @@ extern const wchar_t *keys_help[PA_QUIT + 1];
 #define request_type_str(t)                                                    \
   RT_INDEX == t                                                                \
       ? L"INDEX"                                                               \
-      : (RT_MAN == t ? L"MAN" : (RT_MAN_LOCAL == t ? L"LOCAL" : (RT_APROPOS == t ? L"APROPOS" : L"WHATIS")))
+      : (RT_MAN == t ? L"MAN"                                                  \
+                     : (RT_MAN_LOCAL == t                                      \
+                            ? L"LOCAL"                                         \
+                            : (RT_APROPOS == t ? L"APROPOS" : L"WHATIS")))
 //
 // Functions
 //
@@ -259,13 +262,13 @@ extern void usage();
 
 // Populate the current history entry (i.e. history[history_cur]), setting its
 // request_type member to rt, and its args to args
-extern void history_replace(request_type_t rt, wchar_t *args);
+extern void history_replace(request_type_t rt, const wchar_t *args);
 
 // Push a new entry into history, as follows:
 // Add a new history entry after history_cur, and populate it with rt and args
 // using history_replace(). Increase history_cur, and adjust history_top so that
 // it remains equal to or greater than it.
-extern void history_push(request_type_t rt, wchar_t *args);
+extern void history_push(request_type_t rt, const wchar_t *args);
 
 // If n is smaller than or equal to history_cur, go back n steps in history and
 // return true. Otherwise, return false.
@@ -295,7 +298,7 @@ extern unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *buf,
 // text. Return the number of lines. key, title, ver, and date are used for the
 // header and footer.
 extern unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
-                                unsigned aw_len, wchar_t *const *sc,
+                                unsigned aw_len, const wchar_t *const *sc,
                                 unsigned sc_len, const wchar_t *key,
                                 const wchar_t *title, const wchar_t *ver,
                                 const wchar_t *date);
@@ -326,28 +329,28 @@ extern unsigned man(line_t **dst, const wchar_t *args, bool local_file);
 
 // Find the previous link in lines (of linegth lines_len), starting at location
 // start. Return said link's location.
-extern link_loc_t prev_link(line_t *lines, unsigned lines_len,
+extern link_loc_t prev_link(const line_t *lines, unsigned lines_len,
                             link_loc_t start);
 
 // Find the next link in lines (of length lines_len), starting at location
 // start. Return said link's location.
-extern link_loc_t next_link(line_t *lines, unsigned lines_len,
+extern link_loc_t next_link(const line_t *lines, unsigned lines_len,
                             link_loc_t start);
 
 // Return the first link in lines (of length lines_len) that appears in line
 // number range [start, stop]
-extern link_loc_t first_link(line_t *lines, unsigned lines_len, unsigned start,
-                             unsigned stop);
+extern link_loc_t first_link(const line_t *lines, unsigned lines_len,
+                             unsigned start, unsigned stop);
 
 // Return the last link in lines (of length lines_len) that appears in line
 // number range [start, stop]
-extern link_loc_t last_link(line_t *lines, unsigned lines_len, unsigned start,
-                            unsigned stop);
+extern link_loc_t last_link(const line_t *lines, unsigned lines_len,
+                            unsigned start, unsigned stop);
 
 // Search for needle in lines (of length lines_len). Place all results into dst
 // and return total number of results.
-extern unsigned search(result_t **dst, wchar_t *needle, line_t *lines,
-                       unsigned lines_len);
+extern unsigned search(result_t **dst, const wchar_t *needle,
+                       const line_t *lines, unsigned lines_len);
 
 // Return the line number of the member of res that immediately follows line
 // number from. If no such line exists, return -1. res_len is the length of res.
