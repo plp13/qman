@@ -260,7 +260,7 @@ int str2ch(const char *src) {
     if (NULL == value)                                                         \
       trgt = NULL;                                                             \
     else                                                                       \
-      trgt = strdup(value);                                                    \
+      trgt = xstrdup(value);                                                   \
     return true;                                                               \
   }
 
@@ -363,12 +363,12 @@ for section, options in config_def.config_def.items():
       if None == default_value:
         cog.outl("  config." + section + "." + option + " = NULL;")
       else:
-        cog.outl("  config." + section + "." + option + " = strdup(\"" + default_value[0] + "\");")
+        cog.outl("  config." + section + "." + option + " = xstrdup(\"" + default_value[0] + "\");")
     elif type[0] == "wstring":
       if None == default_value:
         cog.outl("  config." + section + "." + option + " = NULL;")
       else:
-        cog.outl("  config." + section + "." + option + " = wcsdup(L\"" + default_value[0] + "\");")
+        cog.outl("  config." + section + "." + option + " = xwcsdup(L\"" + default_value[0] + "\");")
     elif type[0] == "colour":
       cog.outl("  config." + section + "." + option + ".fg = str2colour(\"" + default_value[0] + "\");")
       cog.outl("  config." + section + "." + option + ".bg = str2colour(\"" + default_value[1] + "\");")

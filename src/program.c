@@ -1252,8 +1252,6 @@ void winddown(int ec, const wchar_t *em) {
     free(config.misc.browser_path);
   if (NULL != config.misc.mailer_path)
     free(config.misc.mailer_path);
-  if (NULL != config.misc.config_path)
-    free(config.misc.config_path);
 
   // Deallocate memory used by history global
   requests_free(history, config.misc.history_size);
