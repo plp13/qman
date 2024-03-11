@@ -849,6 +849,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
               config.layout.rmargin);
   setenv("MANWIDTH", tmps, true);
   setenv("MAN_KEEP_FORMATTING", "1", true);
+  setenv("GROFF_SGR", "1", true);
+  unsetenv("GROFF_NO_SGR");
 
   // Prepare man command
   char cmdstr[BS_SHORT];
