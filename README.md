@@ -48,10 +48,25 @@ compiled using `pandoc`.
 Make sure all of the above dependencies are installed on your system, and do the
 following:
 
+```
   $ meson setup build/ src/
   $ cd build/
   $ meson compile
   $ sudo meson install
+```
+
+For Arch Linux users, there is a an ![AUR package](https://aur.archlinux.org/packages/qman-git).
+
+## Troubleshooting
+Always make sure you are up-to-date with the `main` branch.
+
+Calling `qman` without any parameters will fail with message
+`Apropos '': nothing appropriate` if no manual page index cache exists on your
+system. This can be fixed by running (as root):
+
+```
+  # mandb
+```
 
 ## Screenshots
 
