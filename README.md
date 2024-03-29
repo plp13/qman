@@ -55,7 +55,7 @@ following:
   $ sudo meson install
 ```
 
-For Arch Linux users, there is a an ![AUR package](https://aur.archlinux.org/packages/qman-git).
+For Arch Linux users, there is a an [AUR package](https://aur.archlinux.org/packages/qman-git).
 
 ## Troubleshooting
 Always make sure you are up-to-date with the `main` branch.
