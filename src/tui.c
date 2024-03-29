@@ -70,10 +70,13 @@ void aw_quick_search(wchar_t *needle) {
   wnoutrefresh(wimm);
 }
 
-// Helper of tui_help(). Return a string representation of key mapping k.
+// Helper of tui_help(). Return a (statically allocated) string representation
+// of key mapping k.
 wchar_t *ch2name(int k) {
-  static wchar_t ret[4]; // return value
-  unsigned i;            // iterator
+  static wchar_t fkeys[12][4]; // placeholders for function key representations
+  static wchar_t okeys[94]
+                      [4]; // placeholders for representations of all other keys
+  unsigned i;              // iterator
 
   // Navigation and "special" keys
   switch (k) {
@@ -125,40 +128,38 @@ wchar_t *ch2name(int k) {
   }
 
   // F1 to F9
-  for (i = 1; i <= 9; i++) {
-    if (KEY_F(i) == k) {
-      ret[0] = L'F';
-      ret[1] = i + 48;
-      ret[2] = L'\0';
-      return ret;
+  for (i = 0; i <= 8; i++) {
+    if (KEY_F(i + 1) == k) {
+      fkeys[i][0] = L'F';
+      fkeys[i][1] = i + 48;
+      fkeys[i][2] = L'\0';
+      return fkeys[i];
     }
   }
 
   // F10 to F12
-  for (i = 10; i <= 12; i++) {
-    if (KEY_F(i) == k) {
-      ret[0] = L'F';
-      ret[1] = L'1';
-      ret[2] = i + 38;
-      ret[3] = L'\0';
-      return ret;
+  for (i = 9; i <= 11; i++) {
+    if (KEY_F(i + 1) == k) {
+      fkeys[i][0] = L'F';
+      fkeys[i][1] = L'1';
+      fkeys[i][2] = i + 38;
+      fkeys[i][3] = L'\0';
+      return fkeys[i];
     }
   }
 
   // All other keys
   if (k >= 33 && k <= 126) {
     // Key corresponds to a printable character; return it
-    ret[0] = L'\'';
-    ret[1] = k;
-    ret[2] = L'\'';
+    okeys[k - 33][0] = L'\'';
+    okeys[k - 33][1] = k;
+    okeys[k - 33][2] = L'\'';
+    okeys[k - 33][3] = L'\0';
+    return okeys[k - 33];
   } else {
     // Key does not correspond to a printable character; return "???"
-    ret[0] = '?';
-    ret[1] = '?';
-    ret[2] = '?';
+    return L"???";
   }
-  ret[3] = L'\0';
-  return ret;
 }
 
 // Helper of tui_help(). Draw the help text into wimm. keys_names contains the

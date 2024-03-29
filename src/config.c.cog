@@ -199,8 +199,9 @@ int str2ch(const char *src) {
     char *keys[8];                                                             \
     for (i = 0; i < 8; i++)                                                    \
       keys[i] = walloca(BS_SHORT);                                             \
-    const int keys_read = sscanf("%s%s%s%s%s%s%s%s", keys[0], keys[1], keys[2],\
-                                 keys[3], keys[4], keys[5], keys[6], keys[7]); \
+    const int keys_read = sscanf(value, "%s%s%s%s%s%s%s%s", keys[0], keys[1],  \
+                                 keys[2], keys[3], keys[4], keys[5], keys[6],  \
+                                 keys[7]);                                     \
     if (0 == keys_read) {                                                      \
       swprintf(errmsg, BS_SHORT,                                               \
                L"Config parse error at %s/%s: invalid key mapping value '%s'", \
