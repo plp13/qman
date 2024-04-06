@@ -126,23 +126,14 @@ void discover_links(const full_regex_t *re, line_t *line, link_type_t type) {
   unsigned loff = 0; // offset (in line text) to start searching for links
   range_t lrng = fr_search(re, &line->text[loff]); // location of link in line
   wchar_t trgt[BS_LINE];                           // link target
-  wchar_t *sc;        // temporary; holds manual page section of link target
-  wchar_t *tmp, *buf; // temporary
 
   while (lrng.beg != lrng.end) {
     // While a link has been found, add it to the line
     wcsncpy(trgt, &line->text[loff + lrng.beg], lrng.end - lrng.beg);
     trgt[lrng.end - lrng.beg] = L'\0';
     if (LT_MAN == type) {
-      // Ugly hack: if type is LT_MAN, check that the link's section is listed
-      // in global lc_all before adding it
-      tmp = xwcsdup(trgt);
-      sc = wcstok(tmp, L"()", &buf);
-      if (NULL != sc)
-        sc = wcstok(NULL, L"()", &buf);
-      if (NULL != sc && wcasememberof((const wchar_t **)sc_all, sc, sc_all_len))
+      if (-1 != aprowhat_search(trgt, aw_all, aw_all_len, 0))
         add_link(line, loff + lrng.beg, loff + lrng.end, type, trgt);
-      free(tmp);
     } else
       add_link(line, loff + lrng.beg, loff + lrng.end, type, trgt);
     loff += lrng.end;
