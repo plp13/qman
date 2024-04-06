@@ -830,9 +830,7 @@ unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const wchar_t *args,
 
 unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   unsigned ln = 0; // current line number
-  unsigned len;    // length of current line text
-  // range_t lrng;    // location of a link found in current line
-  // unsigned loff;
+  int len;         // length of current line text
   unsigned i, j;                   // iterators
   wchar_t *tmpw = walloc(BS_LINE); // temporary
   char *tmps = salloc(BS_LINE);    // temporary
@@ -877,6 +875,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 
     // Process text and formatting attirbutes
     len = mbstowcs(tmpw, tmps, BS_LINE);
+    if (-1 == len)
+      winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
     line_alloc(res[ln], config.layout.lmargin + len);
     for (j = 0; j < config.layout.lmargin; j++)
       res[ln].text[j] = L' ';

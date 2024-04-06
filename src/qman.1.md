@@ -53,8 +53,10 @@ keyboard mappings:
 
 | Action name     | Description                           | Key mappings       |
 |-----------------|---------------------------------------|--------------------|
-| UP              | Scroll up one line and/or focus on the previous link | UP, 'y', 'k'       |
-| DOWN            | Scroll down one line and/or focus on the next link | DOWN, 'e', 'j'     |
+| UP              | Scroll up one line and/or focus on the previous link | UP, 'y', 'k' |
+| DOWN            | Scroll down one line and/or focus on the next link | DOWN, 'e', 'j' |
+| LEFT            | Scroll left one tab stop              | LEFT, '<'          |
+| RIGHT           | Scroll right one tab stop             | RIGHT, '>'         |
 | PGUP            | Scroll up one page                    | PGUP, 'b'          |
 | PGDN            | Scroll down one page                  | PGDN, 'f'          |
 | HOME            | Go to page top                        | HOME, 'g'          |
@@ -195,7 +197,7 @@ high (true) or low (false) intensity.
 **Section [keys]**
 : Options in this section specify which keys are mapped to each program action.
 
-The section contains 21 configuration options, each corresponding to one of the
+The section contains 23 configuration options, each corresponding to one of the
 program actions described in the **USER INTERFACE** section of this manual page.
 Their value is a tuple of up to 8 key definitions, separated by whitespace:
 
@@ -227,6 +229,7 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 | beep     | boolean      | Indicates whether to beep the terminal on error    |
 | lmargin  | unsigned int | Size of margin between the left side of the screen, and the page text |
 | rmargin  | unsigned int | Size of margin between the page text and the scroll bar and/or the right side of the screen |
+| tabstop  | unsigned int | Number of characters in a tab stop (used by actions LEFT and RIGHT) |
 
 **Section [misc]**
 : This section contains various miscellaneous options:
