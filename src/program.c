@@ -848,8 +848,11 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
           4 + config.layout.main_width - config.layout.lmargin -
               config.layout.rmargin);
   setenv("MANWIDTH", tmps, true);
+  sprintf(tmps, "%s %s", config.misc.hyphernate ? "" : "--nh",
+          config.misc.justify ? "" : "--nj");
   setenv("MAN_KEEP_FORMATTING", "1", true);
   setenv("GROFF_SGR", "1", true);
+  setenv("MANOPT", tmps, true);
   unsetenv("GROFF_NO_SGR");
 
   // Prepare man command

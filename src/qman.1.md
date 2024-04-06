@@ -239,6 +239,11 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 | browser_path | string       | Path to the command that will be used to open HTTP links (i.e. your web browser) |
 | mailer_path  | string       | Path to the command that will be used to open e-mail links (i.e. your e-mail software) |
 | history_size | unsigned int | Maximum number of history entries              |
+| hyphernate   | boolean      | Sett this to true to hyphernate long words     |
+| justify      | boolean      | Set this to false to disable justified text    |
+
+If you are using a narrow terminal, try setting _hyphernate_ to 'true' and/or
+_justify_ to 'false'.
 
 # ENVIRONMENT
 When invoked using **-T**, the program tries to set the page width to the value
