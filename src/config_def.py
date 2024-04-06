@@ -97,6 +97,8 @@ config_def = {
         # Comments for program actions are located in config.h.cog
         "up": (("key",), ("KEY_UP", "y", "k"), True, None),
         "down": (("key",), ("KEY_DOWN", "e", "j"), True, None),
+        "left": (("key",), ("KEY_LEFT", "<"), True, None),
+        "right": (("key",), ("KEY_RIGHT", ">"), True, None),
         "pgup": (("key",), ("KEY_PPAGE", "b"), True, None),
         "pgdn": (("key",), ("KEY_NPAGE", "f"), True, None),
         "home": (("key",), ("KEY_HOME", "g"), True, None),
@@ -132,7 +134,8 @@ config_def = {
         "imm_height_short": (("int", 0, 100), ("4",), False, "short pop-up dialogues height"),
         "imm_height_long": (("int", 0, 100), ("15",), False, "long pop-up dialogues height"),
         "lmargin": (("int", 0, 200), ("2",), True, "left margin size"),
-        "rmargin": (("int", 0, 200), ("2",), True, "right margin size")
+        "rmargin": (("int", 0, 200), ("2",), True, "right margin size"),
+        "tabstop": (("int", 0, 100), ("8",), True, "number of characters in a tab stop")
     },
     "misc": {
         "program_name": (("wstring",), ("Qman",), False, "this program's name"),

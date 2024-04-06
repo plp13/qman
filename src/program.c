@@ -64,6 +64,8 @@ const wchar_t *keys_help[PA_QUIT + 1] = {
     L"Do nothing",
     L"Scroll up one line",
     L"Scroll down one line",
+    L"Scroll left one tab stop",
+    L"Scroll right one tab stop",
     L"Scroll up one page",
     L"Scroll down one page",
     L"Go to page top",
@@ -412,6 +414,7 @@ void history_replace(request_type_t rt, const wchar_t *args) {
   }
 
   history[history_cur].top = 0;
+  history[history_cur].left = 0;
   history[history_cur].flink = (link_loc_t){false, 0, 0};
 }
 
@@ -420,6 +423,7 @@ void history_push(request_type_t rt, const wchar_t *args) {
 
   // Save user's position
   history[history_cur].top = page_top;
+  history[history_cur].left = page_left;
   history[history_cur].flink = page_flink;
 
   // Increase history_cur and history_top as needed
@@ -452,6 +456,7 @@ void history_push(request_type_t rt, const wchar_t *args) {
 
 bool history_back(unsigned n) {
   history[history_cur].top = page_top;
+  history[history_cur].left = page_left;
   history[history_cur].flink = page_flink;
 
   const int pos = history_cur - n;
@@ -459,6 +464,7 @@ bool history_back(unsigned n) {
   if (pos >= 0) {
     history_cur = pos;
     page_top = history[history_cur].top;
+    page_left = history[history_cur].left;
     page_flink = history[history_cur].flink;
     return true;
   }
@@ -468,6 +474,7 @@ bool history_back(unsigned n) {
 
 bool history_forward(unsigned n) {
   history[history_cur].top = page_top;
+  history[history_cur].left = page_left;
   history[history_cur].flink = page_flink;
 
   const int pos = history_cur + n;
@@ -475,6 +482,7 @@ bool history_forward(unsigned n) {
   if (pos <= history_top) {
     history_cur = pos;
     page_top = history[history_cur].top;
+    page_left = history[history_cur].left;
     page_flink = history[history_cur].flink;
     return true;
   }

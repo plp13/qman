@@ -49,6 +49,7 @@ typedef struct {
   // The following are used by history_...() functions, to record the user's
   // location in history entries (which are instances of request_t)
   unsigned top;     // recorded page_top
+  unsigned left;    // recorded page_left
   link_loc_t flink; // recorded page_flink
 } request_t;
 

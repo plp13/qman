@@ -23,6 +23,8 @@ typedef enum {
   PA_NULL,         // do nothing (must be first member of action_t)
   PA_UP,           // scroll up one line and/or focus on previous link
   PA_DOWN,         // scroll down one line and/or focus on next link
+  PA_LEFT,         // scroll left one tab stop
+  PA_RIGHT,        // scroll right one tab stop
   PA_PGUP,         // scroll up one page
   PA_PGDN,         // scroll down one page
   PA_HOME,         // go to page top

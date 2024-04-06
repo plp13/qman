@@ -172,7 +172,7 @@ void draw_help(const wchar_t *const *keys_names, unsigned keys_names_max,
   const unsigned width = getmaxx(wimm);  // help window width
   const unsigned height = getmaxy(wimm); // help window height
   const unsigned end = MIN(PA_QUIT,
-                           top + height - 4); // last action to print help for
+                           top + height - 6); // last action to print help for
   wchar_t *buf = walloca(width - 2);          // temporary
   unsigned i, j;                              // iterator
 
@@ -333,7 +333,8 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
 
   unsigned y;     // current terminal row
   unsigned ly;    // current line
-  unsigned x;     // current column (in both line and terminal)
+  unsigned x;     // current terminal column
+  unsigned lx;    // current column in line
   unsigned l;     // current link
   unsigned s = 0; // current search result
 
@@ -345,21 +346,22 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
 
     // For each terminal column...
     for (x = 0; x < getmaxx(wmain); x++) {
-      if (x >= lines[ly].length)
+      lx = x + page_left;
+      if (lx >= lines[ly].length)
         break;
 
       // Set text attributes
-      if (bget(lines[ly].bold, x))
+      if (bget(lines[ly].bold, lx))
         change_colour_attr(wmain, config.colours.text, WA_BOLD);
-      if (bget(lines[ly].italic, x))
+      if (bget(lines[ly].italic, lx))
         change_colour_attr(wmain, config.colours.text, WA_STANDOUT);
-      if (bget(lines[ly].uline, x))
+      if (bget(lines[ly].uline, lx))
         change_colour_attr(wmain, config.colours.text, WA_UNDERLINE);
-      if (bget(lines[ly].reg, x))
+      if (bget(lines[ly].reg, lx))
         change_colour_attr(wmain, config.colours.text, WA_NORMAL);
 
       // Place character on screen
-      mvwaddnwstr(wmain, y, x, &lines[ly].text[x], 1);
+      mvwaddnwstr(wmain, y, x, &lines[ly].text[lx], 1);
     }
 
     // For each link...
@@ -404,7 +406,9 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
       }
 
       // Apply said colour
-      apply_colour(wmain, y, link.start, link.end - link.start, col);
+      if (page_left <= link.start)
+        apply_colour(wmain, y, link.start - page_left, link.end - link.start,
+                     col);
     }
 
     // Skip all search results prior to current line
@@ -458,7 +462,7 @@ void draw_stat(const wchar_t *mode, const wchar_t *name, unsigned lines_len,
 
   // Starting columns and widths of the various sections
   const unsigned mode_col = 0, mode_width = 10, name_col = 10,
-                 name_width = width - 24, loc_col = width - 14, loc_width = 14,
+                 name_width = width - 28, loc_col = width - 18, loc_width = 18,
                  prompt_col = 0, prompt_width = width / 2,
                  help_col = prompt_width, help_em_width = width - prompt_width;
 
@@ -471,7 +475,8 @@ void draw_stat(const wchar_t *mode, const wchar_t *name, unsigned lines_len,
   swprintf(tmp, BS_LINE, L" %-*ls", name_width - 1, name);
   change_colour(wstat, config.colours.stat_indic_name);
   mvwaddnwstr(wstat, 0, name_col, tmp, name_width);
-  swprintf(tmp2, BS_LINE, L"%d:%d", lines_pos, lines_len);
+  swprintf(tmp2, BS_LINE, L"%d:%d /%d", lines_pos,
+           page_left / config.layout.tabstop, lines_len);
   swprintf(tmp, BS_LINE, L"%*ls ", loc_width - 1, tmp2);
   change_colour(wstat, config.colours.stat_indic_loc);
   mvwaddnwstr(wstat, 0, loc_col, tmp, loc_width);
@@ -755,6 +760,29 @@ bool tui_down() {
   return true;
 }
 
+bool tui_left() {
+  if (0 == page_left) {
+    tui_error(L"Already at the leftmost position");
+    return false;
+  }
+
+  if (page_left < config.layout.tabstop)
+    page_left = 0;
+  else
+    page_left -= config.layout.tabstop;
+  return true;
+}
+
+bool tui_right() {
+  if (page_left + config.layout.width + config.layout.tabstop >= BS_LINE) {
+    tui_error(L"Already at the rightmost position");
+    return false;
+  }
+
+  page_left += config.layout.tabstop;
+  return true;
+}
+
 bool tui_pgup() {
   if (page_top >= config.layout.main_height) {
     // If there's space, scroll up one window height
@@ -865,6 +893,7 @@ bool tui_open() {
         return false;
       }
       page_top = 0;
+      page_left = 0;
       page_flink = first_link(page, page_len, page_top,
                               page_top + config.layout.main_height - 1);
     }
@@ -936,6 +965,7 @@ bool tui_open_apropos() {
         return false;
       }
       page_top = 0;
+      page_left = 0;
       page_flink = first_link(page, page_len, page_top,
                               page_top + config.layout.main_height - 1);
       return true;
@@ -971,6 +1001,7 @@ bool tui_open_whatis() {
         return false;
       }
       page_top = 0;
+      page_left = 0;
       page_flink = first_link(page, page_len, page_top,
                               page_top + config.layout.main_height - 1);
       return true;
@@ -1048,6 +1079,7 @@ bool tui_sp_open(request_type_t rt) {
       return false;
     }
     page_top = 0;
+    page_left = 0;
     page_flink = first_link(page, page_len, page_top,
                             page_top + config.layout.main_height - 1);
     return true;
@@ -1065,6 +1097,7 @@ bool tui_index() {
   if (err)
     winddown(ES_OPER_ERROR, err_msg);
   page_top = 0;
+  page_left = 0;
   page_flink = first_link(page, page_len, page_top,
                           page_top + config.layout.main_height - 1);
 
@@ -1326,8 +1359,8 @@ bool tui_help() {
     // Adjust top (in case the entire menu won't fit in the immediate window)
     if (focus < top)
       top = focus;
-    else if (focus > top + height - 5)
-      top = focus - height + 5;
+    else if (focus > top + height - 6)
+      top = focus - height + 6;
 
     // If terminal size has changed, regenerate page and redraw everything
     if (termsize_changed()) {
@@ -1337,6 +1370,8 @@ bool tui_help() {
       if (err)
         winddown(ES_OPER_ERROR, err_msg);
       tui_redraw();
+      top = 1;
+      focus = 1;
       draw_imm(true, L"Program Actions and Keyboard Help", help);
       draw_help((const wchar_t **)keys_names, keys_names_max, top, focus);
       doupdate();
@@ -1398,6 +1433,12 @@ void tui() {
       break;
     case PA_DOWN:
       redraw = tui_down();
+      break;
+    case PA_LEFT:
+      redraw = tui_left();
+      break;
+    case PA_RIGHT:
+      redraw = tui_right();
       break;
     case PA_PGUP:
       redraw = tui_pgup();

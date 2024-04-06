@@ -176,6 +176,12 @@ extern bool tui_up();
 // Handler for PA_DOWN
 extern bool tui_down();
 
+// Handler for PA_LEFT
+extern bool tui_left();
+
+// Handler for PA_RIGHT
+extern bool tui_right();
+
 // Handler for PA_PGUP
 extern bool tui_pgup();
 
