@@ -32,7 +32,7 @@ also to be fast and tiny, so that it can be used everywhere.
 **qman 1 ls** or **qman 'ls(1)'**
 : Show the manual page for **ls** from manual section **1**
 
-**qman -w open**
+**qman -f open**
 : Show all manual pages named **open** across all sections (whatis)
 
 **qman -k open**
