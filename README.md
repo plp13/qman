@@ -1,6 +1,23 @@
 # Qman
 A more modern manual page viewer for our terminals
 
+## Screenshots
+
+Index page:
+![Index Page](/screenshots/qman_index.png)
+
+Opening a manual page:
+![Opening a Manual Page](/screenshots/qman_open.png)
+
+Viewing a manual page:
+![Viewing a Manual Page](/screenshots/qman_man.png)
+
+Performing apropos:
+![Performing Apropos](/screenshots/qman_apropos.png)
+
+Online help:
+![On-line Help](/screenshots/qman_help.png)
+
 ## Rationale
 Linux manual pages are lovely. They are concise, well-written, complete, and
 downright useful. However, the standard way of accessing them from the
@@ -68,16 +85,4 @@ system. This can be fixed by running (as root):
   # mandb
 ```
 
-## Screenshots
 
-Index page:
-![Index Page](/screenshots/qman_index.png)
-
-Viewing a manual page:
-![Viewing a Manual Page](/screenshots/qman_man.png)
-
-Performing apropos:
-![Performing Apropos](/screenshots/qman_apropos.png)
-
-Online help:
-![On-line Help](/screenshots/qman_help.png)
