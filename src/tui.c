@@ -1016,7 +1016,7 @@ bool tui_sp_open(request_type_t rt) {
   wchar_t inpt[BS_SHORT - 2] = L""; // string typed by user
   wchar_t trgt[BS_SHORT]; // final string that specifies the page to be opened
   wchar_t help[BS_SHORT]; // help message
-  swprintf(help, BS_SHORT, L"%ls query string (%ls/%ls to abort)",
+  swprintf(help, BS_SHORT, L"%ls: query string   %ls/%ls: abort",
            ch2name(KEY_ENTER), ch2name(KEY_BREAK), ch2name('\e'));
   int got_inpt; // current return value of get_str_next()
 
@@ -1131,7 +1131,7 @@ bool tui_fwrd() {
 bool tui_search(bool back) {
   wchar_t *prompt = back ? L"?" : L"/"; // search prompt
   wchar_t help[BS_SHORT];               // help message
-  swprintf(help, BS_SHORT, L"%ls search string (%ls/%ls to abort)",
+  swprintf(help, BS_SHORT, L"Press %ls to search or %ls/%ls to abort",
            ch2name(KEY_ENTER), ch2name(KEY_BREAK), ch2name('\e'));
   wchar_t inpt[BS_SHORT - 2]; // search string
   wchar_t pout[BS_SHORT];     // search prompt and string printout

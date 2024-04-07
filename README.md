@@ -12,6 +12,9 @@ Opening a manual page:
 Viewing a manual page:
 ![Viewing a Manual Page](/screenshots/qman_man.png)
 
+Searching incrementally:
+![Searching incrementally](/screenshots/qman_search.png)
+
 Performing apropos:
 ![Performing Apropos](/screenshots/qman_apropos.png)
 
