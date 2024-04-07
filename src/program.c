@@ -619,6 +619,8 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   unsigned ln = 0;      // current line number
   unsigned i, j;        // iterators
   wchar_t tmp[BS_LINE]; // temporary
+  swprintf(tmp, BS_LINE, L"%*.lc", BS_LINE,
+           L'\0'); // initialize tmp to get rid of valgrind warning
 
   unsigned res_len = 1024;               // result buffer length
   line_t *res = aalloc(res_len, line_t); // result buffer
@@ -829,8 +831,8 @@ unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const wchar_t *args,
 }
 
 unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
-  unsigned ln = 0; // current line number
-  int len;         // length of current line text
+  unsigned ln = 0;                 // current line number
+  int len;                         // length of current line text
   unsigned i, j;                   // iterators
   wchar_t *tmpw = walloc(BS_LINE); // temporary
   char *tmps = salloc(BS_LINE);    // temporary
