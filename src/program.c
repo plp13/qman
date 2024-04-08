@@ -619,8 +619,8 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   unsigned ln = 0;      // current line number
   unsigned i, j;        // iterators
   wchar_t tmp[BS_LINE]; // temporary
-  swprintf(tmp, BS_LINE, L"%*.lc", BS_LINE,
-           L'\0'); // initialize tmp to get rid of valgrind warning
+  for (i = 0; i < BS_LINE; tmp[i++] = L'\0')
+    ; // zero-pad tmp to get rid of Valgrind warning
 
   unsigned res_len = 1024;               // result buffer length
   line_t *res = aalloc(res_len, line_t); // result buffer
