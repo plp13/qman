@@ -417,8 +417,9 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
 
     // Go through all search results for current line, and highlight them
     while (s < results_len && results[s].line == ly) {
-      apply_colour(wmain, y, results[s].start,
-                   results[s].end - results[s].start, config.colours.search);
+      if (page_left <= results[s].start)
+        apply_colour(wmain, y, results[s].start - page_left,
+                     results[s].end - results[s].start, config.colours.search);
       s++;
     }
   }
