@@ -310,6 +310,11 @@ extern unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
 extern int aprowhat_search(const wchar_t *needle, const aprowhat_t *hayst,
                            unsigned hayst_len, unsigned pos);
 
+// Return true if there is an element in hayst (of length hayst_len) whose
+// ident is case-insensitive equal to needle
+extern bool aprowhat_has(const wchar_t *needle, const aprowhat_t *hayst,
+                                 unsigned hayst_len);
+
 // Render a page that contains an index of all manual pages in dst
 extern unsigned index_page(line_t **dst);
 

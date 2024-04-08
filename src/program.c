@@ -134,7 +134,7 @@ void discover_links(const full_regex_t *re, line_t *line, link_type_t type) {
     wcsncpy(trgt, &line->text[loff + lrng.beg], lrng.end - lrng.beg);
     trgt[lrng.end - lrng.beg] = L'\0';
     if (LT_MAN == type) {
-      if (-1 != aprowhat_search(trgt, aw_all, aw_all_len, 0))
+      if (aprowhat_has(trgt, aw_all, aw_all_len))
         add_link(line, loff + lrng.beg, loff + lrng.end, type, trgt);
     } else
       add_link(line, loff + lrng.beg, loff + lrng.end, type, trgt);
@@ -785,11 +785,28 @@ int aprowhat_search(const wchar_t *needle, const aprowhat_t *hayst,
                     unsigned hayst_len, unsigned pos) {
   unsigned i;
 
+  if (NULL == needle)
+    return -1;
+
   for (i = pos; i < hayst_len; i++)
-    if (NULL != needle && wcsstr(hayst[i].ident, needle) == hayst[i].ident)
+    if (wcsstr(hayst[i].ident, needle) == hayst[i].ident)
       return i;
 
   return -1;
+}
+
+bool aprowhat_has(const wchar_t *needle, const aprowhat_t *hayst,
+                  unsigned hayst_len) {
+  unsigned i;
+
+  if (NULL == needle)
+    return false;
+
+  for (i = 0; i < hayst_len; i++)
+    if (0 == wcscasecmp(hayst[i].ident, needle))
+      return true;
+
+  return false;
 }
 
 unsigned index_page(line_t **dst) {
