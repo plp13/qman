@@ -147,7 +147,7 @@ config_def = {
         "browser_path": (("string",), ("/usr/bin/xdg-open",), True, "path to web browser command"),
         "mailer_path": (("string",), ("/usr/bin/xdg-email",), True, "path to mailer command"),
         "history_size": (("int", 0, 256 * 1024), ("65536",), True, "maximum number of history entries"),
-        "hyphernate": (("bool",), ("false",), True, "hyphernate long words"),
+        "hyphenate": (("bool",), ("true",), True, "hyphenate long words"),
         "justify": (("bool",), ("true",), True, "justify manual page text")
     }
 }

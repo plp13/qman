@@ -76,6 +76,7 @@ typedef enum {
 typedef struct {
   unsigned start;   // character no. where the link starts
   unsigned end;     // character no. the link ends
+  bool in_next;     // whether link end is actually in the following line
   link_type_t type; // type of link
   wchar_t *trgt;    // link target (e.g. "ls(1)" or "http://www.google.com/")
 } link_t;

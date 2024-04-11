@@ -109,16 +109,17 @@ const wchar_t *keys_help[PA_QUIT + 1] = {
   }
 
 // Helper of man() and aprowhat_render(). Add a link to a line. Allocate memory
-// using line_realloc_link() to do so. Use start, end, type, and trgt to
-// populate the new link's members.
-void add_link(line_t *line, unsigned start, unsigned end, link_type_t type,
-              const wchar_t *trgt) {
+// using line_realloc_link() to do so. Use start, end, link_next type, and trgt
+// to populate the new link's members.
+void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
+              link_type_t type, const wchar_t *trgt) {
   unsigned trgt_len = wcslen(trgt);
 
   line_realloc_link((*line), trgt_len);
   line->links[line->links_length - 1].start = start;
   line->links[line->links_length - 1].end = end;
   line->links[line->links_length - 1].type = type;
+  line->links[line->links_length - 1].in_next = in_next;
   wcscpy(line->links[line->links_length - 1].trgt, trgt);
 }
 
@@ -129,21 +130,29 @@ void discover_links(const full_regex_t *re, line_t *line, link_type_t type) {
   range_t lrng = fr_search(re, &line->text[loff]); // location of link in line
   wchar_t trgt[BS_LINE];                           // link target
 
+  // While a link has been found...
   while (lrng.beg != lrng.end) {
-    // While a link has been found, add it to the line
-    wcsncpy(trgt, &line->text[loff + lrng.beg], lrng.end - lrng.beg);
-    trgt[lrng.end - lrng.beg] = L'\0';
-    if (LT_MAN == type) {
-      if (aprowhat_has(trgt, aw_all, aw_all_len))
-        add_link(line, loff + lrng.beg, loff + lrng.end, type, trgt);
-    } else
-      add_link(line, loff + lrng.beg, loff + lrng.end, type, trgt);
+    if (loff + lrng.end == line->length - 2 &&
+        line->text[line->length - 2] == L'‐') {
+      // Link is broken by a hyphen; do not add it to the line
+    } else {
+      // Link is not broken by a hyphen; add it to the line
+      wcsncpy(trgt, &line->text[loff + lrng.beg], lrng.end - lrng.beg);
+      trgt[lrng.end - lrng.beg] = L'\0';
+      if (LT_MAN == type) {
+        if (aprowhat_has(trgt, aw_all, aw_all_len))
+          add_link(line, loff + lrng.beg, loff + lrng.end, false, type, trgt);
+      } else
+        add_link(line, loff + lrng.beg, loff + lrng.end, false, type, trgt);
+    }
+
+    // Calculate next offset
     loff += lrng.end;
     if (loff < line->length) {
-      // Link wasn't at the very end of line; look for another link after it
+      // Offset is not beyond the end of line; look for another link
       lrng = fr_search(re, &line->text[loff]);
     } else {
-      // Link was at the very end of line; exit the loop
+      // Offset is beyond the end of line; exit the loop
       lrng.beg = 0;
       lrng.end = 0;
     }
@@ -687,6 +696,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
         add_link(&res[ln],                                                 //
                  lmargin_width + j * (sc_maxwidth + 4),                    //
                  lmargin_width + j * (sc_maxwidth + 4) + wcslen(sc[sc_i]), //
+                 false,                                                    //
                  LT_LS,                                                    //
                  tmp);
       }
@@ -728,7 +738,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
                  lmargin_width, "",                         //
                  lc_width, aw[j].ident);
         add_link(&res[ln], lmargin_width, lmargin_width + wcslen(aw[j].ident),
-                 LT_MAN, aw[j].ident);
+                 false, LT_MAN, aw[j].ident);
 
         // Description
         wcscpy(tmp, aw[j].descr);
@@ -829,8 +839,10 @@ unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const wchar_t *args,
                   const wchar_t *key, const wchar_t *title) {
   aprowhat_t *aw;
   unsigned aw_len = aprowhat_exec(&aw, cmd, args);
+
   wchar_t **sc;
   unsigned sc_len = aprowhat_sections(&sc, aw, aw_len);
+
   time_t now = time(NULL);
   wchar_t date[BS_SHORT];
   wcsftime(date, BS_SHORT, L"%x", gmtime(&now));
@@ -864,7 +876,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
           4 + config.layout.main_width - config.layout.lmargin -
               config.layout.rmargin);
   setenv("MANWIDTH", tmps, true);
-  sprintf(tmps, "%s %s", config.misc.hyphernate ? "" : "--nh",
+  sprintf(tmps, "%s %s", config.misc.hyphenate ? "" : "--nh",
           config.misc.justify ? "" : "--nj");
   setenv("MAN_KEEP_FORMATTING", "1", true);
   setenv("GROFF_SGR", "1", true);
