@@ -20,6 +20,42 @@ action_t action = PA_NULL;
 // Helper macros and functions
 //
 
+// Helper of draw_page(). Set col to the appropriate colour for link no. linkno
+// of line number lineno. Consider the type of the link, and also query flink to
+// check whether it's focused.
+#define set_link_col(lineno, linkno, type)                                     \
+  if (flink.ok && flink.line == lineno && flink.link == linkno) {              \
+    switch (type) {                                                            \
+    case LT_MAN:                                                               \
+      col = config.colours.link_man_f;                                         \
+      break;                                                                   \
+    case LT_HTTP:                                                              \
+      col = config.colours.link_http_f;                                        \
+      break;                                                                   \
+    case LT_EMAIL:                                                             \
+      col = config.colours.link_email_f;                                       \
+      break;                                                                   \
+    case LT_LS:                                                                \
+    default:                                                                   \
+      col = config.colours.link_ls_f;                                          \
+    }                                                                          \
+  } else {                                                                     \
+    switch (type) {                                                            \
+    case LT_MAN:                                                               \
+      col = config.colours.link_man;                                           \
+      break;                                                                   \
+    case LT_HTTP:                                                              \
+      col = config.colours.link_http;                                          \
+      break;                                                                   \
+    case LT_EMAIL:                                                             \
+      col = config.colours.link_email;                                         \
+      break;                                                                   \
+    case LT_LS:                                                                \
+    default:                                                                   \
+      col = config.colours.link_ls;                                            \
+    }                                                                          \
+  }
+
 // Helper of tui_open(), tui_open_apropos() and tui_open_whatis(). If page_flink
 // isn't valid, error out and return false.
 #define error_on_invalid_flink                                                 \
@@ -368,47 +404,31 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
     for (l = 0; l < lines[ly].links_length; l++) {
       const link_t link = lines[ly].links[l];
 
-      // Choose the the appropriate colour, based on link type and whether the
+      // Apply the the appropriate colour, based on link type and whether the
       // link is focused
       colour_t col;
-      if (flink.ok && flink.line == ly && flink.link == l) {
-        // Current link is the focused link
-        switch (link.type) {
-        case LT_MAN:
-          col = config.colours.link_man_f;
-          break;
-        case LT_HTTP:
-          col = config.colours.link_http_f;
-          break;
-        case LT_EMAIL:
-          col = config.colours.link_email_f;
-          break;
-        case LT_LS:
-        default:
-          col = config.colours.link_ls_f;
-        }
-      } else {
-        // Current link is not the focused link
-        switch (link.type) {
-        case LT_MAN:
-          col = config.colours.link_man;
-          break;
-        case LT_HTTP:
-          col = config.colours.link_http;
-          break;
-        case LT_EMAIL:
-          col = config.colours.link_email;
-          break;
-        case LT_LS:
-        default:
-          col = config.colours.link_ls;
-        }
-      }
-
-      // Apply said colour
+      set_link_col(ly, l, link.type);
       if (page_left <= link.start)
         apply_colour(wmain, y, link.start - page_left, link.end - link.start,
                      col);
+    }
+
+    // If we are below the first line, and the previous line has links...
+    if (ly > 0 && lines[ly - 1].links_length > 0) {
+      l = lines[ly - 1].links_length - 1;
+
+      // ...and its last link is hyphenated...
+      if (lines[ly - 1].links[l].in_next) {
+        const link_t link = lines[ly - 1].links[l];
+
+        // Apply the the appropriate colour, based on link type and whether the
+        // link is focused
+        colour_t col;
+        set_link_col(ly - 1, l, link.type);
+        if (page_left <= link.start)
+          apply_colour(wmain, y, link.start_next - page_left,
+                       link.end_next - link.start_next, col);
+      }
     }
 
     // Skip all search results prior to current line

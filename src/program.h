@@ -74,11 +74,15 @@ typedef enum {
 
 // A link
 typedef struct {
-  unsigned start;   // character no. where the link starts
-  unsigned end;     // character no. the link ends
-  bool in_next;     // whether link end is actually in the following line
-  link_type_t type; // type of link
-  wchar_t *trgt;    // link target (e.g. "ls(1)" or "http://www.google.com/")
+  unsigned start;      // character no. where the link starts
+  unsigned end;        // character no. the link ends
+  bool in_next;        // whether link gets hyphenated into the next line
+  unsigned start_next; // character no. where the next line portion of the link
+                       // starts (if hyphenated)
+  unsigned end_next;   // character no. where the next line portion of the link
+                       // ends (if hyphenated)
+  link_type_t type;    // type of link
+  wchar_t *trgt;       // link target (e.g. "ls(1)" or "http://www.google.com/")
 } link_t;
 
 // A line of text
@@ -314,7 +318,7 @@ extern int aprowhat_search(const wchar_t *needle, const aprowhat_t *hayst,
 // Return true if there is an element in hayst (of length hayst_len) whose
 // ident is case-insensitive equal to needle
 extern bool aprowhat_has(const wchar_t *needle, const aprowhat_t *hayst,
-                                 unsigned hayst_len);
+                         unsigned hayst_len);
 
 // Render a page that contains an index of all manual pages in dst
 extern unsigned index_page(line_t **dst);

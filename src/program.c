@@ -112,7 +112,8 @@ const wchar_t *keys_help[PA_QUIT + 1] = {
 // using line_realloc_link() to do so. Use start, end, link_next type, and trgt
 // to populate the new link's members.
 void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
-              link_type_t type, const wchar_t *trgt) {
+              unsigned start_next, unsigned end_next, link_type_t type,
+              const wchar_t *trgt) {
   unsigned trgt_len = wcslen(trgt);
 
   line_realloc_link((*line), trgt_len);
@@ -120,30 +121,66 @@ void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
   line->links[line->links_length - 1].end = end;
   line->links[line->links_length - 1].type = type;
   line->links[line->links_length - 1].in_next = in_next;
+  line->links[line->links_length - 1].start_next = start_next;
+  line->links[line->links_length - 1].end_next = end_next;
   wcscpy(line->links[line->links_length - 1].trgt, trgt);
 }
 
 // Helper of man(). Discover links that match re in the text of line, and add
-// them to said line. type signifies the link type to add.
-void discover_links(const full_regex_t *re, line_t *line, link_type_t type) {
-  unsigned loff = 0; // offset (in line text) to start searching for links
-  range_t lrng = fr_search(re, &line->text[loff]); // location of link in line
-  wchar_t trgt[BS_LINE];                           // link target
+// them to said line. line_next is necessary to support hyphenated links. type
+// signifies the link type to add.
+void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
+                    link_type_t type) {
+  unsigned loff = 0;     // offset (in line text) to start searching for links
+  range_t lrng;          // location of link in line
+  wchar_t trgt[BS_LINE]; // link target
+  wchar_t tmp_text[BS_LINE * 2]; // temporary (used for hyphenated links)
+  range_t tmp_lrng;              // ditto
 
   // While a link has been found...
+  lrng = fr_search(re, &line->text[loff]);
   while (lrng.beg != lrng.end) {
     if (loff + lrng.end == line->length - 2 &&
         line->text[line->length - 2] == L'‐') {
-      // Link is broken by a hyphen; do not add it to the line
+      // Link is broken by a hyphen
+
+      // Merge texts of line with line_next and extract link target from that
+      unsigned lnme = wmargend(line_next->text);
+      wcsncpy(tmp_text, line->text, line->length - 2);
+      tmp_text[line->length - 2] = L'\0';
+      wcscat(tmp_text, &line_next->text[lnme]);
+      tmp_lrng = fr_search(re, tmp_text);
+      wcsncpy(trgt, &tmp_text[loff + lrng.beg], tmp_lrng.end - tmp_lrng.beg);
+      trgt[tmp_lrng.end - tmp_lrng.beg] = L'\0';
+
+      // If successful, add the link to line
+      if (tmp_lrng.beg != tmp_lrng.end) {
+        const unsigned lstart = loff + tmp_lrng.beg; // starting pos. in line
+        const unsigned lend = line->length - 2;      // ending pos. in line
+        const unsigned nlstart = lnme; // starting pos in next line
+        const unsigned nlend = lnme + (tmp_lrng.end - tmp_lrng.beg) -
+                               (lend - lstart); // ending pos in next line
+        if (LT_MAN == type) {
+          if (aprowhat_has(trgt, aw_all, aw_all_len))
+            add_link(line, lstart, lend, true, nlstart, nlend, type, trgt);
+        } else
+          add_link(line, lstart, lend, true, nlstart, nlend, type, trgt);
+      }
     } else {
-      // Link is not broken by a hyphen; add it to the line
+      // Link is not broken by a hyphen
+
+      // Extract link target from line
       wcsncpy(trgt, &line->text[loff + lrng.beg], lrng.end - lrng.beg);
       trgt[lrng.end - lrng.beg] = L'\0';
+
+      // Add the link to line
       if (LT_MAN == type) {
         if (aprowhat_has(trgt, aw_all, aw_all_len))
-          add_link(line, loff + lrng.beg, loff + lrng.end, false, type, trgt);
+          add_link(line, loff + lrng.beg, loff + lrng.end, //
+                   false, 0, 0, type, trgt);
       } else
-        add_link(line, loff + lrng.beg, loff + lrng.end, false, type, trgt);
+        add_link(line, loff + lrng.beg, loff + lrng.end, //
+                 false, 0, 0, type, trgt);
     }
 
     // Calculate next offset
@@ -696,9 +733,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
         add_link(&res[ln],                                                 //
                  lmargin_width + j * (sc_maxwidth + 4),                    //
                  lmargin_width + j * (sc_maxwidth + 4) + wcslen(sc[sc_i]), //
-                 false,                                                    //
-                 LT_LS,                                                    //
-                 tmp);
+                 false, 0, 0, LT_LS, tmp);
       }
     }
   }
@@ -738,7 +773,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
                  lmargin_width, "",                         //
                  lc_width, aw[j].ident);
         add_link(&res[ln], lmargin_width, lmargin_width + wcslen(aw[j].ident),
-                 false, LT_MAN, aw[j].ident);
+                 false, 0, 0, LT_MAN, aw[j].ident);
 
         // Description
         wcscpy(tmp, aw[j].descr);
@@ -904,7 +939,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     if (NULL == tmps)
       continue;
 
-    // Process text and formatting attirbutes
+    // Insert text and formatting attirbutes into line
     len = mbstowcs(tmpw, tmps, BS_LINE);
     if (-1 == len)
       winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
@@ -941,15 +976,6 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 
     xfgets(tmps, BS_LINE, pp);
 
-    // Discover and add links (skipping the first two lines, and the last line)
-    if (ln > 1 && !feof(pp)) {
-      discover_links(&re_man, &res[ln], LT_MAN);
-      discover_links(&re_http, &res[ln], LT_HTTP);
-      discover_links(&re_email, &res[ln], LT_EMAIL);
-      for (unsigned i = 0; i < res[ln].links_length; i++) {
-      }
-    }
-
     inc_ln;
   }
 
@@ -960,7 +986,14 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   free(tmpw);
   free(tmps);
 
-  // If no resulst were returned by man, set err and err_msg
+  // Discover and add links (skipping the first two lines, and the last line)
+  for (unsigned i = 2; i < ln - 1; i++) {
+    discover_links(&re_man, &res[i], &res[i + 1], LT_MAN);
+    discover_links(&re_http, &res[i], &res[i + 1], LT_HTTP);
+    discover_links(&re_email, &res[i], &res[i + 1], LT_EMAIL);
+  }
+
+  // If no results were returned by man, set err and err_msg
   err = false;
   if (0 == ln) {
     err = true;

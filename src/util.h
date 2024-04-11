@@ -204,6 +204,9 @@ extern void wsort(wchar_t **trgt, unsigned trgt_len, bool rev);
 // length of src.
 extern unsigned wmaxlen(const wchar_t *const *src, unsigned src_len);
 
+// Return the position of the first character in src that is not whitespace
+extern unsigned wmargend(const wchar_t *src);
+
 // Copy all data in source into trgt, line by line. Both source and target must
 // be text files. Return the number of lines copied.
 extern unsigned scopylines(FILE *source, FILE *target);
