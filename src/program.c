@@ -987,10 +987,12 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   free(tmps);
 
   // Discover and add links (skipping the first two lines, and the last line)
-  for (unsigned i = 2; i < ln - 1; i++) {
-    discover_links(&re_man, &res[i], &res[i + 1], LT_MAN);
-    discover_links(&re_http, &res[i], &res[i + 1], LT_HTTP);
-    discover_links(&re_email, &res[i], &res[i + 1], LT_EMAIL);
+  if (ln >= 2) {
+    for (unsigned i = 2; i < ln - 1; i++) {
+      discover_links(&re_man, &res[i], &res[i + 1], LT_MAN);
+      discover_links(&re_http, &res[i], &res[i + 1], LT_HTTP);
+      discover_links(&re_email, &res[i], &res[i + 1], LT_EMAIL);
+    }
   }
 
   // If no results were returned by man, set err and err_msg
