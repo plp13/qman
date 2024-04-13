@@ -22,8 +22,9 @@ typedef char *bitarr_t;
 // A full regular expression, i.e. one that is represented both as a string and
 // a regex_t
 typedef struct {
-  char *str;  // string version
-  regex_t re; // regex_t version
+  char *str;     // string version
+  regex_t re;    // regex_t version
+  wchar_t *snpt; // a snippet of text that's always contained in matches
 } full_regex_t;
 
 // A range
@@ -216,8 +217,8 @@ extern unsigned scopylines(FILE *source, FILE *target);
 // Otherwise, return -1.
 extern int sreadline(char *str, unsigned size, FILE *fp);
 
-// Initialize full regular expression re, using str
-extern void fr_init(full_regex_t *re, char *str);
+// Initialize full regular expression re, using str and snpt
+extern void fr_init(full_regex_t *re, char *str, wchar_t *snpt);
 
 // Search src for a string matching re. If found, return its location in src as
 // a range_t. If not, return { 0, 0 }. This function uses libc regular

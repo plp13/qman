@@ -128,20 +128,12 @@ void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
 
 // Helper of man(). Discover links that match re in the text of line, and add
 // them to said line. line_next is necessary to support hyphenated links. type
-// signifies the link type to add. check is a text snippet that should always be
-// contained in links of the type, and is used to avoid unnecessary calls to
-// fr_search() which are expensive.
+// signifies the link type to add.
 void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
-                    const link_type_t type, const wchar_t *check) {
+                    const link_type_t type) {
   unsigned loff = 0;     // offset (in line text) to start searching for links
   range_t lrng;          // location of link in line
   wchar_t trgt[BS_LINE]; // link target
-  wchar_t tmp_text[BS_LINE * 2]; // temporary (used for hyphenated links)
-  range_t tmp_lrng;              // ditto
-
-  // If check is not in line text, return immediately
-  if (NULL == wcsstr(line->text, check))
-    return;
 
   // While a link has been found...
   lrng = fr_search(re, &line->text[loff]);
@@ -150,8 +142,14 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
         line->text[line->length - 2] == L'‐') {
       // Link is broken by a hyphen
 
+      wchar_t
+          tmp_text[BS_LINE * 2]; // will hold merged text of line and line_next
+      range_t tmp_lrng;          // will hold link target in merged text
+      unsigned lnme =
+          wmargend(line_next->text); // position where actual text (without
+                                     // margin) of line_text starts
+
       // Merge texts of line with line_next and extract link target from that
-      unsigned lnme = wmargend(line_next->text);
       wcsncpy(tmp_text, line->text, line->length - 2);
       tmp_text[line->length - 2] = L'\0';
       wcscat(tmp_text, &line_next->text[lnme]);
@@ -279,13 +277,14 @@ void init() {
   wcscpy(page_title, L"");
 
   // initialize regular expressions
-  fr_init(&re_man, "[a-zA-Z0-9\\.:@_-]+\\([a-zA-Z0-9]+\\)");
-  fr_init(&re_http, "https?:\\/\\/[a-zA-Z0-9\\.\\/\\?\\+:@_#%=-]+");
+  fr_init(&re_man, "[a-zA-Z0-9\\.:@_-]+\\([a-zA-Z0-9]+\\)", L")");
+  fr_init(&re_http, "https?:\\/\\/[a-zA-Z0-9\\.\\/\\?\\+:@_#%=-]+", L"http");
   fr_init(
       &re_email,
       "[a-zA-Z0-9\\.\\$\\*\\+\\?\\^\\|!#%&'/=_`{}~-][a-zA-Z0-9\\.\\$\\*\\+\\/"
       "\\?\\^\\|\\.!#%&'=_`{}~-]*@[a-zA-Z0-9-][a-zA-Z0-9-]+\\.[a-zA-Z0-9-][a-"
-      "zA-Z0-9\\.-]+");
+      "zA-Z0-9\\.-]+",
+      L"@");
 }
 
 int parse_options(int argc, char *const *argv) {
@@ -995,9 +994,9 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // Discover and add links (skipping the first two lines, and the last line)
   if (ln >= 2) {
     for (unsigned i = 2; i < ln - 1; i++) {
-      discover_links(&re_man, &res[i], &res[i + 1], LT_MAN, L")");
-      discover_links(&re_http, &res[i], &res[i + 1], LT_HTTP, L"http");
-      discover_links(&re_email, &res[i], &res[i + 1], LT_EMAIL, L"@");
+      discover_links(&re_man, &res[i], &res[i + 1], LT_MAN);
+      discover_links(&re_http, &res[i], &res[i + 1], LT_HTTP);
+      discover_links(&re_email, &res[i], &res[i + 1], LT_EMAIL);
     }
   }
 

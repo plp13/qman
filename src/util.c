@@ -353,10 +353,11 @@ int sreadline(char *str, unsigned size, FILE *fp) {
   return nlc - str;
 }
 
-void fr_init(full_regex_t *re, char *str) {
+void fr_init(full_regex_t *re, char *str, wchar_t *snpt) {
   re->str = str;
-  int err = regcomp(&re->re, str, REG_EXTENDED);
+  re->snpt = snpt;
 
+  int err = regcomp(&re->re, str, REG_EXTENDED);
   if (0 != err) {
     static wchar_t errmsg[BS_SHORT];
     char err_str[BS_SHORT];
@@ -367,12 +368,19 @@ void fr_init(full_regex_t *re, char *str) {
 }
 
 range_t fr_search(const full_regex_t *re, const wchar_t *src) {
-  char ssrc[BS_LINE]; // char* version of src
-  wcstombs(ssrc, src, BS_LINE);
+  char ssrc[BS_LINE];   // char* version of src
   regmatch_t pmatch[1]; // regex match
   range_t res;          // return value
 
-  // Try to find a match in ssrc
+  // If re->snpt isn't in src, return {0, 0}
+  if (NULL == wcsstr(src, re->snpt)) {
+    res.beg = 0;
+    res.end = 0;
+    return res;
+  }
+
+  // Convert src to ssrc and try to find a match in it
+  wcstombs(ssrc, src, BS_LINE);
   int err = regexec(&re->re, ssrc, 1, pmatch, 0);
 
   if (0 == err) {
