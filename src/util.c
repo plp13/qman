@@ -319,9 +319,9 @@ unsigned wmaxlen(const wchar_t *const *src, unsigned src_len) {
   return maxlen;
 }
 
-extern unsigned wmargend(const wchar_t *src) {
+unsigned wmargend(const wchar_t *src) {
   for (unsigned i = 0; i < wcslen(src); i++)
-    if (! iswspace(src[i]))
+    if (!iswspace(src[i]))
       return i;
 
   return 0;
