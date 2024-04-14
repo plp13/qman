@@ -722,9 +722,9 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
       text_width / (4 + sc_maxwidth); // number of columns for sections
   const unsigned sc_lines =
       sc_len % sc_cols > 0
-          ? sc_len / sc_cols
-          : 1 + sc_len / sc_cols; // number of lines for sections
-  unsigned sc_i;                  // index of current section
+          ? 1 + sc_len / sc_cols
+          : MAX(1, sc_len / sc_cols); // number of lines for sections
+  unsigned sc_i;                      // index of current section
   for (i = 0; i < sc_lines; i++) {
     inc_ln;
     line_alloc(res[ln], line_width + 4); // +4 for section margin
@@ -938,11 +938,6 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // For each line...
   xfgets(tmps, BS_LINE, pp);
   while (!feof(pp)) {
-    // Ugly hack: sometimes ncurses rudely interrupts xfgets(), which causes its
-    // return value to return NULL. If that happens, we skip the current loop
-    // step.
-    if (NULL == tmps)
-      continue;
 
     // Insert text and formatting attirbutes into line
     len = mbstowcs(tmpw, tmps, BS_LINE);

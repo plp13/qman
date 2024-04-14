@@ -98,19 +98,28 @@ FILE *xtmpfile() {
 }
 
 char *xfgets(char *s, int size, FILE *stream) {
-  char *const res = fgets(s, size, stream);
+  char *res;
 
-  if (ferror(stream)) {
-    // Ugly hack: this function sometimes gets rudley interrupted by ncurses; if
-    // that happens, we simply ignore the error and return NULL
-    if (EINTR != errno) {
-      static wchar_t errmsg[BS_SHORT];
-      serror(errmsg, L"Unable to fgets()");
-      winddown(ES_OPER_ERROR, errmsg);
+  while (true) {
+    res = fgets(s, size, stream);
+
+    if (ferror(stream) && !feof(stream)) {
+      // There has been an error
+      if (EINTR == errno) {
+        // Sometimes ncurses rudely interrupts fgets(). If that's the case, try
+        // calling fgets() again
+        clearerr(stream);
+      } else {
+        // Otherwise, fail gracefully
+        static wchar_t errmsg[BS_SHORT];
+        serror(errmsg, L"Unable to fgets()");
+        winddown(ES_OPER_ERROR, errmsg);
+      }
+    } else {
+      // No error; return the result
+      return res;
     }
   }
-
-  return res;
 }
 
 size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
