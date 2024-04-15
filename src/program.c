@@ -913,7 +913,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   char *old_term = getenv("TERM");
   setenv("TERM", "xterm", true);
   sprintf(tmps, "%d",
-          4 + config.layout.main_width - config.layout.lmargin -
+          1 + config.layout.main_width - config.layout.lmargin -
               config.layout.rmargin);
   setenv("MANWIDTH", tmps, true);
   sprintf(tmps, "%s %s", config.misc.hyphenate ? "" : "--nh",
