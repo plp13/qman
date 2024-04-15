@@ -84,6 +84,11 @@ extern void init_windows();
 // true. Otherwise, return false.
 extern bool termsize_changed();
 
+// Corrects page_top and page_flink whenever the terminal has been resized. Must
+// be called whenever termsize_changed() returned true and right before calling
+// tui_redraw().
+extern void termsize_adjust();
+
 // Draw a box in w, starting at (tl_y, tl_x) and ending at (br_y, br_x)
 extern void draw_box(WINDOW *w, unsigned tl_y, unsigned tl_x, unsigned br_y,
                      unsigned br_x);
@@ -164,7 +169,7 @@ extern void winddown_tui();
 //
 
 // Redraw everythhing on the screen, calling draw_page(), draw_sbar() and
-// draw_reset()
+// draw_stat()
 extern void tui_redraw();
 
 // Error handler: display em in the status bar, and call cbeep();

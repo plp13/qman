@@ -144,7 +144,8 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
 
       wchar_t
           tmp_text[BS_LINE * 2]; // will hold merged text of line and line_next
-      range_t tmp_lrng;          // will hold link target in merged text
+      memset(tmp_text, 0, sizeof(wchar_t) * BS_LINE * 2);
+      range_t tmp_lrng; // will hold link target in merged text
       unsigned lnme =
           wmargend(line_next->text); // position where actual text (without
                                      // margin) of line_text starts
@@ -152,7 +153,7 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
       // Merge texts of line with line_next and extract link target from that
       wcsncpy(tmp_text, line->text, line->length - 2);
       tmp_text[line->length - 2] = L'\0';
-      wcscat(tmp_text, &line_next->text[lnme]);
+      wcsncat(tmp_text, &line_next->text[lnme], line_next->length);
       tmp_lrng = fr_search(re, tmp_text);
       wcsncpy(trgt, &tmp_text[loff + lrng.beg], tmp_lrng.end - tmp_lrng.beg);
       trgt[tmp_lrng.end - tmp_lrng.beg] = L'\0';
@@ -477,20 +478,20 @@ void history_push(request_type_t rt, const wchar_t *args) {
   history[history_cur].left = page_left;
   history[history_cur].flink = page_flink;
 
-  // Increase history_cur and history_top as needed
+  // Increase history_cur
   history_cur++;
-  if (history_top < history_cur)
-    // If we're pushing at the top of the history stack, history_top becomes
-    // equal to history_cur
-    history_top = history_cur;
-  else if (history_top > history_cur)
-    // If we're pushing in the middle of the history stack, all subsequent
-    // history entries are lost, and we must free any memory used by their args
+
+  // If we're pushing in the middle of the history stack, all subsequent
+  // history entries are lost, and we must free any memory used by their args
+  if (history_top > history_cur)
     for (i = history_cur + 1; i <= history_top; i++)
       if (NULL != history[i].args) {
         free(history[i].args);
         history[i].args = NULL;
       }
+
+  // Make history_top equal to history_cur
+  history_top = history_cur;
 
   // Failsafe: in the unlikely case history_top exceeds history size, free all
   // memory used by history and start over
@@ -670,8 +671,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   unsigned ln = 0;      // current line number
   unsigned i, j;        // iterators
   wchar_t tmp[BS_LINE]; // temporary
-  for (i = 0; i < BS_LINE; tmp[i++] = L'\0')
-    ; // zero-pad tmp to get rid of Valgrind warning
+  memset(tmp, 0, sizeof(wchar_t) * BS_LINE);
 
   unsigned res_len = 1024;               // result buffer length
   line_t *res = aalloc(res_len, line_t); // result buffer
@@ -1171,6 +1171,10 @@ unsigned search(result_t **dst, const wchar_t *needle, const line_t *lines,
       inc_i;
     }
   }
+
+  // If no results were found, free the result buffer
+  if (0 == i)
+    free(res);
 
   *dst = res;
   return i;

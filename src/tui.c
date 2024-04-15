@@ -343,6 +343,21 @@ bool termsize_changed() {
   return false;
 }
 
+void termsize_adjust() {
+  if (page_top + config.layout.main_height > page_len) {
+    page_top = page_len - config.layout.main_height;
+    const link_loc_t ll = last_link(page, page_len, page_top,
+                                    page_top + config.layout.main_height - 1);
+    if (ll.ok)
+      page_flink = ll;
+  } else {
+    const link_loc_t fl = first_link(page, page_len, page_top,
+                                     page_top + config.layout.main_height - 1);
+    if (fl.ok)
+      page_flink = fl;
+  }
+}
+
 void draw_box(WINDOW *w, unsigned tl_y, unsigned tl_x, unsigned br_y,
               unsigned br_x) {
   unsigned i;
@@ -363,6 +378,7 @@ void draw_box(WINDOW *w, unsigned tl_y, unsigned tl_x, unsigned br_y,
 
 void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
                link_loc_t flink) {
+  // Clear screen and reset colour
   werase(wmain);
   wbkgd(wmain, COLOR_PAIR(config.colours.text.pair));
   change_colour_attr(wmain, config.colours.text, WA_NORMAL);
@@ -702,15 +718,19 @@ void winddown_tui() {
 //
 
 void tui_redraw() {
+  // Main page
+  draw_page(page, page_len, page_top, page_flink);
+
+  // Scrollbar
+  draw_sbar(page_len, page_top);
+
+  // Status bar
   unsigned pos = page_top;
   if (page_flink.ok)
     pos = page_flink.line;
   if (pos < page_top || pos >= page_top + config.layout.main_height)
     pos = page_top;
   wchar_t help[BS_SHORT];
-
-  draw_page(page, page_len, page_top, page_flink);
-  draw_sbar(page_len, page_top);
   swprintf(help, BS_SHORT, L"Press %ls for help or %ls to quit",
            ch2name(config.keys[PA_HELP][0]), ch2name(config.keys[PA_QUIT][0]));
   draw_stat(request_type_str(history[history_cur].request_type), page_title,
@@ -1065,6 +1085,7 @@ bool tui_sp_open(request_type_t rt) {
       populate_page();
       if (err)
         winddown(ES_OPER_ERROR, err_msg);
+      termsize_adjust();
       tui_redraw();
       if (RT_MAN == rt)
         draw_imm(true, L"Manual page to open?", help);
@@ -1175,6 +1196,7 @@ bool tui_search(bool back) {
       populate_page();
       if (err)
         winddown(ES_OPER_ERROR, err_msg);
+      termsize_adjust();
       tui_redraw();
       doupdate();
     }
@@ -1390,6 +1412,7 @@ bool tui_help() {
       populate_page();
       if (err)
         winddown(ES_OPER_ERROR, err_msg);
+      termsize_adjust();
       tui_redraw();
       top = 1;
       focus = 1;
@@ -1433,6 +1456,7 @@ void tui() {
       populate_page();
       if (err)
         winddown(ES_OPER_ERROR, err_msg);
+      termsize_adjust();
       redraw = true;
     }
 
