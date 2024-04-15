@@ -79,7 +79,12 @@ following:
 For Arch Linux users, there is a an [AUR package](https://aur.archlinux.org/packages/qman-git).
 
 ## Troubleshooting
-Always make sure you are up-to-date with the `main` branch.
+Always make sure you are up-to-date with the `main` branch. And, of course,
+RTFM:
+
+```
+qman qman
+```
 
 *What is the location of the configuration file?*
 
