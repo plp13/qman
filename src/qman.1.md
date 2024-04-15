@@ -114,7 +114,7 @@ The program accepts the following non-argument options:
 : Print a help message and exit.
 
 # CONFIGURATION
-**Qman** will attempt to load its configuration from _~/home/.config/qman.conf_
+**Qman** will attempt to load its configuration from _~/.config/qman.conf_
 (the user config file). Failing that, it will try to load it from
 _/etc/xdg/qman.conf_ (the system config file). The process stops once a config
 file has been found and loaded; in other words, the system and user config files

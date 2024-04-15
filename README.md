@@ -81,12 +81,32 @@ For Arch Linux users, there is a an [AUR package](https://aur.archlinux.org/pack
 ## Troubleshooting
 Always make sure you are up-to-date with the `main` branch.
 
-Calling `qman` without any parameters will fail with message
-`Apropos '': nothing appropriate` if no manual page index cache exists on your
-system. This can be fixed by running (as root):
+*What is the location of the configuration file?*
+
+`~/.config/qman.conf` (user-specific) or `/etc/xdg/qman.conf` (system-wide).
+
+*Calling `qman` without any parameters fails with message `Apropos '': nothing
+appropriate`*
+
+Your system does not have a manual page index. This can be fixed by running (as
+root):
 
 ```
   # mandb
 ```
 
+*Trying to open an HTTP or e-mail link results in a `sh: line 1:
+/usr/bin/xdg-open: No such file or directory`*
+
+By default, `qman` uses `xdg-open` to open such links. On desktop systems, this
+is sufficient to open them using the default browser / email client. On all
+other systems, you must specify alternative programs with the `browser_path` and
+`mailer_path` options in the `misc` section of `qman`'s configuration file.
+To avoid opening such links altogether, set both options to a command that does
+nothing, e.g. `/usr/bin/false`.
+
+*`qman` does not look as pretty on my system as in the screenshots*
+
+Try using the supplied
+[modernity.conf](https://github.com/plp13/qman/blob/main/config/modernity.conf).
 
