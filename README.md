@@ -51,8 +51,6 @@ dependencies.
 
 ## Future features
 - Navigation history dialogue (view and select history entries using a menu)
-- Links that span multiple lines
-- Internal links to manual page sections
 - More???
 
 All basic functionality has now been completed. However, the program should
