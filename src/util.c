@@ -158,6 +158,16 @@ wchar_t *xwcsdup(const wchar_t *s) {
   return res;
 }
 
+void xsystem(const char *cmd, bool fail) {
+  int res = system(cmd);
+
+  if (fail && 0 != res) {
+    static wchar_t errmsg[BS_SHORT];
+    swprintf(errmsg, BS_SHORT, L"Failed to execute: %s", cmd);
+    winddown(ES_CHILD_ERROR, errmsg);
+  }
+}
+
 int getenvi(const char *name) {
   const char *const val = getenv(name);
 

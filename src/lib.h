@@ -18,6 +18,8 @@
 #include <time.h>
 #include <regex.h>
 #include <curses.h>
+#include <term.h>
+#undef lines
 #include <ini.h>
 
 #include "util.h"

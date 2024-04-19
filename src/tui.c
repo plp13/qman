@@ -56,6 +56,22 @@ action_t action = PA_NULL;
     }                                                                          \
   }
 
+// Helper of tui_open. Re-initialize ncurses after shelling out
+#define tui_reset                                                              \
+  {                                                                            \
+    winddown_tui();                                                            \
+    init_tui();                                                                \
+    termsize_changed();                                                        \
+    init_windows();                                                            \
+    populate_page();                                                           \
+    if (err)                                                                   \
+      winddown(ES_OPER_ERROR, err_msg);                                        \
+    if (termsize_changed())                                                    \
+      termsize_adjust();                                                       \
+    tui_redraw();                                                              \
+    doupdate();                                                                \
+  }
+
 // Helper of tui_open(), tui_open_apropos() and tui_open_whatis(). If page_flink
 // isn't valid, error out and return false.
 #define error_on_invalid_flink                                                 \
@@ -704,10 +720,15 @@ void ctbeep() {
 void winddown_tui() {
   if (NULL != wmain)
     delwin(wmain);
+  wmain = NULL;
+
   if (NULL != wsbar)
     delwin(wsbar);
+  wsbar = NULL;
+
   if (NULL != wstat)
     delwin(wstat);
+  wstat = NULL;
 
   reset_color_pairs();
   endwin();
@@ -943,18 +964,31 @@ bool tui_open() {
     // The link is http(s); open it with the external web browser
     {
       char trgt[BS_SHORT];
-      snprintf(trgt, BS_SHORT, "%s '%ls'", config.misc.browser_path,
+      snprintf(trgt, BS_SHORT, "%s '%ls' 2>>/dev/null",
+               config.misc.browser_path,
                page[page_flink.line].links[page_flink.link].trgt);
-      system(trgt);
+
+      // Shell out
+      xsystem(trgt, true);
+
+      // Re-initialize ncurses (unless using xdg-open)
+      if (NULL == strstr(config.misc.browser_path, "xdg-open"))
+        tui_reset;
     }
     break;
   case LT_EMAIL:
     // The link is an email address; open it with the external mailer
     {
       char trgt[BS_SHORT];
-      snprintf(trgt, BS_SHORT, "%s '%ls'", config.misc.mailer_path,
+      snprintf(trgt, BS_SHORT, "%s '%ls' 2>>/dev/null", config.misc.mailer_path,
                page[page_flink.line].links[page_flink.link].trgt);
-      system(trgt);
+
+      // Shell out
+      xsystem(trgt, true);
+
+      // Re-initialize ncurses (unless using xdg-open)
+      if (NULL == strstr(config.misc.mailer_path, "xdg-open"))
+        tui_reset;
     }
     break;
   case LT_LS:

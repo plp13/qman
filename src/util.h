@@ -148,6 +148,10 @@ extern char *xstrdup(const char *s);
 // Safely call wcsdup()
 extern wchar_t *xwcsdup(const wchar_t *s);
 
+// Safely call system(cmd), to execute cmd in a new shell. If fail is true, and
+// the return value of system() is non-zero, terminate.
+extern void xsystem(const char *cmd, bool fail);
+
 // Return the value of environment variable name as an integer. Return 0 in case
 // of error.
 extern int getenvi(const char *name);

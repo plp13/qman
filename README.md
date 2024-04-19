@@ -98,11 +98,10 @@ root):
   # mandb
 ```
 
-*Trying to open an HTTP or e-mail link results in a `sh: line 1:
-/usr/bin/xdg-open: No such file or directory`*
+*Trying to open an HTTP or e-mail linkdoesn't seem to do anything*
 
-By default, `qman` uses `xdg-open` to open such links. On desktop systems, this
-is sufficient to open them using the default browser / email client. On all
+By default, `qman` uses `xdg-open` to open such links. On desktop Linux systems,
+this is sufficient to open them using the default browser / email client. On all
 other systems, you must specify alternative programs with the `browser_path` and
 `mailer_path` options in the `misc` section of `qman`'s configuration file.
 To avoid opening such links altogether, set both options to a command that does

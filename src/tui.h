@@ -25,8 +25,6 @@ extern WINDOW *wstat;
 // Immediate (popup) window
 extern WINDOW *wimm;
 
-extern action_t action;
-
 //
 // Macros
 //
