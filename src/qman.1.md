@@ -150,6 +150,9 @@ following sections and configuration options are accepted:
 Each configuration option value in this section must consist of a single
 Unicode character.
 
+The default values for this section are sensible enough to allow **Qman** to
+work with most terminals and/or environments.
+
 **Section [colours]**
 : Options in this section specify the user interface colours:
 
@@ -194,6 +197,9 @@ values higher than 7 and/or RGB values.
 _bold_ is a boolean that signifies whether the foreground colour will have a
 high (true) or low (false) intensity.
 
+The default values for this section are sensible enough to allow **Qman** to
+work with most terminals and/or environments.
+
 **Section [keys]**
 : Options in this section specify which keys are mapped to each program action.
 
@@ -205,14 +211,15 @@ _key_1_ _key_2_ _key_3_ _key_4_ _key_5_ _key_6_ _key_7_ _key_8_
 
 The value of each _key_i_ can take one of the following values:
 
-1. Any ncurses(3x) keycode, such as **KEY_UP** or **KEY_HOME**
-2. 'F1' to 'F12' (for the function keys)
-3. 'ESC' (for the ESC key)
-4. 'EXT' (for CTRL-C)
-5. 'LF' (for the ENTER key)
-6. 'BS' (for the BACKSPACE key)
-7. 'HT' (for the TAB key)
-8. 'SPACE' (for the spacebar)
+1. Any character, surch as 'a', 'b', 'c', etc.
+2. Any ncurses(3x) keycode, such as **KEY_UP** or **KEY_HOME**
+3. 'F1' to 'F12' (for the function keys)
+4. 'ESC' (for the ESC key)
+5. 'EXT' (for CTRL-C)
+6. 'LF' (for the ENTER key)
+7. 'BS' (for the BACKSPACE key)
+8. 'HT' (for the TAB key)
+9. 'SPACE' (for the spacebar)
 
 For reasons of compatibility with various terminals, mapping the ENTER key
 requires specifying both 'KEY_ENTER' and 'LF'. Similarly, mapping CTRL-C
@@ -223,30 +230,37 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 : This section contains various options that concern the layout of the text user
   interface:
 
-| Option   | Type         | Description                                        |
-|----------|--------------|----------------------------------------------------|
-| sbar     | boolean      | Indicates whether the scrollbar will be displayed  |
-| beep     | boolean      | Indicates whether to beep the terminal on error    |
-| lmargin  | unsigned int | Size of margin between the left side of the screen, and the page text |
-| rmargin  | unsigned int | Size of margin between the page text and the scroll bar and/or the right side of the screen |
-| tabstop  | unsigned int | Number of characters in a tab stop (used by actions LEFT and RIGHT) |
+| Option   | Type         | Def. value | Description                           |
+|----------|--------------|------------|---------------------------------------|
+| sbar     | boolean      | true       | Indicates whether the scrollbar will be displayed |
+| beep     | boolean      | true       | Indicates whether to beep the terminal on error |
+| lmargin  | unsigned int | 2          | Size of margin between the left side of the screen, and the page text |
+| rmargin  | unsigned int | 2          | Size of margin between the page text and the scroll bar and/or the right side of the screen |
+| tabstop  | unsigned int | true       | Number of characters in a tab stop (used by actions LEFT and RIGHT) |
 
 **Section [misc]**
 : This section contains various miscellaneous options:
 
-| Option       | Type         | Description                                    |
-|--------------|--------------|------------------------------------------------|
-| man_path     | string       | Path to the **man(1)** command                 |
-| whatis_path  | string       | Path to the **whatis(1)** command              |
-| apropos_path | string       | Path to the **apropos(1)** command             |
-| browser_path | string       | Path to the command that will be used to open HTTP links (i.e. your web browser) |
-| mailer_path  | string       | Path to the command that will be used to open e-mail links (i.e. your e-mail software) |
-| history_size | unsigned int | Maximum number of history entries              |
-| hyphenate    | boolean      | Sett this to true to hyphenate long words      |
-| justify      | boolean      | Set this to false to disable justified text    |
+| Option       | Type         | Def. value | Description                       |
+|--------------|--------------|------------|-----------------------------------|
+| man_path     | string       | /usr/bin/man | Path to the **man(1)** command  |
+| whatis_path  | string       | /usr/bin/whatis | Path to the **whatis(1)** command |
+| apropos_path | string       | /usr/bin/apropos | Path to the **apropos(1)** command |
+| browser_path | string       | /usr/bin/xdg-open | Path to the command that will be used to open HTTP links (i.e. your web browser) |
+| mailer_path  | string       | /usr/bin/xdg-email | Path to the command that will be used to open e-mail links (i.e. your e-mail software) |
+| reset_after_http | boolean  | true       | Re-initialize curses after opening an http(s) link |
+| reset_after_email| boolean  | true       | Re-initialize curses after opening an e-mail link |
+| history_size | unsigned int | 256k       | Maximum number of history entries |
+| hyphenate    | boolean      | true       | Set to true to hyphenate long words |
+| justify      | boolean      | true       | Set to false to disable justified text |
 
 If you are using a narrow terminal, try setting _hyphenate_ to 'true' and/or
 _justify_ to 'false'.
+
+If you are planning on using A GUI web browser for http(s) links, set
+_reset_after_http_ to 'false', to avoid the blinking associated
+with re-initializing ncurses. Similarly, set _reset_after_email_ to 'false' if
+you are planning on using a GUI client for e-mail links.
 
 # ENVIRONMENT
 When invoked using **-T**, the program tries to set the page width to the value

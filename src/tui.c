@@ -972,11 +972,12 @@ bool tui_open() {
       xsystem(trgt, true);
 
       // Re-initialize ncurses (unless using xdg-open)
-      tui_reset;
+      if (config.misc.reset_after_http)
+        tui_reset;
     }
     break;
   case LT_EMAIL:
-    // The link is an email address; open it with the external mailer
+    // The link is an e-mail address; open it with the external mailer
     {
       char trgt[BS_SHORT];
       snprintf(trgt, BS_SHORT, "%s '%ls' 2>>/dev/null", config.misc.mailer_path,
@@ -985,8 +986,9 @@ bool tui_open() {
       // Shell out
       xsystem(trgt, true);
 
-      // Re-initialize ncurses (unless using xdg-open)
-      tui_reset;
+      // Re-initialize ncurses
+      if (config.misc.reset_after_email)
+        tui_reset;
     }
     break;
   case LT_LS:

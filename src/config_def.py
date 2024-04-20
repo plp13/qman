@@ -145,6 +145,8 @@ config_def = {
         "apropos_path": (("string",), ("/usr/bin/apropos",), True, "path to the apropos(1) command"),
         "browser_path": (("string",), ("/usr/bin/xdg-open",), True, "path to web browser command"),
         "mailer_path": (("string",), ("/usr/bin/xdg-email",), True, "path to mailer command"),
+        "reset_after_http": (("bool",), ("true",), True, "re-initialize curses after opening an http(s) link"),
+        "reset_after_email": (("bool",), ("true",), True, "re-initialize curses after opening an e-mail link"),
         "history_size": (("int", 0, 256 * 1024), ("65536",), True, "maximum number of history entries"),
         "hyphenate": (("bool",), ("true",), True, "hyphenate long words"),
         "justify": (("bool",), ("true",), True, "justify manual page text")
