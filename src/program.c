@@ -60,32 +60,6 @@ unsigned results_len = 0;
 
 full_regex_t re_man, re_http, re_email;
 
-const wchar_t *keys_help[PA_QUIT + 1] = {
-    L"Do nothing",
-    L"Scroll up one line",
-    L"Scroll down one line",
-    L"Scroll left one tab stop",
-    L"Scroll right one tab stop",
-    L"Scroll up one page",
-    L"Scroll down one page",
-    L"Go to page top",
-    L"Go to page end",
-    L"Open focused link",
-    L"Perform apropos on focused link",
-    L"Perform whatis on focused link",
-    L"Open a manual page using a dialog",
-    L"Perform apropos on a manual page using a dialog",
-    L"Perform whatis on a manual page using a dialog",
-    L"Go to index (home) page",
-    L"Go back one step in history",
-    L"Go forward one step in history",
-    L"Search forward",
-    L"Search backward",
-    L"Go to next search result",
-    L"Go to previous search result",
-    L"Show this help message",
-    L"Exit the program"};
-
 //
 // Helper macros and functions
 //

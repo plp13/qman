@@ -8,6 +8,28 @@
 
 config_t config;
 
+/*[[[cog
+
+import cog
+import config_def
+
+cog.outl("const wchar_t *keys_help[PA_QUIT + 1] = {")
+cog.outl("  L\"Do nothing\",")
+
+for option, option_def in config_def.config_def["keys"].items():
+  (type, default_value, in_config, comment) = option_def
+
+  if option == "quit":
+    comma = ""
+  else:
+    comma = ","
+  cog.outl("  L\"" + comment + "\"" + comma) 
+
+cog.outl("};")
+]]]
+
+[[[end]]]*/
+
 //
 // Helper macros and functions
 //
@@ -302,9 +324,6 @@ static int conf_handler(void *user, const char *section, const char *name,
 
 /*[[[cog
 
-import cog
-import config_def
-
 for section, options in config_def.config_def.items():
   cog.outl("  conf_section(\"" + section + "\") {")
 
@@ -345,6 +364,7 @@ for section, options in config_def.config_def.items():
 
 void conf_init() {
 /*[[[cog
+
 pair = 10
 
 for section, options in config_def.config_def.items():

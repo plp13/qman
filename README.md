@@ -98,7 +98,8 @@ root):
   # mandb
 ```
 
-*Trying to open an HTTP or e-mail linkdoesn't seem to do anything*
+*Trying to open an HTTP or e-mail causes the program to terminate (or does
+nothing)*
 
 By default, `qman` uses `xdg-open` to open such links. On desktop Linux systems,
 this is sufficient to open them using the default browser / email client. On all

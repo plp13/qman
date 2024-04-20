@@ -181,10 +181,6 @@ extern full_regex_t re_man, // manual page
     re_url,                 // http(s) URL
     re_email;               // email address
 
-// Help text for program actions and their corresponding key character mappings.
-// Make sure that this corresponds to action_t precisely.
-extern const wchar_t *keys_help[PA_QUIT + 1];
-
 //
 // Macros
 //

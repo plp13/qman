@@ -18,38 +18,26 @@ typedef struct {
   short pair; // pair no.
 } colour_t;
 
-// A program action
-typedef enum {
-  PA_NULL,         // do nothing (must be first member of action_t)
-  PA_UP,           // scroll up one line and/or focus on previous link
-  PA_DOWN,         // scroll down one line and/or focus on next link
-  PA_LEFT,         // scroll left one tab stop
-  PA_RIGHT,        // scroll right one tab stop
-  PA_PGUP,         // scroll up one page
-  PA_PGDN,         // scroll down one page
-  PA_HOME,         // go to page top
-  PA_END,          // go to page bottom
-  PA_OPEN,         // open focused link
-  PA_OPEN_APROPOS, // perform apropos on focused link
-  PA_OPEN_WHATIS,  // perform whatis on focused link
-  PA_SP_OPEN,      // open a manual page using a dialogue
-  PA_SP_APROPOS,   // perform apropos on a manual page using a dialogue
-  PA_SP_WHATIS,    // perform whatis on a manual page using a dialogue
-  PA_INDEX,        // go to index (home) page
-  PA_BACK,         // go back one step in history
-  PA_FWRD,         // go forward one step in history
-  PA_SEARCH,       // (free text) search forward
-  PA_SEARCH_BACK,  // (free text) search backward
-  PA_SEARCH_NEXT,  // go to next search result
-  PA_SEARCH_PREV,  // go to previous search result
-  PA_HELP,         // show help message
-  PA_QUIT          // exit the program (must be last member of action_t)
-} action_t;
-
 /*[[[cog
 
 import cog
 import config_def
+
+cog.outl("// A program action")
+cog.outl("typedef enum {")
+cog.outl("  PA_NULL,  // Do nothing (must be first member of action_t)")
+
+for option, option_def in config_def.config_def["keys"].items():
+  (type, default_value, in_config, comment) = option_def
+
+  if option == "quit":
+    comma = " "
+  else:
+    comma = ","
+  cog.outl("  {:30s} // {}".format("PA_" + option.upper() + comma, comment))
+
+cog.outl("} action_t;")
+cog.outl()
 
 for section, options in config_def.config_def.items():
   cog.outl("// Configuration structure for section '" + section + "'")
@@ -115,6 +103,9 @@ typedef struct {
 
 // Program configuration
 extern config_t config;
+
+// Help text for program actions and their corresponding key character mappings
+extern const wchar_t *keys_help[PA_QUIT + 1];
 
 //
 // Functions
