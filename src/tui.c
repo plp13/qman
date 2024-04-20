@@ -972,8 +972,7 @@ bool tui_open() {
       xsystem(trgt, true);
 
       // Re-initialize ncurses (unless using xdg-open)
-      if (NULL == strstr(config.misc.browser_path, "xdg-open"))
-        tui_reset;
+      tui_reset;
     }
     break;
   case LT_EMAIL:
@@ -987,8 +986,7 @@ bool tui_open() {
       xsystem(trgt, true);
 
       // Re-initialize ncurses (unless using xdg-open)
-      if (NULL == strstr(config.misc.mailer_path, "xdg-open"))
-        tui_reset;
+      tui_reset;
     }
     break;
   case LT_LS:
