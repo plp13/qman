@@ -61,6 +61,7 @@ action_t action = PA_NULL;
   {                                                                            \
     winddown_tui();                                                            \
     init_tui();                                                                \
+    init_tui_colours();                                                        \
     termsize_changed();                                                        \
     init_windows();                                                            \
     populate_page();                                                           \
@@ -258,11 +259,11 @@ void init_tui() {
   noecho();
   curs_set(1);
   timeout(2000);
-
-  // Initialize color (if available)
   start_color();
+}
+
+void init_tui_colours() {
   if (COLOUR) {
-    // Initialize color pairs
     init_colour(config.colours.text);
     init_colour(config.colours.search);
     init_colour(config.colours.link_man);
@@ -288,7 +289,7 @@ void init_tui() {
     init_colour(config.colours.sp_text_f);
     init_colour(config.colours.help_text);
     init_colour(config.colours.help_text_f);
-    // Initialize color pairs used for transitions
+    // Color pairs used for transitions
     init_pair(config.colours.trans_mode_name, config.colours.stat_indic_mode.bg,
               config.colours.stat_indic_name.bg);
     init_pair(config.colours.trans_name_loc, config.colours.stat_indic_name.bg,
@@ -1469,6 +1470,8 @@ void tui() {
 
   // Initialize TUI
   init_tui();
+  configure();
+  init_tui_colours();
   termsize_changed();
   init_windows();
 

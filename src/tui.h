@@ -32,7 +32,7 @@ extern WINDOW *wimm;
 // True if the terminal supports at least 8 colors
 #define COLOUR (has_colors() && COLORS >= 8)
 
-// Initialize color pair col
+// Initialize ncurses color pair in (colour_t value) col
 #define init_colour(col) init_pair(col.pair, col.fg, col.bg);
 
 // Change the color for window win to col (a variable of type colour_t)
@@ -69,6 +69,9 @@ extern WINDOW *wimm;
 
 // Initialize ncurses
 extern void init_tui();
+
+// Initialize ncurses color pairs
+extern void init_tui_colours();
 
 // init_windows() and all draw_...() functions call wnoutrefresh() in order to
 // update the virtual screen, before returning. It's your responsibility to call

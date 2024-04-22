@@ -117,7 +117,7 @@ extern const wchar_t *keys_help[PA_QUIT + 1];
 // Initialize configuration to sane defaults
 extern void conf_init();
 
-// Read the configuration file and set members of config appropriately. This
+// Parse the configuration file and set members of config appropriately. This
 // function tries to find the config file in the following locations:
 // (1) value of config.misc.config_path, set with '-C'
 // (2) ~/.config/qman.conf

@@ -12,8 +12,6 @@ int main(int argc, char **argv) {
   char **clean_argv = &argv[noopt_argc];
   parse_args(clean_argc, clean_argv);
 
-  configure();
-
   // Run the main handler
   if (config.layout.tui)
     tui();
