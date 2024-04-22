@@ -75,9 +75,13 @@ int str2int(const char *src) {
 // 'yellow', 'blue', 'magenta', 'cyan', 'white', a positive integer, or
 // '#rrggbb'.
 short str2colour(const char *src) {
+  // Try to parse src as integer. If successful, return it.
   const int srci = str2int(src);
   if (srci >= 0)
     return srci;
+
+  // If src matches a color name such as 'black', 'red', etc. return the
+  // corresponding color.
   else if (0 == strcasecmp(src, "BLACK"))
     return COLOR_BLACK;
   else if (0 == strcasecmp(src, "RED"))
@@ -94,6 +98,8 @@ short str2colour(const char *src) {
     return COLOR_CYAN;
   else if (0 == strcasecmp(src, "WHITE"))
     return COLOR_WHITE;
+
+  // Otherwise, try to parse src as '#rrggbb' and return the corresponding color
   else {
     static short ret = 8;
     unsigned red = 0, green = 0, blue = 0;
@@ -305,7 +311,8 @@ int str2ch(const char *src) {
 
 // Helper of conf_handler(). Error out with a "no such option" error message.
 #define conf_no_such_option                                                    \
-  swprintf(errmsg, BS_SHORT, L"Config parse error: no such section '%s'",      \
+  swprintf(errmsg, BS_SHORT,                                                   \
+           L"Config parse error: no such option '%s' in section '%s'", name,   \
            section);                                                           \
   winddown(ES_CONFIG_ERROR, errmsg);                                           \
   return false;
