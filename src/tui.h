@@ -29,13 +29,13 @@ extern WINDOW *wimm;
 // Macros
 //
 
-// True if the terminal supports at least 8 colours
+// True if the terminal supports at least 8 colors
 #define COLOUR (has_colors() && COLORS >= 8)
 
-// Initialize colour pair col
+// Initialize color pair col
 #define init_colour(col) init_pair(col.pair, col.fg, col.bg);
 
-// Change the colour for window win to col (a variable of type colour_t)
+// Change the color for window win to col (a variable of type colour_t)
 #define change_colour(win, col)                                                \
   if (COLOUR) {                                                                \
     if (col.bold)                                                              \
@@ -44,7 +44,7 @@ extern WINDOW *wimm;
       wattr_set(win, WA_NORMAL, col.pair, NULL);                               \
   }
 
-// Change the colour for window win to col, and also set text attribute for
+// Change the color for window win to col, and also set text attribute for
 // window win to attr
 #define change_colour_attr(win, col, attr)                                     \
   {                                                                            \
@@ -54,7 +54,7 @@ extern WINDOW *wimm;
       wattrset(win, attr);                                                     \
   }
 
-// Apply colour col to n characters, starting at location (y, x) in window w
+// Apply color col to n characters, starting at location (y, x) in window w
 #define apply_colour(win, y, x, n, col)                                        \
   if (COLOUR) {                                                                \
     if (col.bold)                                                              \

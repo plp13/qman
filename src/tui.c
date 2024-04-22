@@ -20,7 +20,7 @@ action_t action = PA_NULL;
 // Helper macros and functions
 //
 
-// Helper of draw_page(). Set col to the appropriate colour for link no. linkno
+// Helper of draw_page(). Set col to the appropriate color for link no. linkno
 // of line number lineno. Consider the type of the link, and also query flink to
 // check whether it's focused.
 #define set_link_col(lineno, linkno, type)                                     \
@@ -259,10 +259,10 @@ void init_tui() {
   curs_set(1);
   timeout(2000);
 
-  // Initialize colour (if available)
+  // Initialize color (if available)
   start_color();
   if (COLOUR) {
-    // Initialize colour pairs
+    // Initialize color pairs
     init_colour(config.colours.text);
     init_colour(config.colours.search);
     init_colour(config.colours.link_man);
@@ -288,7 +288,7 @@ void init_tui() {
     init_colour(config.colours.sp_text_f);
     init_colour(config.colours.help_text);
     init_colour(config.colours.help_text_f);
-    // Initialize colour pairs used for transitions
+    // Initialize color pairs used for transitions
     init_pair(config.colours.trans_mode_name, config.colours.stat_indic_mode.bg,
               config.colours.stat_indic_name.bg);
     init_pair(config.colours.trans_name_loc, config.colours.stat_indic_name.bg,
@@ -394,7 +394,7 @@ void draw_box(WINDOW *w, unsigned tl_y, unsigned tl_x, unsigned br_y,
 
 void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
                link_loc_t flink) {
-  // Clear screen and reset colour
+  // Clear screen and reset color
   werase(wmain);
   wbkgd(wmain, COLOR_PAIR(config.colours.text.pair));
   change_colour_attr(wmain, config.colours.text, WA_NORMAL);
@@ -436,7 +436,7 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
     for (l = 0; l < lines[ly].links_length; l++) {
       const link_t link = lines[ly].links[l];
 
-      // Apply the the appropriate colour, based on link type and whether the
+      // Apply the the appropriate color, based on link type and whether the
       // link is focused
       colour_t col;
       set_link_col(ly, l, link.type);
@@ -453,7 +453,7 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
       if (lines[ly - 1].links[l].in_next) {
         const link_t link = lines[ly - 1].links[l];
 
-        // Apply the the appropriate colour, based on link type and whether the
+        // Apply the the appropriate color, based on link type and whether the
         // link is focused
         colour_t col;
         set_link_col(ly - 1, l, link.type);

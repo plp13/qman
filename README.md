@@ -50,7 +50,7 @@ dependencies.
 - Manual page
 
 ## Future features
-- Navigation history dialogue (view and select history entries using a menu)
+- Navigation history dialog (view and select history entries using a menu)
 - More???
 
 All basic functionality has now been completed. However, the program should

@@ -10,11 +10,11 @@
 // Types
 //
 
-// A colour
+// A color
 typedef struct {
-  short fg;   // foreground colour no.
-  bool bold;  // true if foreground colour is bold, false otherwise
-  short bg;   // background colour no.
+  short fg;   // foreground color no.
+  bool bold;  // true if foreground color is bold, false otherwise
+  short bg;   // background color no.
   short pair; // pair no.
 } colour_t;
 

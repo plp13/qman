@@ -34,7 +34,7 @@ cog.outl("};")
 // Helper macros and functions
 //
 
-// Helper of conf_init() conf_handler(). Initialize the values of all colour
+// Helper of conf_init() conf_handler(). Initialize the values of all color
 // pairs used for transitions.
 #define set_transition_colours                                                 \
   config.colours.trans_mode_name = 100 * config.colours.stat_indic_mode.pair + \
@@ -70,7 +70,7 @@ int str2int(const char *src) {
     return val;
 }
 
-// Helper of various conf_...() functions and methods. Return the ncurses colour
+// Helper of various conf_...() functions and methods. Return the ncurses color
 // that corresponds to src. Allowed values for src are 'black', 'red', 'green',
 // 'yellow', 'blue', 'magenta', 'cyan', 'white', a positive integer, or
 // '#rrggbb'.
@@ -98,7 +98,7 @@ short str2colour(const char *src) {
     static short ret = 8;
     unsigned red = 0, green = 0, blue = 0;
     if (3 != sscanf(src, "#%2x%2x%2x", &red, &green, &blue)) {
-      // Unable to parse colour; return -1
+      // Unable to parse color; return -1
       return -1;
     } else {
       red = (red * 1000) / 256;
@@ -181,8 +181,8 @@ int str2ch(const char *src) {
 // equal to s.
 #define conf_section(s) if (0 == strcmp(section, s))
 
-// Helper of conf_handler(). Set trgt to the colour that corresponds to value,
-// if name is equal to n. value is formatted as 3 colour definitions (as
+// Helper of conf_handler(). Set trgt to the color that corresponds to value,
+// if name is equal to n. value is formatted as 3 color definitions (as
 // accepted by str2colour) separated by whitespace.
 #define conf_set_colour(n, trgt)                                               \
   if (0 == strcmp(name, n)) {                                                  \
@@ -190,21 +190,21 @@ int str2ch(const char *src) {
     const int vals_read = sscanf(value, "%9s%9s%9s", fg, bg, bold);            \
     if (3 != vals_read) {                                                      \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid colour value '%s'",      \
+               L"Config parse error at %s/%s: invalid color value '%s'",      \
                section, name, value);                                          \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
     trgt.fg = str2colour(fg);                                                  \
     if (-1 == trgt.fg) {                                                       \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid foreground colour '%s'", \
+               L"Config parse error at %s/%s: invalid foreground color '%s'", \
                section, name, fg);                                             \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
     trgt.bg = str2colour(bg);                                                  \
     if (-1 == trgt.bg) {                                                       \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid background colour '%s'", \
+               L"Config parse error at %s/%s: invalid background color '%s'", \
                section, name, bg);                                             \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \

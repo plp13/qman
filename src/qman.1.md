@@ -64,9 +64,9 @@ keyboard mappings:
 | OPEN            | Open focused link                     | ENTER, 'o'         |
 | OPEN_APROPOS    | Perform apropos on focused link       | 'a'                |
 | OPEN_WHATIS     | Perform whatis on focused link        | 'w'                |
-| SP_OPEN         | Open a manual page using a dialogue   | 'O'                |
-| SP_APROPOS      | Perform apropos on a manual page using a dialogue | 'A'    |
-| SP_WHATIS       | Perform whatis on a manual page using a dialogue  | 'W'    |
+| SP_OPEN         | Open a manual page using a dialog     | 'O'                |
+| SP_APROPOS      | Perform apropos on a manual page using a dialog | 'A'      |
+| SP_WHATIS       | Perform whatis on a manual page using a dialog  | 'W'      |
 | INDEX           | Go to index (home) page               | 'i', 'I'           |
 | BACK            | Go back one step in history           | BACKSPACE, '['     |
 | FWRD            | Go forward one step in history        | ']'                |
@@ -74,7 +74,7 @@ keyboard mappings:
 | SEARCH_BACK     | (Free text) search backward           | '?'                |
 | SEARCH_NEXT     | Go to next search result              | 'n'                |
 | SEARCH_PREV     | Go to previous search result          | 'N'                |
-| HELP            | Show the help message dialogue        | 'h', 'H'           |
+| HELP            | Show the help message dialog          | 'h', 'H'           |
 | QUIT            | Exit the program                      | 'q', 'Q'           |
 
 All of the aforementioned keyboard mappings are customizable. For more
@@ -140,12 +140,12 @@ following sections and configuration options are accepted:
 | trans_name_loc    | transition between the name and location sections of the status bar |
 | trans_prompt_help | transition between the prompt and help sections of the status bar |
 | trans_prompt_em   | transition between the prompt and error message sections of the status bar|
-| box_hline         | dialogue box horizontal line                             |
-| box_vline         | dialogue box vertical line                               |
-| box_tl            | dialogue box top left corner                             |
-| box_tr            | dialogue box top right corner                            |
-| box_bl            | dialogue box bottom left corner                          |
-| box_br            | dialogue box bottom right corner                         |
+| box_hline         | dialog box horizontal line                               |
+| box_vline         | dialog box vertical line                                 |
+| box_tl            | dialog box top left corner                               |
+| box_tr            | dialog box top right corner                              |
+| box_bl            | dialog box bottom left corner                            |
+| box_br            | dialog box bottom right corner                           |
 
 Each configuration option value in this section must consist of a single
 Unicode character.
@@ -154,7 +154,7 @@ The default values for this section are sensible enough to allow **Qman** to
 work with most terminals and/or environments.
 
 **Section [colours]**
-: Options in this section specify the user interface colours:
+: Options in this section specify the user interface colors:
 
 | Option            | Description                                              |
 |-------------------|----------------------------------------------------------|
@@ -176,25 +176,25 @@ work with most terminals and/or environments.
 | stat_input_prompt | status bar input prompt                                  |
 | stat_input_help   | status bar help section                                  |
 | stat_input_em     | status bar error message section                         |
-| imm_border        | pop-up dialogues border                                  |
-| imm_title         | pop-up dialogues title                                   |
-| sp_input          | pop-up input dialogue prompt                             |
-| sp_text           | pop-up input dialogue progressive search text            |
-| sp_text_f         | pop-up input dialogue progressive search text (focused)  |
-| help_text         | help dialogue etries text                                |
-| help_text_f       | help dialogue entries text (focused)                     |
+| imm_border        | pop-up dialogs border                                    |
+| imm_title         | pop-up dialogs title                                     |
+| sp_input          | pop-up input dialog prompt                               |
+| sp_text           | pop-up input dialog progressive search text              |
+| sp_text_f         | pop-up input dialog progressive search text (focused)    |
+| help_text         | help dialog etries text                                  |
+| help_text_f       | help dialog entries text (focused)                       |
 
-Each colour is defined using three words separated by whitespace:
+Each color is defined using three words separated by whitespace:
 
 _foreground_ _background_ _bold_
 
 _foreground_ and _background_ can be one of 'black', 'red', 'green',
 'yellow', 'blue', 'magenta', 'cyan', or 'white'. Alternatively, they can be a
 number between 0 and 255, or a hexadecimal RGB value using the #RRGGBB
-notation. Users should beware that not all terminals support numeric colour
+notation. Users should beware that not all terminals support numeric color
 values higher than 7 and/or RGB values.
 
-_bold_ is a boolean that signifies whether the foreground colour will have a
+_bold_ is a boolean that signifies whether the foreground color will have a
 high (true) or low (false) intensity.
 
 The default values for this section are sensible enough to allow **Qman** to

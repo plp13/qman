@@ -26,7 +26,7 @@ Where:
         - "int": an integer
         - "string": an 8-bit string
         - "wstring": a wide string
-        - "colour": a colour definition (see manual page)
+        - "colour": a color definition (see manual page)
         - "key": a key mapping (see manual page)
     - constraint: optional constraints for a type. For the time being, the only
       type that has constraints is "int", and those are used to define a minimum
@@ -55,12 +55,12 @@ config_def = {
         "trans_name_loc": (("wstring",), ("│",), True, "transition between the name and location sections of the status bar"),
         "trans_prompt_help": (("wstring",), (" ",), True, "transition between the prompt and help sections of the status bar"),
         "trans_prompt_em": (("wstring",), (" ",), True, "transition between the prompt and error message sections of the status bar"),
-        "box_hline": (("wstring",), ("─",), True, "dialogue box horizontal line"),
-        "box_vline": (("wstring",), ("│",), True, "dialogue box vertical line"),
-        "box_tl": (("wstring",), ("┌",), True, "dialogue box top left corner"),
-        "box_tr": (("wstring",), ("┐",), True, "dialogue box top right corner"),
-        "box_bl": (("wstring",), ("└",), True, "dialogue box bottom left corner"),
-        "box_br": (("wstring",), ("┘",), True, "dialogue box bottom right corner"),
+        "box_hline": (("wstring",), ("─",), True, "dialog box horizontal line"),
+        "box_vline": (("wstring",), ("│",), True, "dialog box vertical line"),
+        "box_tl": (("wstring",), ("┌",), True, "dialog box top left corner"),
+        "box_tr": (("wstring",), ("┐",), True, "dialog box top right corner"),
+        "box_bl": (("wstring",), ("└",), True, "dialog box bottom left corner"),
+        "box_br": (("wstring",), ("┘",), True, "dialog box bottom right corner"),
     },
     "colours": {
         "text": (("colour",), ("white", "black", "false"), True, "page text"),
@@ -81,17 +81,17 @@ config_def = {
         "stat_input_prompt": (("colour",), ("white", "black", "false"), True, "status bar input prompt"),
         "stat_input_help": (("colour",), ("yellow", "black", "true"), True, "status bar help section"),
         "stat_input_em": (("colour",), ("red", "black", "true"), True, "status bar error message section"),
-        "imm_border": (("colour",), ("yellow", "black", "false"), True, "pop-up dialogues border"),
-        "imm_title": (("colour",), ("yellow", "red", "true"), True, "pop-up dialogues title"),
-        "sp_input": (("colour",), ("white", "black", "true"), True, "pop-up input dialogue prompt"),
-        "sp_text": (("colour",), ("black", "black", "true"), True, "pop-up input dialogue progressive help text"),
-        "sp_text_f": (("colour",), ("black", "white", "false"), True, "pop-up input dialogue progressive help text (focused)"),
-        "help_text": (("colour",), ("white", "black", "true"), True, "help dialogue entries text"),
-        "help_text_f": (("colour",), ("black", "white", "false"), True, "help dialogue entries text (focused)"),
-        "trans_mode_name": (("int", 0, 65535), ("0",), False, "colour pair for mode to name transition character"),
-        "trans_name_loc": (("int", 0, 65535), ("0",), False, "colour pair for name to location transition character"),
-        "trans_prompt_help": (("int", 0, 65535), ("0",), False, "colour pair for prompt to help transition character"),
-        "trans_prompt_em": (("int", 0, 65535), ("0",), False, "colour pair for prompt to error_message transition character"),
+        "imm_border": (("colour",), ("yellow", "black", "false"), True, "pop-up dialogs border"),
+        "imm_title": (("colour",), ("yellow", "red", "true"), True, "pop-up dialogs title"),
+        "sp_input": (("colour",), ("white", "black", "true"), True, "pop-up input dialog prompt"),
+        "sp_text": (("colour",), ("black", "black", "true"), True, "pop-up input dialog progressive help text"),
+        "sp_text_f": (("colour",), ("black", "white", "false"), True, "pop-up input dialog progressive help text (focused)"),
+        "help_text": (("colour",), ("white", "black", "true"), True, "help dialog entries text"),
+        "help_text_f": (("colour",), ("black", "white", "false"), True, "help dialog entries text (focused)"),
+        "trans_mode_name": (("int", 0, 65535), ("0",), False, "color pair for mode to name transition character"),
+        "trans_name_loc": (("int", 0, 65535), ("0",), False, "color pair for name to location transition character"),
+        "trans_prompt_help": (("int", 0, 65535), ("0",), False, "color pair for prompt to help transition character"),
+        "trans_prompt_em": (("int", 0, 65535), ("0",), False, "color pair for prompt to error_message transition character"),
     },
     "keys": {
         "up": (("key",), ("KEY_UP", "y", "k"), True, "Scroll up one line"),
@@ -107,7 +107,7 @@ config_def = {
         "open_whatis": (("key",), ("w"), True, "Perform whatis on the focused link"),
         "sp_open": (("key",), ("O"), True, "Open a manual page using a dialog"),
         "sp_apropos": (("key",), ("A"), True, "Perform apropos using a dialog"),
-        "sp_whatis": (("key",), ("W"), True, "Perform whatis using a dialogue"),
+        "sp_whatis": (("key",), ("W"), True, "Perform whatis using a dialog"),
         "index": (("key",), ("i", "I"), True, "Go to index (home) page"),
         "back": (("key",), ("KEY_BACKSPACE", "BS", "["), True, "Go back one step in history"),
         "fwrd": (("key",), ("]"), True, "Go forward one step in history"),
@@ -129,9 +129,9 @@ config_def = {
         "stat_height": (("int", 0, 100), ("2",), False, "status bar height"),
         "main_width": (("int", 0, 400), ("79",), False, "main window width"),
         "main_height": (("int", 0, 100), ("23",), False, "main window height"),
-        "imm_width": (("int", 0, 400), ("59",), False, "pop-up dialogues width"),
-        "imm_height_short": (("int", 0, 100), ("4",), False, "short pop-up dialogues height"),
-        "imm_height_long": (("int", 0, 100), ("15",), False, "long pop-up dialogues height"),
+        "imm_width": (("int", 0, 400), ("59",), False, "pop-up dialogs width"),
+        "imm_height_short": (("int", 0, 100), ("4",), False, "short pop-up dialogs height"),
+        "imm_height_long": (("int", 0, 100), ("15",), False, "long pop-up dialogs height"),
         "lmargin": (("int", 0, 200), ("2",), True, "left margin size"),
         "rmargin": (("int", 0, 200), ("2",), True, "right margin size"),
         "tabstop": (("int", 0, 100), ("8",), True, "number of characters in a tab stop")
