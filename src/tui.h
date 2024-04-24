@@ -10,6 +10,24 @@
 // Global variables
 //
 
+// (terminal detection)
+
+// True if the terminal supports at least 8 colors
+extern bool colour;
+
+// True if the terminal supports at least 256 colours
+extern bool colour_256;
+
+// True if the terminal supports at least 256 colours that can be re-defined
+extern bool colour_hi;
+
+// True if the terminal can display non-ASCII characters. (Note that there's no
+// reliable way to determine this this. Therefore we set this variable to the
+// same value as that of colour_256.)
+extern bool unicode;
+
+// (ncurses windows)
+
 // Main window where the current page is displayed
 extern WINDOW *wmain;
 
@@ -29,15 +47,12 @@ extern WINDOW *wimm;
 // Macros
 //
 
-// True if the terminal supports at least 8 colors
-#define COLOUR (has_colors() && COLORS >= 8)
-
 // Initialize ncurses color pair in (colour_t value) col
 #define init_colour(col) init_pair(col.pair, col.fg, col.bg);
 
 // Change the color for window win to col (a variable of type colour_t)
 #define change_colour(win, col)                                                \
-  if (COLOUR) {                                                                \
+  if (colour) {                                                                \
     if (col.bold)                                                              \
       wattr_set(win, WA_BOLD, col.pair, NULL);                                 \
     else                                                                       \
@@ -48,7 +63,7 @@ extern WINDOW *wimm;
 // window win to attr
 #define change_colour_attr(win, col, attr)                                     \
   {                                                                            \
-    if (COLOUR)                                                                \
+    if (colour)                                                                \
       wattr_set(win, attr, col.pair, NULL);                                    \
     else                                                                       \
       wattrset(win, attr);                                                     \
@@ -56,7 +71,7 @@ extern WINDOW *wimm;
 
 // Apply color col to n characters, starting at location (y, x) in window w
 #define apply_colour(win, y, x, n, col)                                        \
-  if (COLOUR) {                                                                \
+  if (colour) {                                                                \
     if (col.bold)                                                              \
       mvwchgat(win, y, x, n, WA_BOLD, col.pair, NULL);                         \
     else                                                                       \
@@ -67,14 +82,14 @@ extern WINDOW *wimm;
 // Functions (utility)
 //
 
-// Initialize ncurses
+// Initialize ncurses and set the terminal detection globals
 extern void init_tui();
 
 // Initialize ncurses color pairs
 extern void init_tui_colours();
 
 // init_windows() and all draw_...() functions call wnoutrefresh() in order to
-// update the virtual screen, before returning. It's your responsibility to call
+// update the virtual screen before returning. It's your responsibility to call
 // doupdate() afterwards, to update the physical screen.
 
 // Delete and re-initialize all windows. After calling this function, you must

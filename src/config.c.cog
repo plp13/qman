@@ -73,12 +73,18 @@ int str2int(const char *src) {
 // Helper of various conf_...() functions and methods. Return the ncurses color
 // that corresponds to src. Allowed values for src are 'black', 'red', 'green',
 // 'yellow', 'blue', 'magenta', 'cyan', 'white', a positive integer, or
-// '#rrggbb'.
+// '#rrggbb'. Return -1 in case of parse error, or -2 if the terminal cannot
+// support such a color.
 short str2colour(const char *src) {
   // Try to parse src as integer. If successful, return it.
   const int srci = str2int(src);
-  if (srci >= 0)
+  if (srci >= 0) {
+    if (! colour_256) {
+      // Terminal does not support 256 colors; return -2
+      return -2;
+    }
     return srci;
+  }
 
   // If src matches a color name such as 'black', 'red', etc. return the
   // corresponding color.
@@ -101,23 +107,28 @@ short str2colour(const char *src) {
 
   // Otherwise, try to parse src as '#rrggbb' and return the corresponding color
   else {
-    static short ret = 8;
-    unsigned red = 0, green = 0, blue = 0;
+    static short ret = 255;
+    unsigned red = 0, green = 0, blue = 0; // New color values
     if (3 != sscanf(src, "#%2x%2x%2x", &red, &green, &blue)) {
-      // Unable to parse color; return -1
+      // Unable to parse src; return -1
       return -1;
     } else {
+      if (! colour_hi) {
+        // Terminal does not support 256 colors that can be re-defined; return
+        // -2
+        return -2;
+      }
       red = (red * 1000) / 256;
       green = (green * 1000) / 256;
       blue = (blue * 1000) / 256;
       init_color(ret, red, green, blue);
-      return ret++;
+      return ret--;
     }
   }
 }
 
 // Helper of various conf_...() functions and methods. Return the ncurses key
-// mapping that corresponds to src.
+// mapping that corresponds to src. Return -1 in case of parse error.
 int str2ch(const char *src) {
   if (0 == strcasecmp(src, "KEY_UP"))
     return KEY_UP;
@@ -179,8 +190,10 @@ int str2ch(const char *src) {
     return KEY_F(12);
   else if (src[0] >= 33 && src[0] <= 126 && 1 == strlen(src))
     return src[0];
-  else
+  else {
+    // Unable to parse src; return -1
     return -1;
+  }
 }
 
 // Helper of conf_handler(). Return an if statement that matches if section is
@@ -188,33 +201,41 @@ int str2ch(const char *src) {
 #define conf_section(s) if (0 == strcmp(section, s))
 
 // Helper of conf_handler(). Set trgt to the color that corresponds to value,
-// if name is equal to n. value is formatted as 3 color definitions (as
-// accepted by str2colour) separated by whitespace.
+// if name is equal to n. value is formatted as 2 color definitions (as
+// accepted by str2colour) and one boolean, separated by whitespace.
 #define conf_set_colour(n, trgt)                                               \
   if (0 == strcmp(name, n)) {                                                  \
     char fg[10], bg[10], bold[10];                                             \
+    unsigned nfg, nbg;                                                         \
+    bool nbold;                                                                \
     const int vals_read = sscanf(value, "%9s%9s%9s", fg, bg, bold);            \
     if (3 != vals_read) {                                                      \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid color value '%s'",      \
+               L"Config parse error at %s/%s: invalid color value '%s'",       \
                section, name, value);                                          \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
-    trgt.fg = str2colour(fg);                                                  \
-    if (-1 == trgt.fg) {                                                       \
+    nfg = str2colour(fg);                                                      \
+    if (-1 == nfg) {                                                           \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid foreground color '%s'", \
+               L"Config parse error at %s/%s: invalid foreground color '%s'",  \
                section, name, fg);                                             \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
-    trgt.bg = str2colour(bg);                                                  \
-    if (-1 == trgt.bg) {                                                       \
+    nbg = str2colour(bg);                                                      \
+    if (-1 == nbg) {                                                           \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid background color '%s'", \
+               L"Config parse error at %s/%s: invalid background color '%s'",  \
                section, name, bg);                                             \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
-    trgt.bold = str2bool(bold);                                                \
+    nbold = str2bool(bold);                                                    \
+    /* Apply colour changes only if the terminal supports it                */ \
+    if (-2 != nfg && -2 != nbg) {                                              \
+      trgt.fg = nfg;                                                           \
+      trgt.bg = nbg;                                                           \
+      trgt.bold = nbold;                                                       \
+    }                                                                          \
     return true;                                                               \
   }
 
@@ -298,6 +319,11 @@ int str2ch(const char *src) {
 #define conf_set_wstring(n, trgt)                                              \
   if (0 == strcmp(name, n)) {                                                  \
     const unsigned value_len = strlen(value);                                  \
+    /* If the terminal doesn't support Unicode, reject all non-ASCII TUI    *  \
+     * drawing characters                                                   */ \
+    if (! unicode && 0 == strcmp(section, "chars") &&                          \
+             (value[0] < 0 || value[0] > 127))                                 \
+      return true;                                                             \
     if (NULL != trgt)                                                          \
       free(trgt);                                                              \
     if (NULL == value)                                                         \

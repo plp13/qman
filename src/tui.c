@@ -6,6 +6,14 @@
 // Global variables
 //
 
+bool colour = false;
+
+bool colour_256 = false;
+
+bool colour_hi = false;
+
+bool unicode = false;
+
 WINDOW *wmain = NULL;
 
 WINDOW *wsbar = NULL;
@@ -252,7 +260,6 @@ void draw_help(const wchar_t *const *keys_names, unsigned keys_names_max,
 //
 
 void init_tui() {
-  // Initialize ncurses
   initscr();
   raw();
   keypad(stdscr, true);
@@ -260,10 +267,15 @@ void init_tui() {
   curs_set(1);
   timeout(2000);
   start_color();
+
+  colour = has_colors() && COLORS >= 8;
+  colour_256 = has_colors() && COLORS >= 256;
+  colour_hi = colour_256 && can_change_color();
+  unicode = colour_256;
 }
 
 void init_tui_colours() {
-  if (COLOUR) {
+  if (colour) {
     init_colour(config.colours.text);
     init_colour(config.colours.search);
     init_colour(config.colours.link_man);
