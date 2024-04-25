@@ -33,6 +33,13 @@ Test using the following configurations:
 
 Use `gdb`.
 
+To make sure the program gets fully rebuilt between debug sessions, we can use:
+
+```
+meson compile --clean && meson compile
+
+```
+
 ## Memory leaks
 
 Test for memory leaks using:
