@@ -1,6 +1,6 @@
 # Testing
 
-This document describes the procedures and tools we use for testing `qman`.
+This document describes the procedures and tools we use for testing Qman.
 
 ## Terminal emulators
 

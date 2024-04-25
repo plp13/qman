@@ -110,6 +110,7 @@ nothing, e.g. `/usr/bin/false`.
 
 *`qman` does not look as pretty on my system as in the screenshots*
 
-Try using the supplied
+That look can be achieved by pasting the directives in the supplied
 [modernity.conf](https://github.com/plp13/qman/blob/main/config/modernity.conf).
-
+into your configuration file. Your terminal must support at least 256 colours
+and Unicode fonts.
