@@ -1,8 +1,8 @@
-#Testing
+# Testing
 
 This document describes the procedures and tools we use for testing `qman`.
 
-#Terminal emulators
+## Terminal emulators
 
 Test against the following terminal emulators:
 
@@ -21,7 +21,7 @@ Test against the following terminal emulators:
 - kitty
 - st
 
-#Configuration files
+## Configuration files
 
 Test using the following configurations:
 
@@ -29,11 +29,11 @@ Test using the following configurations:
 - empty configuration file
 - custom configuration file, depending on the test case
 
-#Debugging
+## Debugging
 
 Use `gdb`.
 
-#Memory leaks
+## Memory leaks
 
 Test for memory leaks using:
 
@@ -51,7 +51,7 @@ not to fully deallocate its own memory.
 For more granularity, we may want to pass `--show-leak-kinds=all` to `valgrind`.
 This, however, will result in even more spurious errors caused by `ncurses`.
 
-#Profiling
+## Profiling
 
 Use the following command:
 
