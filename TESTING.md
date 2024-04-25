@@ -45,7 +45,7 @@ meson compile --clean && meson compile
 Test for memory leaks using:
 
 ```
-valgrind --leak-check=full --show-reachable=no --track-origins=yes --log-file=valgrind.out ./qman <arguments>
+valgrind --leak-check=full --show-leak-kinds=all --show-reachable=no --track-origins=yes --log-file=valgrind.out ./qman <arguments>
 ```
 
 Then, examine `valgrind.out`.
@@ -55,7 +55,7 @@ Reports of lost memory that has been allocated by `initscr()` and
 a [tendency](https://invisible-island.net/ncurses/ncurses.faq.html#config_leaks)
 not to fully deallocate its own memory.
 
-For more granularity, we may want to pass `--show-leak-kinds=all` to `valgrind`.
+For more granularity, we may want to pass `--show-reachable=yes` to `valgrind`.
 This, however, will result in even more spurious errors caused by `ncurses`.
 
 ## Profiling
