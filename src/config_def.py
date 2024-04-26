@@ -118,6 +118,10 @@ config_def = {
         "help": (("key",), ("h", "H"), True, "Show this help message"),
         "quit": (("key",), ("q", "Q"), True, "Exit the program")
     },
+    "mouse": {
+        "left_handed": (("bool",), ("false",), True, "if true, the left and right mouse buttons will be swapped"),
+        "left_click_open": (("bool",), ("false",), True, "if true, the left mouse button will open links rather than simply focusing on them")
+    },
     "layout": {
         "tui": (("bool",), ("true",), False, "true if we are in TUI mode, false if we are in CLI mode"),
         "fixedwidth": (("bool",), ("true",), False, "if true, don't change width to match the terminal size"),

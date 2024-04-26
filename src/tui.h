@@ -7,6 +7,35 @@
 #include "lib.h"
 
 //
+// Types
+//
+
+// A mouse button
+typedef enum {
+  BT_NONE,  // n/a
+  BT_LEFT,  // left button
+  BT_RIGHT, // right button
+  BT_WHEEL  // wheel button
+} mouse_button_t;
+
+// Mouse wheel activation
+typedef enum {
+  WH_NONE, // n/a
+  WH_UP,   // up
+  WH_DOWN  // down
+} mouse_wheel_t;
+
+// Compiled mouse status (not full; only essential parametres are recorded)
+typedef struct {
+  mouse_button_t button; // which mouse button
+  bool down;             // the button was pressed
+  bool up;               // the button was released
+  mouse_wheel_t wheel;   // activation of the mouse wheel
+  short y;               // cursor vertical position
+  short x;               // cursor horizontal position
+} mouse_t;
+
+//
 // Global variables
 //
 
@@ -42,6 +71,14 @@ extern WINDOW *wstat;
 
 // Immediate (popup) window
 extern WINDOW *wimm;
+
+// (program state)
+
+// Latest action
+extern action_t action;
+
+// Latest mouse status
+extern mouse_t mouse_status;
 
 //
 // Macros
@@ -151,9 +188,9 @@ extern bool get_str(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
 // and 0 respectively on subsequent calls. The function updates trgt and returns
 // whenever the user types something. Return value varies depending on the
 // user's action:
-// - 0, if the user hit ESC or CTRL-C
-// - n, if the user hit ENTER, where n is the total number of typed
-//   characters
+// - 0, if the user hit ESC or CTRL-C (or pressed left mouse)
+// - n, if the user hit ENTER (or pressed right mouse), where n is the total
+//      number of typed characters
 // - -KEY_UP, if the user hit the UP arrow key
 // - -KEY_DOWN, if the user hit the DOWN arrow key
 // - -KEY_PPAGE, if the user hit PGUP
@@ -169,6 +206,9 @@ extern int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
 // Return the program action number that corresponds to input character chr. If
 // no such action, return -1.
 extern action_t get_action(int chr);
+
+// Return the current compiled mouse status, after receiving input character chr
+extern mouse_t get_mouse_status(int chr);
 
 // Beep if config.layout.beep is true
 extern void cbeep();
@@ -248,6 +288,9 @@ extern bool tui_search_next(bool back);
 
 // Handler for PA_HELP
 extern bool tui_help();
+
+// Called whenever the left mouse button is pressed at position (y, x)
+extern bool tui_mouse_click(short y, short x);
 
 // Main handler/loop for the TUI
 extern void tui();

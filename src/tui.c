@@ -24,6 +24,8 @@ WINDOW *wimm = NULL;
 
 action_t action = PA_NULL;
 
+mouse_t mouse_status = {BT_NONE, false, false, WH_NONE, -1, -1};
+
 //
 // Helper macros and functions
 //
@@ -263,6 +265,10 @@ void init_tui() {
   initscr();
   raw();
   keypad(stdscr, true);
+  mousemask(BUTTON1_PRESSED | BUTTON1_RELEASED | BUTTON3_PRESSED |
+                BUTTON3_RELEASED | BUTTON2_PRESSED | BUTTON2_RELEASED |
+                BUTTON4_PRESSED | BUTTON5_PRESSED | REPORT_MOUSE_POSITION,
+            NULL);
   noecho();
   curs_set(1);
   timeout(2000);
@@ -634,6 +640,8 @@ int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
   int ret;                 // next return value
   int chr = '\0';          // user character input
   int wget_stat;           // mvwget_wch() return value
+  mouse_t ms = {BT_NONE, false, false,
+                WH_NONE, -1,    -1}; // mouse status corresponding to wget_stat
 
   if (NULL != trgt) {
     // First call; initialize res, res_len, and pos
@@ -644,58 +652,77 @@ int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
 
   // Get input from user
   wget_stat = mvwget_wch(w, y, x + pos, (wint_t *)&chr);
+  ms = get_mouse_status(chr);
 
-  switch (chr) {
-  case L'\e':
-  case KEY_BREAK:
-  case 0x03:
-    // User hit ESC or CTRL-C
+  if (BT_RIGHT == ms.button && ms.up) {
+    // User pressed right mouse button; act as if she hit ESC or CTRL-C
     res[0] = L'\0';
-    ret = 0;
-    break;
-  case KEY_ENTER:
-  case L'\n':
-    // User hit ENTER
+    wnoutrefresh(w);
+    return 0;
+  } else if (BT_LEFT == ms.button && ms.up && config.mouse.left_click_open) {
+    // User clicked the left mouse button; act if she hit ENTER (but only if the
+    // left_click_open config option is true)
     res[pos] = L'\0';
-    ret = pos;
-    break;
-  case KEY_BACKSPACE:
-  case L'\b':
-    // User hit BACKSPACE
-    if (pos > 0)
-      pos--;
-    else
-      ctbeep();
+    wnoutrefresh(w);
+    return pos;
+  } else if (BT_WHEEL == ms.button && ms.up) {
+    // User pressed the wheel button; act as if she hit ENTER
     res[pos] = L'\0';
-    mvwaddnwstr(w, y, x + pos, L" ", 1);
-    ret = -KEY_BACKSPACE;
-    break;
-  case L'\t':
-    // User hit TAB
-    ret = -0x09;
-    break;
-  case KEY_UP:
-  case KEY_DOWN:
-  case KEY_PPAGE:
-  case KEY_NPAGE:
-  case KEY_HOME:
-  case KEY_END:
-    // Key hit UP, DOWN, PGUP, PGDN, HOME, or END
-    ret = -chr;
-    break;
-  default:
-    // User typed a character
-    if (OK != wget_stat) {
-      // Reject function keys, arrow keys, etc.
-      ctbeep();
-    } else if (pos < res_len) {
-      res[pos] = (wchar_t)chr;
-      res[pos + 1] = L'\0';
-      mvwaddnwstr(w, y, x + pos, &res[pos], 1);
-      pos++;
-    } else
-      ctbeep();
-    ret = -chr;
+    wnoutrefresh(w);
+    return pos;
+  } else {
+    switch (chr) {
+    case L'\e':
+    case KEY_BREAK:
+    case 0x03:
+      // User hit ESC or CTRL-C
+      res[0] = L'\0';
+      ret = 0;
+      break;
+    case KEY_ENTER:
+    case L'\n':
+      // User hit ENTER
+      res[pos] = L'\0';
+      ret = pos;
+      break;
+    case KEY_BACKSPACE:
+    case L'\b':
+      // User hit BACKSPACE
+      if (pos > 0)
+        pos--;
+      else
+        ctbeep();
+      res[pos] = L'\0';
+      mvwaddnwstr(w, y, x + pos, L" ", 1);
+      ret = -KEY_BACKSPACE;
+      break;
+    case L'\t':
+      // User hit TAB
+      ret = -0x09;
+      break;
+    case KEY_UP:
+    case KEY_DOWN:
+    case KEY_PPAGE:
+    case KEY_NPAGE:
+    case KEY_HOME:
+    case KEY_END:
+      // Key hit UP, DOWN, PGUP, PGDN, HOME, or END
+      ret = -chr;
+      break;
+    default:
+      // User typed a character
+      if (OK != wget_stat) {
+        // Reject function keys, arrow keys, etc.
+        ctbeep();
+      } else if (pos < res_len) {
+        res[pos] = (wchar_t)chr;
+        res[pos + 1] = L'\0';
+        mvwaddnwstr(w, y, x + pos, &res[pos], 1);
+        pos++;
+      } else
+        ctbeep();
+      ret = -chr;
+    }
   }
 
   wnoutrefresh(w);
@@ -715,6 +742,57 @@ action_t get_action(int chr) {
         return i;
 
   return PA_NULL;
+}
+
+mouse_t get_mouse_status(int chr) {
+  mouse_t ret = {BT_NONE, false, false, WH_NONE, -1, -1};
+
+  if (chr == KEY_MOUSE) {
+    MEVENT ev;
+
+    if (OK == getmouse(&ev)) {
+      // Record cursor position
+      ret.y = ev.y;
+      ret.x = ev.x;
+
+      // Record button up and down events
+      if (ev.bstate & BUTTON1_PRESSED) {
+        ret.button = BT_LEFT;
+        ret.down = true;
+      } else if (ev.bstate & BUTTON1_RELEASED) {
+        ret.button = BT_LEFT;
+        ret.up = true;
+      } else if (ev.bstate & BUTTON3_PRESSED) {
+        ret.button = BT_RIGHT;
+        ret.down = true;
+      } else if (ev.bstate & BUTTON3_RELEASED) {
+        ret.button = BT_RIGHT;
+        ret.up = true;
+      } else if (ev.bstate & BUTTON2_PRESSED) {
+        ret.button = BT_WHEEL;
+        ret.down = true;
+      } else if (ev.bstate & BUTTON2_RELEASED) {
+        ret.button = BT_WHEEL;
+        ret.up = true;
+      }
+
+      // Swap left and right buttons if user is left handed
+      if (config.mouse.left_handed) {
+        if (BT_LEFT == ret.button)
+          ret.button = BT_RIGHT;
+        else if (BT_RIGHT == ret.button)
+          ret.button = BT_LEFT;
+      }
+
+      // Record mouse wheel activations
+      if (ev.bstate & BUTTON4_PRESSED)
+        ret.wheel = WH_UP;
+      else if (ev.bstate & BUTTON5_PRESSED)
+        ret.wheel = WH_DOWN;
+    }
+  }
+
+  return ret;
 }
 
 void cbeep() {
@@ -1173,7 +1251,7 @@ bool tui_sp_open(request_type_t rt) {
                             page_top + config.layout.main_height - 1);
     return true;
   } else {
-    // User hit ESC or CTRL-C; abort
+    // User hit ESC or CTRL-C or pressed right mouse button; abort
     tui_redraw();
     tui_error(L"Aborted");
     return false;
@@ -1373,11 +1451,13 @@ bool tui_help() {
            L"%ls/%ls: choose action   %ls: fire   %ls/%ls: abort",
            ch2name(config.keys[PA_UP][0]), ch2name(config.keys[PA_DOWN][0]),
            ch2name(config.keys[PA_OPEN][0]), ch2name(KEY_BREAK), ch2name('\e'));
-  int hinput;                 // keyboard/mouse input from the user
-  action_t haction = PA_NULL; // program action corresponding to hinput
-  unsigned top = 1;           // first action to be printed
-  unsigned focus = 1;         // focused action
-  unsigned height;            // help window height
+  int hinput; // keyboard/mouse input from the user
+  mouse_t hms = {BT_NONE, false, false,
+                 WH_NONE, -1,    -1}; // mouse status corresponding to hinput
+  action_t haction = PA_NULL;         // program action corresponding to hinput
+  unsigned top = 1;                   // first action to be printed
+  unsigned focus = 1;                 // focused action
+  unsigned height;                    // help window height
 
   // For each action...
   for (i = 0; i <= PA_QUIT; i++) {
@@ -1415,8 +1495,10 @@ bool tui_help() {
 
     // Get user input
     hinput = getch();
-    if ('\e' == hinput || KEY_BREAK == hinput || 0x03 == hinput) {
-      // User hit ESC or CTRL-C; abort
+    hms = get_mouse_status(hinput);
+    if ('\e' == hinput || KEY_BREAK == hinput || 0x03 == hinput ||
+        (BT_RIGHT == hms.button && hms.up)) {
+      // User hit ESC or CTRL-C or pressed right mouse button; abort
       del_imm();
       tui_error(L"Aborted");
       tui_redraw();
@@ -1443,6 +1525,46 @@ bool tui_help() {
       break;
     case PA_NULL:
     default:
+      if (WH_UP == hms.wheel) {
+        // When mouse wheel scrolls up, select previous help entry
+        focus--;
+        if (0 == focus)
+          focus = PA_QUIT;
+      } else if (WH_DOWN == hms.wheel) {
+        // When mouse wheel scrolls down, select next help entry
+        focus++;
+        if (PA_QUIT + 1 == focus)
+          focus = 1;
+      } else if (BT_LEFT == hms.button && hms.down) {
+        // On left button press, focus on the help entry under the cursor
+        int iy = hms.y,
+            ix = hms.x;
+        unsigned ih = getmaxy(wimm);
+        if (wmouse_trafo(wimm, &iy, &ix, false))
+          if (iy > 1 && iy < ih - 3)
+            focus = top + iy - 2;
+      } else if (BT_LEFT == hms.button && hms.up) {
+        // On left button release, focus on the help entry under the cursor
+        int iy = hms.y,
+            ix = hms.x;
+        unsigned ih = getmaxy(wimm);
+        if (wmouse_trafo(wimm, &iy, &ix, false))
+          if (iy > 1 && iy < ih - 3) {
+            focus = top + iy - 2;
+            if (config.mouse.left_click_open) {
+              // If the left_click_open option is set, execute the entry's
+              // program action
+              del_imm();
+              ungetch(config.keys[focus][0]);
+              return true;
+            }
+          }
+      } else if (BT_WHEEL == hms.button && hms.up) {
+        // On mouse wheel click, execute the focused entry's program action
+        del_imm();
+        ungetch(config.keys[focus][0]);
+        return true;
+      }
       break;
     }
 
@@ -1473,6 +1595,51 @@ bool tui_help() {
   return true;
 }
 
+bool tui_mouse_click(short y, short x) {
+  int my = y, mx = x; // locations in wmain that correspond to y and x
+  int sy = y, sx = x; // locations in wsbar that correspond to y and x
+
+  // If the cursor is on a link, make it the focused link
+  if (wmouse_trafo(wmain, &my, &mx, false)) {
+    unsigned ln = page_top + my; // line number that corresponds to my
+    if (ln < page_len) {
+      for (unsigned i = 0; i < page[ln].links_length; i++) {
+        if (mx >= page[ln].links[i].start && mx < page[ln].links[i].end) {
+          page_flink.ok = true;
+          page_flink.line = ln;
+          page_flink.link = i;
+
+          if (config.mouse.left_click_open && mouse_status.up) {
+            // If left_click_open is set, open the link as well
+            return tui_open();
+          } else
+            return true;
+        }
+      }
+    }
+  }
+
+  // If the cursor is on the scrollbar, jump to the appropriate page position
+  if (wmouse_trafo(wsbar, &sy, &sx, false)) {
+    unsigned sh = getmaxy(wsbar); // scrollbar window height
+    unsigned bp = (MAX(
+        1, MIN(sh - 2, sy))); // where the scrollbar knob should be repositioned
+
+    page_top = bp == 1 ? 0 : (bp * (page_len - sh + 1) - 1) / (sh - 2);
+    char tmp[BS_SHORT];
+    snprintf(tmp, BS_SHORT, "sy=%d sx=%d sh=%d bp=%d page_top=%d", sy, sx, sh,
+             bp, page_top);
+    loggit(tmp);
+    const link_loc_t fl = first_link(page, page_len, page_top,
+                                     page_top + config.layout.main_height - 1);
+    if (fl.ok && (page_flink.line != fl.line || page_flink.link != fl.link))
+      page_flink = fl;
+
+    return true;
+  }
+
+  return false;
+}
 void tui() {
   int input;                // keyboard/mouse input from user
   bool redraw = true;       // set this to true to redraw the screen
@@ -1519,6 +1686,7 @@ void tui() {
     // Get user input
     input = getch();
     action = get_action(input);
+    mouse_status = get_mouse_status(input);
 
     // Perform the requested action
     switch (action) {
@@ -1591,10 +1759,27 @@ void tui() {
     case PA_QUIT:
       break;
     case PA_NULL:
-      redraw = true;
-      break;
     default:
-      tui_error(errmsg);
+      if (WH_UP == mouse_status.wheel) {
+        // Mouse wheel scroll up causes PA_UP
+        redraw = tui_up();
+      } else if (WH_DOWN == mouse_status.wheel) {
+        // Mouse wheel scroll down causes PA_DOWN
+        redraw = tui_down();
+      } else if (BT_WHEEL == mouse_status.button && mouse_status.up) {
+        // Mouse wheel click causes PA_OPEN
+        redraw = tui_open();
+      } else if (BT_RIGHT == mouse_status.button && mouse_status.up) {
+        // Right mouse button click causes PA_HELP
+        redraw = tui_help();
+      } else if (BT_LEFT == mouse_status.button && mouse_status.down) {
+        // On left mouse button press, we call tui_mouse_down()
+        redraw = tui_mouse_click(mouse_status.y, mouse_status.x);
+      } else if (BT_LEFT == mouse_status.button && mouse_status.up) {
+        // Ditto on left mouse button release
+        redraw = tui_mouse_click(mouse_status.y, mouse_status.x);
+      } else
+        redraw = true;
       break;
     }
   }

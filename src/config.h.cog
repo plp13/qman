@@ -80,18 +80,15 @@ for section, options in config_def.config_def.items():
   cog.outl("} config_" + section + "_t;")
   cog.outl()
 
+cog.outl("// Main configuration structure");
+cog.outl("typedef struct {");
+for section, options in config_def.config_def.items():
+  cog.outl("  config_" + section + "_t " + section + ";")
+cog.outl("} config_t;");
+
 ]]]
 
 [[[end]]]*/
-
-// Main configuration structure
-typedef struct {
-  config_chars_t chars;
-  config_colours_t colours;
-  config_keys_t keys;
-  config_layout_t layout;
-  config_misc_t misc;
-} config_t;
 
 //
 // Constants
