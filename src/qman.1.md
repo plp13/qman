@@ -251,8 +251,8 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 | reset_after_http | boolean  | true       | Re-initialize curses after opening an http(s) link |
 | reset_after_email| boolean  | true       | Re-initialize curses after opening an e-mail link |
 | history_size | unsigned int | 256k       | Maximum number of history entries |
-| hyphenate    | boolean      | true       | Set to true to hyphenate long words |
-| justify      | boolean      | true       | Set to false to disable justified text |
+| hyphenate    | boolean      | true       | Hyphenate long words in manual pages |
+| justify      | boolean      | true       | Justify manual pages text         |
 
 If you are using a narrow terminal, try setting _hyphenate_ to 'true' and/or
 _justify_ to 'false'.

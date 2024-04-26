@@ -148,7 +148,7 @@ config_def = {
         "reset_after_http": (("bool",), ("true",), True, "re-initialize curses after opening an http(s) link"),
         "reset_after_email": (("bool",), ("true",), True, "re-initialize curses after opening an e-mail link"),
         "history_size": (("int", 0, 256 * 1024), ("65536",), True, "maximum number of history entries"),
-        "hyphenate": (("bool",), ("true",), True, "hyphenate long words"),
-        "justify": (("bool",), ("true",), True, "justify manual page text")
+        "hyphenate": (("bool",), ("true",), True, "hyphenate long words in manual pages"),
+        "justify": (("bool",), ("true",), True, "justify manual pages text")
     }
 }
