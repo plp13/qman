@@ -119,8 +119,9 @@ config_def = {
         "quit": (("key",), ("q", "Q"), True, "Exit the program")
     },
     "mouse": {
-        "left_handed": (("bool",), ("false",), True, "if true, the left and right mouse buttons will be swapped"),
-        "left_click_open": (("bool",), ("false",), True, "if true, the left mouse button will open links rather than simply focusing on them")
+        "enable": (("bool",), ("true",), True, "enable mouse support"),
+        "left_handed": (("bool",), ("false",), True, "swap the left and right mouse buttons"),
+        "left_click_open": (("bool",), ("false",), True, "causes the left mouse button to invoke the OPEN action and/or act as the ENTER key")
     },
     "layout": {
         "tui": (("bool",), ("true",), False, "true if we are in TUI mode, false if we are in CLI mode"),

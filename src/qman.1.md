@@ -74,11 +74,30 @@ keyboard mappings:
 | SEARCH_BACK     | (Free text) search backward           | '?'                |
 | SEARCH_NEXT     | Go to next search result              | 'n'                |
 | SEARCH_PREV     | Go to previous search result          | 'N'                |
-| HELP            | Show the help message dialog          | 'h', 'H'           |
+| HELP            | Show the help dialog                  | 'h', 'H'           |
 | QUIT            | Exit the program                      | 'q', 'Q'           |
 
 All of the aforementioned keyboard mappings are customizable. For more
 information, see **CONFIGURATION**.
+
+# MOUSE SUPPORT
+
+Mouse input is supported but is considered experimental. The **CONFIGURATION**
+section contains instructions on how to disable it.
+
+When mouse input is enabled, the scroll wheel can be used as an alternative way
+for invoking the UP and DOWN program actions. Clicking the left mouse button
+causes the link under the cursor to be selected. Clicking the middle button (the
+scroll wheel in most mice) invokes the OPEN action. Finally, clicking the right
+button invokes HELP.
+
+In situations where the user is asked to input text or select from a menu, the
+middle button acts as a substitute for the ENTER key, and the right button as a
+substitute for CTRL-C. When selecting from a menu, clicking the left button
+causes the menu entry under the cursor to be selected.
+
+The above behaviour can be customized. For more information, see
+**CONFIGURATION**.
 
 # OPTIONS
 The program accepts the following non-argument options:
@@ -212,7 +231,7 @@ _key_1_ _key_2_ _key_3_ _key_4_ _key_5_ _key_6_ _key_7_ _key_8_
 The value of each _key_i_ can take one of the following values:
 
 1. Any character, surch as 'a', 'b', 'c', etc.
-2. Any ncurses(3x) keycode, such as **KEY_UP** or **KEY_HOME**
+2. Any ncurses(3x) keycode, such as 'KEY_UP' or 'KEY_HOME'
 3. 'F1' to 'F12' (for the function keys)
 4. 'ESC' (for the ESC key)
 5. 'EXT' (for CTRL-C)
@@ -225,6 +244,15 @@ For reasons of compatibility with various terminals, mapping the ENTER key
 requires specifying both 'KEY_ENTER' and 'LF'. Similarly, mapping CTRL-C
 requires specifying both 'KEY_BREAK' and 'ETX', and mapping BACKSPACE requires
 specifying both 'KEY_BACKSPACE' and 'BS'.
+
+**Section [mouse]**
+: This sections contains the following options that pertain to mouse support:
+
+| Option   | Type         | Def. value | Description                           |
+|----------|--------------|------------|---------------------------------------|
+| enable   | boolean      | true       | Enables mouse support                 |
+| left_handed | boolean   | false      | Swaps the left and right mouse buttons |
+| left_click_open | boolean | false    | Causes the left mouse button to invoke the OPEN action and/or act as the ENTER key |
 
 **Section [layout]**
 : This section contains various options that concern the layout of the text user
@@ -254,16 +282,18 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 | hyphenate    | boolean      | true       | Hyphenate long words in manual pages |
 | justify      | boolean      | true       | Justify manual pages text         |
 
-If you are using a narrow terminal, try setting _hyphenate_ to 'true' and/or
-_justify_ to 'false'.
+When using a horizontally narrow terminal, setting _hyphenate_ to 'true' and/or
+_justify_ to 'false' can improve the program's output.
 
-If you are planning on using A GUI web browser for http(s) links, set
-_reset_after_http_ to 'false', to avoid the blinking associated
-with re-initializing ncurses. Similarly, set _reset_after_email_ to 'false' if
-you are planning on using a GUI client for e-mail links.
+Option _reset_after_http_ should be set to 'false' when using a GUI web browser
+for handling http(s) links. Similarly, _reset_after_email_ should be set to
+false' when using a GUI email client for e-mail links.
 
 # ENVIRONMENT
-When invoked using **-T**, the program tries to set the page width to the value
+Users should take care setting their **TERM** environment variable to match
+their virtual terminal.
+
+When invoked using **-T**, the program tries to set its page width to the value
 of the **MANWIDTH** environment variable. If **MANWIDTH** hasn't been set, it
 tries to set it to the value of **COLUMNS** and, if that also fails, it sets
 it to the default value of 80.

@@ -747,6 +747,11 @@ action_t get_action(int chr) {
 mouse_t get_mouse_status(int chr) {
   mouse_t ret = {BT_NONE, false, false, WH_NONE, -1, -1};
 
+  if (! config.mouse.enable) {
+    // If mouse is disabled, always return an empty status
+    return ret;
+  }
+
   if (chr == KEY_MOUSE) {
     MEVENT ev;
 
