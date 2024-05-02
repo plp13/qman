@@ -61,6 +61,8 @@ config_def = {
         "box_tr": (("wstring",), ("┐",), True, "dialog box top right corner"),
         "box_bl": (("wstring",), ("└",), True, "dialog box bottom left corner"),
         "box_br": (("wstring",), ("┘",), True, "dialog box bottom right corner"),
+        "arrow_up": (("wstring",), ("↑",), True, "up arrow"),
+        "arrow_down": (("wstring",), ("↓",), True, "down arrow")
     },
     "colours": {
         "text": (("colour",), ("white", "black", "false"), True, "page text"),

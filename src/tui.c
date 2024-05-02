@@ -242,9 +242,17 @@ void draw_help(const wchar_t *const *keys_names, unsigned keys_names_max,
 
   j = 2;
   for (i = top; i <= end; i++) {
-    swprintf(buf, width - 1, L" %-*ls  %-*.*ls ", keys_names_max, keys_names[i],
-             width - keys_names_max - 6, width - keys_names_max - 6,
-             keys_help[i]);
+    wchar_t glyph;
+    if (i == top && i > 1)
+      glyph = *config.chars.arrow_up;
+    else if (i == end && i < PA_QUIT)
+      glyph = *config.chars.arrow_down;
+    else
+      glyph = L' ';
+
+    swprintf(buf, width - 1, L" %-*ls  %-*.*ls %lc", keys_names_max,
+             keys_names[i], width - keys_names_max - 7,
+             width - keys_names_max - 7, keys_help[i], glyph);
     if (i == focus) {
       change_colour(wimm, config.colours.help_text_f);
     } else {
@@ -273,10 +281,18 @@ void draw_history(request_t *history, unsigned history_cur,
 
   j = 2;
   for (i = top; i <= end; i++) {
-    swprintf(buf, width - 1, L"%1ls %-7ls  %-*ls ",
-             i == history_cur ? L">" : L" ",
-             request_type_str(history[i].request_type), width - 14,
-             NULL == history[i].args ? L"" : history[i].args);
+    wchar_t glyph;
+    if (i == top && i > 0)
+      glyph = *config.chars.arrow_up;
+    else if (i == end && i < history_top)
+      glyph = *config.chars.arrow_down;
+    else
+      glyph = L' ';
+
+    swprintf(buf, width - 1, L"%1ls %-7ls  %-*ls %lc",
+             i == history_cur ? L"»" : L" ",
+             request_type_str(history[i].request_type), width - 15,
+             NULL == history[i].args ? L"" : history[i].args, glyph);
     if (i == focus) {
       change_colour(wimm, config.colours.help_text_f);
     } else {
@@ -1348,7 +1364,7 @@ bool tui_fwrd() {
 
 bool tui_history() {
   wchar_t help[BS_SHORT]; // help message
-  swprintf(help, BS_SHORT, L"%ls/%ls: choose   %ls: fire   %ls/%ls: abort",
+  swprintf(help, BS_SHORT, L"%ls/%ls: choose   %ls: jump   %ls/%ls: abort",
            ch2name(config.keys[PA_UP][0]), ch2name(config.keys[PA_DOWN][0]),
            ch2name(config.keys[PA_OPEN][0]), ch2name(KEY_BREAK), ch2name('\e'));
   int hinput; // keyboard/mouse input from the user
