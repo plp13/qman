@@ -70,6 +70,7 @@ keyboard mappings:
 | INDEX           | Go to index (home) page               | 'i', 'I'           |
 | BACK            | Go back one step in history           | BACKSPACE, '['     |
 | FWRD            | Go forward one step in history        | ']'                |
+| HISTORY         | Show history menu                     | 's', 'S'           |
 | SEARCH          | (Free text) search forward            | '/'                |
 | SEARCH_BACK     | (Free text) search backward           | '?'                |
 | SEARCH_NEXT     | Go to next search result              | 'n'                |
@@ -165,6 +166,8 @@ following sections and configuration options are accepted:
 | box_tr            | dialog box top right corner                              |
 | box_bl            | dialog box bottom left corner                            |
 | box_br            | dialog box bottom right corner                           |
+| arrow_up          | up arrow                                                 |
+| arrow_down        | down arrow                                               |
 
 Each configuration option value in this section must consist of a single
 Unicode character.
