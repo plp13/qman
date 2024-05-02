@@ -173,8 +173,10 @@ extern void draw_stat(const wchar_t *mode, const wchar_t *name,
                       const wchar_t *em);
 
 // Draw an immediate window. is_long specifies whether the window is long or
-// short. The title and help strings is quite obvious what they are.
-void draw_imm(bool is_long, const wchar_t *title, const wchar_t *help);
+// short. is_wide whether it is wide or narrow. The title and help strings is
+// quite obvious what they are.
+void draw_imm(bool is_long, bool is_wide, const wchar_t *title,
+              const wchar_t *help);
 
 // Delete the immediate window previously drawn with draw_imm()
 void del_imm();
@@ -277,6 +279,9 @@ extern bool tui_back();
 
 // Handler for PA_FWRD
 extern bool tui_fwrd();
+
+// Handler for PA_HISTORY
+extern bool tui_history();
 
 // Handler for PA_SEARCH (whenever back is set to true) or PA_SEARCH_BACK
 // (whenever back is set to false)

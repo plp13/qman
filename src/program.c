@@ -480,32 +480,12 @@ void history_push(request_type_t rt, const wchar_t *args) {
   history_replace(rt, args);
 }
 
-bool history_back(unsigned n) {
+bool history_jump(int pos) {
   history[history_cur].top = page_top;
   history[history_cur].left = page_left;
   history[history_cur].flink = page_flink;
 
-  const int pos = history_cur - n;
-
-  if (pos >= 0) {
-    history_cur = pos;
-    page_top = history[history_cur].top;
-    page_left = history[history_cur].left;
-    page_flink = history[history_cur].flink;
-    return true;
-  }
-
-  return false;
-}
-
-bool history_forward(unsigned n) {
-  history[history_cur].top = page_top;
-  history[history_cur].left = page_left;
-  history[history_cur].flink = page_flink;
-
-  const int pos = history_cur + n;
-
-  if (pos <= history_top) {
+  if (pos >= 0 && pos <= history_top) {
     history_cur = pos;
     page_top = history[history_cur].top;
     page_left = history[history_cur].left;

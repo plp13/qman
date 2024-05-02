@@ -113,9 +113,10 @@ void aw_quick_search(wchar_t *needle) {
   lines = ln; // lines becomes exact no. of lines to display
 
   // Display the search results
-  const unsigned width = config.layout.imm_width - 4; // immediate window width
-  wchar_t *tmp = walloca(width - 4);                  // temporary
-  unsigned ident_len = 0; // space dedicated to ident column
+  const unsigned width =
+      config.layout.imm_width_wide - 4; // immediate window width
+  wchar_t *tmp = walloca(width - 4);    // temporary
+  unsigned ident_len = 0;               // space dedicated to ident column
   for (ln = 0; ln < lines; ln++)
     ident_len = MAX(ident_len, wcslen(aw_all[res[ln]].ident));
   const unsigned descr_len =
@@ -225,7 +226,7 @@ wchar_t *ch2name(int k) {
   }
 }
 
-// Helper of tui_help(). Draw the help text into wimm. keys_names contains the
+// Helper of tui_help(). Draw the help menu into wimm. keys_names contains the
 // string representations of key character mappings corresponding to all program
 // actions, keys_names_max is the length of the longest string in keys_names,
 // top is the first action to print help for, and focus is the action to focus
@@ -244,6 +245,38 @@ void draw_help(const wchar_t *const *keys_names, unsigned keys_names_max,
     swprintf(buf, width - 1, L" %-*ls  %-*.*ls ", keys_names_max, keys_names[i],
              width - keys_names_max - 6, width - keys_names_max - 6,
              keys_help[i]);
+    if (i == focus) {
+      change_colour(wimm, config.colours.help_text_f);
+    } else {
+      change_colour(wimm, config.colours.help_text);
+    }
+    mvwaddnwstr(wimm, j, 1, buf, width - 1);
+    j++;
+  }
+
+  wmove(wimm, height - 2, width - 2);
+  wnoutrefresh(wimm);
+}
+
+// Helper for tui_history(). Draw the history menu into wimm. history,
+// history_cur, and history_top have the same meanings as the history,
+// history_cur, and history_top globals respectively. top is the first history
+// entry to print, and focus indicates the entry to focus on.
+void draw_history(request_t *history, unsigned history_cur,
+                  unsigned history_top, unsigned top, unsigned focus) {
+  const unsigned width = getmaxx(wimm);  // help window width
+  const unsigned height = getmaxy(wimm); // help window height
+  const unsigned end = MIN(history_top,
+                           top + height - 6); // last entry to print
+  wchar_t *buf = walloca(width - 2);          // temporary
+  unsigned i, j;                              // iterator
+
+  j = 2;
+  for (i = top; i <= end; i++) {
+    swprintf(buf, width - 1, L"%1ls %-7ls  %-*ls ",
+             i == history_cur ? L">" : L" ",
+             request_type_str(history[i].request_type), width - 14,
+             NULL == history[i].args ? L"" : history[i].args);
     if (i == focus) {
       change_colour(wimm, config.colours.help_text_f);
     } else {
@@ -360,17 +393,24 @@ bool termsize_changed() {
     else
       config.layout.main_height = 0;
 
-    if (config.layout.width > 100)
-      config.layout.imm_width = config.layout.width - 20;
-    else if (config.layout.width > 60)
-      config.layout.imm_width = config.layout.width - 6;
-    else
-      config.layout.imm_width = 40;
+    if (config.layout.width > 100) {
+      config.layout.imm_width_wide = config.layout.width - 20;
+      config.layout.imm_width_narrow = 54;
+    } else if (config.layout.width > 60) {
+      config.layout.imm_width_wide = config.layout.width - 6;
+      config.layout.imm_width_narrow = 54;
+    } else {
+      config.layout.imm_width_wide = config.layout.width - 6;
+      config.layout.imm_width_narrow = config.layout.width - 6;
+    }
 
-    if (config.layout.height > 18)
+    if (config.layout.height > 18) {
       config.layout.imm_height_long = config.layout.height - 8;
-    else
-      config.layout.imm_height_long = 10;
+      config.layout.imm_height_short = 6;
+    } else {
+      config.layout.imm_height_long = config.layout.height - 4;
+      config.layout.imm_height_short = config.layout.height - 4;
+    }
 
     return true;
   }
@@ -576,7 +616,8 @@ void draw_stat(const wchar_t *mode, const wchar_t *name, unsigned lines_len,
   wnoutrefresh(wstat);
 }
 
-void draw_imm(bool is_long, const wchar_t *title, const wchar_t *help) {
+void draw_imm(bool is_long, bool is_wide, const wchar_t *title,
+              const wchar_t *help) {
   unsigned height, width, y, x;
 
   timeout(-1);
@@ -588,8 +629,13 @@ void draw_imm(bool is_long, const wchar_t *title, const wchar_t *help) {
     height = config.layout.imm_height_short;
     y = (config.layout.height - height) / 4;
   }
-  width = config.layout.imm_width;
-  x = (config.layout.width - width) / 2;
+  if (is_wide) {
+    width = config.layout.imm_width_wide;
+    x = (config.layout.width - width) / 2;
+  } else {
+    width = config.layout.imm_width_narrow;
+    x = (config.layout.width - width) - 4;
+  }
 
   if (NULL != wimm)
     delwin(wimm);
@@ -747,7 +793,7 @@ action_t get_action(int chr) {
 mouse_t get_mouse_status(int chr) {
   mouse_t ret = {BT_NONE, false, false, WH_NONE, -1, -1};
 
-  if (! config.mouse.enable) {
+  if (!config.mouse.enable) {
     // If mouse is disabled, always return an empty status
     return ret;
   }
@@ -1193,11 +1239,11 @@ bool tui_sp_open(request_type_t rt) {
 
   // Draw immediate window and title bar
   if (RT_MAN == rt)
-    draw_imm(true, L"Manual page to open?", help);
+    draw_imm(true, true, L"Manual page to open?", help);
   else if (RT_APROPOS == rt)
-    draw_imm(true, L"Apropos what?", help);
+    draw_imm(true, true, L"Apropos what?", help);
   else if (RT_WHATIS == rt)
-    draw_imm(true, L"Whatis what?", help);
+    draw_imm(true, true, L"Whatis what?", help);
   doupdate();
 
   // Get input (and show quick search results as the user types)
@@ -1206,7 +1252,7 @@ bool tui_sp_open(request_type_t rt) {
   doupdate();
   change_colour(wimm, config.colours.sp_input);
   got_inpt = get_str_next(wimm, 2, 2, inpt,
-                          MIN(BS_SHORT - 3, config.layout.imm_width - 4));
+                          MIN(BS_SHORT - 3, config.layout.imm_width_wide - 4));
   while (got_inpt < 0) {
     // If terminal size has changed, regenerate page and redraw everything
     if (termsize_changed()) {
@@ -1218,11 +1264,11 @@ bool tui_sp_open(request_type_t rt) {
       termsize_adjust();
       tui_redraw();
       if (RT_MAN == rt)
-        draw_imm(true, L"Manual page to open?", help);
+        draw_imm(true, true, L"Manual page to open?", help);
       else if (RT_APROPOS == rt)
-        draw_imm(true, L"Apropos what?", help);
+        draw_imm(true, true, L"Apropos what?", help);
       else if (RT_WHATIS == rt)
-        draw_imm(true, L"Whatis what?", help);
+        draw_imm(true, true, L"Whatis what?", help);
       change_colour(wimm, config.colours.sp_input);
       mvwaddnwstr(wimm, 2, 2, inpt, wcslen(inpt));
       aw_quick_search(inpt);
@@ -1298,6 +1344,142 @@ bool tui_fwrd() {
     tui_error(L"Already at the last page in history");
     return false;
   }
+}
+
+bool tui_history() {
+  wchar_t help[BS_SHORT]; // help message
+  swprintf(help, BS_SHORT, L"%ls/%ls: choose   %ls: fire   %ls/%ls: abort",
+           ch2name(config.keys[PA_UP][0]), ch2name(config.keys[PA_DOWN][0]),
+           ch2name(config.keys[PA_OPEN][0]), ch2name(KEY_BREAK), ch2name('\e'));
+  int hinput; // keyboard/mouse input from the user
+  mouse_t hms = {BT_NONE, false, false,
+                 WH_NONE, -1,    -1}; // mouse status corresponding to hinput
+  action_t haction = PA_NULL;         // program action corresponding to hinput
+  unsigned height;                    // history window height
+  unsigned top;                       // first history entry to be printed
+  int focus = history_cur;            // focused history entry
+
+  // Create the history window, retrieve height, and calculate top
+  draw_imm(true, false, L"History", help);
+  height = getmaxy(wimm);
+  if (focus > height - 6)
+    top = focus - height + 6;
+  else
+    top = 0;
+
+  // Main loop
+  while (true) {
+    // Draw the help text in the help window
+    draw_history(history, history_cur, history_top, top, focus);
+    doupdate();
+
+    // Get user input
+    hinput = getch();
+    hms = get_mouse_status(hinput);
+    if ('\e' == hinput || KEY_BREAK == hinput || 0x03 == hinput ||
+        (BT_RIGHT == hms.button && hms.up)) {
+      // User hit ESC or CTRL-C or pressed right mouse button; abort
+      del_imm();
+      tui_error(L"Aborted");
+      tui_redraw();
+      return false;
+    }
+    haction = get_action(hinput);
+
+    // Perform the requested action
+    switch (haction) {
+    case PA_UP:
+      focus--;
+      if (-1 == focus)
+        focus = history_top;
+      break;
+    case PA_DOWN:
+      focus++;
+      if (history_top + 1 == focus)
+        focus = 0;
+      break;
+    case PA_OPEN:
+      del_imm();
+      if (history_jump(focus))
+        populate_page();
+      if (err)
+        winddown(ES_OPER_ERROR, err_msg);
+      return true;
+      break;
+    case PA_NULL:
+    default:
+      if (WH_UP == hms.wheel) {
+        // When mouse wheel scrolls up, select previous history entry
+        focus--;
+        if (-1 == focus)
+          focus = history_top;
+      } else if (WH_DOWN == hms.wheel) {
+        // When mouse wheel scrolls down, select next history entry
+        focus++;
+        if (history_top + 1 == focus)
+          focus = 0;
+      } else if (BT_LEFT == hms.button && hms.down) {
+        // On left button press, focus on the history entry under the cursor
+        int iy = hms.y, ix = hms.x;
+        unsigned ih = getmaxy(wimm);
+        if (wmouse_trafo(wimm, &iy, &ix, false))
+          if (iy > 1 && iy < ih - 3 && history_top >= top + iy - 2)
+            focus = top + iy - 2;
+      } else if (BT_LEFT == hms.button && hms.up) {
+        // On left button release, focus on the history entry under the cursor
+        int iy = hms.y, ix = hms.x;
+        unsigned ih = getmaxy(wimm);
+        if (wmouse_trafo(wimm, &iy, &ix, false))
+          if (iy > 1 && iy < ih - 3 && history_top >= top + iy - 2) {
+            focus = top + iy - 2;
+            if (config.mouse.left_click_open) {
+              // If the left_click_open option is set, go to the appropriate
+              // history entry
+              del_imm();
+              if (history_jump(focus))
+                populate_page();
+              if (err)
+                winddown(ES_OPER_ERROR, err_msg);
+              return true;
+            }
+          }
+      } else if (BT_WHEEL == hms.button && hms.up) {
+        // On mouse wheel click, go to the appropriate history entry
+        del_imm();
+        if (history_jump(focus))
+          populate_page();
+        if (err)
+          winddown(ES_OPER_ERROR, err_msg);
+        return true;
+      }
+      break;
+    }
+
+    // Adjust top (in case the entire menu won't fit in the immediate window)
+    if (focus < top)
+      top = focus;
+    else if (focus > top + height - 6)
+      top = focus - height + 6;
+
+    // If terminal size has changed, regenerate page and redraw everything
+    if (termsize_changed()) {
+      del_imm();
+      init_windows();
+      populate_page();
+      if (err)
+        winddown(ES_OPER_ERROR, err_msg);
+      termsize_adjust();
+      tui_redraw();
+      top = 0;
+      focus = 0;
+      draw_imm(true, false, L"History", help);
+      draw_history(history, history_cur, history_top, top, focus);
+      doupdate();
+      height = getmaxy(wimm);
+    }
+  }
+
+  return true;
 }
 
 bool tui_search(bool back) {
@@ -1489,7 +1671,7 @@ bool tui_help() {
   }
 
   // Create the help window, and retrieve its height
-  draw_imm(true, L"Program Actions and Keyboard Help", help);
+  draw_imm(true, true, L"Program Actions and Keyboard Help", help);
   height = getmaxy(wimm);
 
   // Main loop
@@ -1542,19 +1724,17 @@ bool tui_help() {
           focus = 1;
       } else if (BT_LEFT == hms.button && hms.down) {
         // On left button press, focus on the help entry under the cursor
-        int iy = hms.y,
-            ix = hms.x;
+        int iy = hms.y, ix = hms.x;
         unsigned ih = getmaxy(wimm);
         if (wmouse_trafo(wimm, &iy, &ix, false))
-          if (iy > 1 && iy < ih - 3)
+          if (iy > 1 && iy < ih - 3 && PA_QUIT >= top + iy - 2)
             focus = top + iy - 2;
       } else if (BT_LEFT == hms.button && hms.up) {
         // On left button release, focus on the help entry under the cursor
-        int iy = hms.y,
-            ix = hms.x;
+        int iy = hms.y, ix = hms.x;
         unsigned ih = getmaxy(wimm);
         if (wmouse_trafo(wimm, &iy, &ix, false))
-          if (iy > 1 && iy < ih - 3) {
+          if (iy > 1 && iy < ih - 3 && PA_QUIT >= top + iy - 2) {
             focus = top + iy - 2;
             if (config.mouse.left_click_open) {
               // If the left_click_open option is set, execute the entry's
@@ -1590,7 +1770,7 @@ bool tui_help() {
       tui_redraw();
       top = 1;
       focus = 1;
-      draw_imm(true, L"Program Actions and Keyboard Help", help);
+      draw_imm(true, true, L"Program Actions and Keyboard Help", help);
       draw_help((const wchar_t **)keys_names, keys_names_max, top, focus);
       doupdate();
       height = getmaxy(wimm);
@@ -1745,6 +1925,9 @@ void tui() {
       break;
     case PA_FWRD:
       redraw = tui_fwrd();
+      break;
+    case PA_HISTORY:
+      redraw = tui_history();
       break;
     case PA_SEARCH:
       redraw = tui_search(false);

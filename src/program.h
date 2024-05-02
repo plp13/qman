@@ -239,6 +239,15 @@ extern full_regex_t re_man, // manual page
                      : (RT_MAN_LOCAL == t                                      \
                             ? L"LOCAL"                                         \
                             : (RT_APROPOS == t ? L"APROPOS" : L"WHATIS")))
+
+// If n is smaller than or equal to history_cur, go back n steps in history and
+// return true. Otherwise, return false.
+#define history_back(n) history_jump(history_cur - n)
+
+// If n + history_cur is smaller than or equal to history_top, go forward n
+// steps in history and return true. Otherwise, return false.
+#define history_forward(n) history_jump(history_cur + n)
+
 //
 // Functions
 //
@@ -272,13 +281,9 @@ extern void history_replace(request_type_t rt, const wchar_t *args);
 // it remains equal to or greater than it.
 extern void history_push(request_type_t rt, const wchar_t *args);
 
-// If n is smaller than or equal to history_cur, go back n steps in history and
-// return true. Otherwise, return false.
-extern bool history_back(unsigned n);
-
-// If n + history_cur is smaller than or equal to history_top, go forward n
-// steps in history and return true. Otherwise, return false.
-extern bool history_forward(unsigned n);
+// If pos is larger or equal to 0 and smaller or equal to history_cur, jump to
+// history position pos and return true. Otherwise, return false.
+extern bool history_jump(int pos);
 
 // Discard all history entries after history_cur, and make history_top equal to
 // history_cur
