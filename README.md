@@ -44,14 +44,11 @@ dependencies.
 - Command-line options similar to those of `man` (most importantly, `-k` and
   `-f`)
 - Keyboard mappings similar to those of `less`
+- Mouse support
 - Navigation history
 - On-line help
 - Fully configurable using an INI-style config file
 - Manual page
-
-## Future features
-- Navigation history dialog (view and select history entries using a menu)
-- More???
 
 All basic functionality has now been completed. However, the program should
 still be considered as beta quality. Please try it out and report any
