@@ -180,7 +180,7 @@ extern void safree(char **buf, unsigned buf_len);
 // do any memory allocation. Said argument must be a pointer to a buffer of
 // already allocated memory.
 
-// Return the number of uccurences of needle in hayst
+// Return the number of occurences of needle in hayst
 extern unsigned wccnt(const wchar_t *hayst, wchar_t needle);
 
 // Replace all occurences of needle in hayst with repl. Place the result in
@@ -211,6 +211,9 @@ extern unsigned wmaxlen(const wchar_t *const *src, unsigned src_len);
 
 // Return the position of the first character in src that is not whitespace
 extern unsigned wmargend(const wchar_t *src);
+
+// Case-insensitive version of wcsstr()
+extern wchar_t *wcscasestr(const wchar_t *haystack, const wchar_t *needle);
 
 // Copy all data in source into trgt, line by line. Both source and target must
 // be text files. Return the number of lines copied.

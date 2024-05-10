@@ -1827,10 +1827,6 @@ bool tui_mouse_click(short y, short x) {
         1, MIN(sh - 2, sy))); // where the scrollbar knob should be repositioned
 
     page_top = bp == 1 ? 0 : (bp * (page_len - sh + 1) - 1) / (sh - 2);
-    char tmp[BS_SHORT];
-    snprintf(tmp, BS_SHORT, "sy=%d sx=%d sh=%d bp=%d page_top=%d", sy, sx, sh,
-             bp, page_top);
-    loggit(tmp);
     const link_loc_t fl = first_link(page, page_len, page_top,
                                      page_top + config.layout.main_height - 1);
     if (fl.ok && (page_flink.line != fl.line || page_flink.link != fl.link))

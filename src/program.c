@@ -1098,7 +1098,7 @@ unsigned search(result_t **dst, const wchar_t *needle, const line_t *lines,
   unsigned i = 0;                             // current result no.
   const unsigned needle_len = wcslen(needle); // length of needle
   wchar_t *cur_hayst;      // current haystuck (i.e. text of current line)
-  wchar_t *hit = NULL;     // current return value of wcsstr()
+  wchar_t *hit = NULL;     // current return value of wcscasestr()
   unsigned res_len = 1024; // result buffer length
   result_t *res = aalloc(res_len, result_t); // result buffer
 
@@ -1107,7 +1107,7 @@ unsigned search(result_t **dst, const wchar_t *needle, const line_t *lines,
     // Start at the beginning of the line's text
     cur_hayst = lines[ln].text;
     // Search for needle
-    hit = wcsstr(cur_hayst, needle);
+    hit = wcscasestr(cur_hayst, needle);
     // While needle has been found...
     while (NULL != hit) {
       // Add the search result to res[i]
@@ -1118,7 +1118,7 @@ unsigned search(result_t **dst, const wchar_t *needle, const line_t *lines,
       cur_hayst = hit + needle_len;
       // And search for needle again (except in case of overflow)
       if (cur_hayst - lines[ln].text < lines[ln].length)
-        hit = wcsstr(cur_hayst, needle);
+        hit = wcscasestr(cur_hayst, needle);
       else
         hit = NULL;
       // Increment i (and reallocate memory if necessary)
@@ -1145,13 +1145,13 @@ int search_next(result_t *res, unsigned res_len, unsigned from) {
 }
 
 int search_prev(result_t *res, unsigned res_len, unsigned from) {
-  unsigned i;
-  unsigned prev_line = -1;
+  int i;
 
-  for (i = 0; i < res_len && res[i].line < from; i++)
-    prev_line = res[i].line;
+  for (i = res_len - 1; i >=0; i--)
+    if (res[i].line <= from)
+      return res[i].line;
 
-  return prev_line;
+  return -1;
 }
 
 void populate_page() {

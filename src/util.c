@@ -346,6 +346,31 @@ unsigned wmargend(const wchar_t *src) {
   return 0;
 }
 
+wchar_t *wcscasestr(const wchar_t *haystack, const wchar_t *needle) {
+  unsigned i = 0, j;
+  wchar_t haystack_c, needle_c;
+
+  if (L'\0' == needle[0])
+    return (wchar_t *)haystack;
+
+  while (L'\0' != haystack[i]) {
+    j = 0;
+    while (TRUE) {
+      haystack_c = towlower(haystack[i + j]);
+      needle_c = towlower(needle[j]);
+      if (L'\0' == needle_c)
+        return (wchar_t *)&haystack[i];
+      else if (haystack_c != needle_c)
+        break;
+      else
+        j++;
+    }
+    i++;
+  }
+
+  return NULL;
+}
+
 unsigned scopylines(FILE *source, FILE *trgt) {
   unsigned cnt = 0;
   char tmp[BS_LINE];
