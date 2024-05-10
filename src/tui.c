@@ -72,6 +72,7 @@ mouse_t mouse_status = {BT_NONE, false, false, WH_NONE, -1, -1};
     winddown_tui();                                                            \
     init_tui();                                                                \
     init_tui_colours();                                                        \
+    init_tui_mouse();                                                          \
     termsize_changed();                                                        \
     init_windows();                                                            \
     populate_page();                                                           \
@@ -314,10 +315,6 @@ void init_tui() {
   initscr();
   raw();
   keypad(stdscr, true);
-  mousemask(BUTTON1_PRESSED | BUTTON1_RELEASED | BUTTON3_PRESSED |
-                BUTTON3_RELEASED | BUTTON2_PRESSED | BUTTON2_RELEASED |
-                BUTTON4_PRESSED | BUTTON5_PRESSED | REPORT_MOUSE_POSITION,
-            NULL);
   noecho();
   curs_set(1);
   timeout(2000);
@@ -368,6 +365,14 @@ void init_tui_colours() {
               config.colours.stat_input_prompt.bg,
               config.colours.stat_input_em.bg);
   }
+}
+
+void init_tui_mouse() {
+  if (config.mouse.enable)
+    mousemask(BUTTON1_PRESSED | BUTTON1_RELEASED | BUTTON3_PRESSED |
+                  BUTTON3_RELEASED | BUTTON2_PRESSED | BUTTON2_RELEASED |
+                  BUTTON4_PRESSED | BUTTON5_PRESSED | REPORT_MOUSE_POSITION,
+              NULL);
 }
 
 void init_windows() {
@@ -809,7 +814,7 @@ action_t get_action(int chr) {
 mouse_t get_mouse_status(int chr) {
   mouse_t ret = {BT_NONE, false, false, WH_NONE, -1, -1};
 
-  if (!config.mouse.enable) {
+  if (!config.mouse.enable || !has_mouse()) {
     // If mouse is disabled, always return an empty status
     return ret;
   }
@@ -1837,6 +1842,7 @@ bool tui_mouse_click(short y, short x) {
 
   return false;
 }
+
 void tui() {
   int input;                // keyboard/mouse input from user
   bool redraw = true;       // set this to true to redraw the screen
@@ -1848,6 +1854,7 @@ void tui() {
   init_tui();
   configure();
   init_tui_colours();
+  init_tui_mouse();
   termsize_changed();
   init_windows();
 
@@ -1973,7 +1980,7 @@ void tui() {
         // Right mouse button click causes PA_HELP
         redraw = tui_help();
       } else if (BT_LEFT == mouse_status.button && mouse_status.down) {
-        // On left mouse button press, we call tui_mouse_down()
+        // On left mouse button press, we call tui_mouse_click()
         redraw = tui_mouse_click(mouse_status.y, mouse_status.x);
       } else if (BT_LEFT == mouse_status.button && mouse_status.up) {
         // Ditto on left mouse button release

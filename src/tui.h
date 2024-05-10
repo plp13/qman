@@ -125,6 +125,9 @@ extern void init_tui();
 // Initialize ncurses color pairs
 extern void init_tui_colours();
 
+// Initialize ncurses mouse support
+extern void init_tui_mouse();
+
 // init_windows() and all draw_...() functions call wnoutrefresh() in order to
 // update the virtual screen before returning. It's your responsibility to call
 // doupdate() afterwards, to update the physical screen.
