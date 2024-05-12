@@ -95,6 +95,16 @@ root):
   # mandb
 ```
 
+*I can't select text with the mouse and/or mouse input behaves erratically*
+
+Mouse support is experimental. To disable it, add the following to your
+configuration file:
+
+```
+[mouse]
+enable=false
+```
+
 *Trying to open an HTTP or e-mail causes the program to terminate (or does
 nothing)*
 
