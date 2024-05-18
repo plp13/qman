@@ -14,6 +14,8 @@ bool colour_hi = false;
 
 bool unicode = false;
 
+bool clipboard = false;
+
 WINDOW *wmain = NULL;
 
 WINDOW *wsbar = NULL;
@@ -24,7 +26,7 @@ WINDOW *wimm = NULL;
 
 action_t action = PA_NULL;
 
-mouse_t mouse_status = {BT_NONE, false, false, WH_NONE, -1, -1};
+mouse_t mouse_status = MS_EMPTY;
 
 //
 // Helper macros and functions
@@ -66,7 +68,7 @@ mouse_t mouse_status = {BT_NONE, false, false, WH_NONE, -1, -1};
     }                                                                          \
   }
 
-// Helper of tui_open. Re-initialize ncurses after shelling out
+// Helper of tui_open(). Re-initialize ncurses after shelling out.
 #define tui_reset                                                              \
   {                                                                            \
     winddown_tui();                                                            \
@@ -133,98 +135,6 @@ void aw_quick_search(wchar_t *needle) {
   }
 
   wnoutrefresh(wimm);
-}
-
-// Helper of tui_help(). Return a (statically allocated) string representation
-// of key mapping k.
-wchar_t *ch2name(int k) {
-  static wchar_t fkeys[12][4]; // placeholders for function key representations
-  static wchar_t okeys[94]
-                      [4]; // placeholders for representations of all other keys
-  unsigned i;              // iterator
-
-  // Navigation and "special" keys
-  switch (k) {
-  case KEY_UP:
-    return L"UP";
-    break;
-  case KEY_DOWN:
-    return L"DOWN";
-    break;
-  case KEY_LEFT:
-    return L"LEFT";
-    break;
-  case KEY_RIGHT:
-    return L"RIGHT";
-    break;
-  case KEY_PPAGE:
-    return L"PGUP";
-    break;
-  case KEY_NPAGE:
-    return L"PGDN";
-    break;
-  case KEY_HOME:
-    return L"HOME";
-    break;
-  case KEY_END:
-    return L"END";
-    break;
-  case '\e':
-    return L"ESC";
-    break;
-  case KEY_BREAK:
-  case 0x03:
-    return L"CTRL-C";
-    break;
-  case KEY_ENTER:
-  case '\n':
-    return L"ENTER";
-    break;
-  case KEY_BACKSPACE:
-  case '\b':
-    return L"BACKSPACE";
-    break;
-  case '\t':
-    return L"TAB";
-    break;
-  case ' ':
-    return L"SPACE";
-    break;
-  }
-
-  // F1 to F9
-  for (i = 0; i <= 8; i++) {
-    if (KEY_F(i + 1) == k) {
-      fkeys[i][0] = L'F';
-      fkeys[i][1] = i + 48;
-      fkeys[i][2] = L'\0';
-      return fkeys[i];
-    }
-  }
-
-  // F10 to F12
-  for (i = 9; i <= 11; i++) {
-    if (KEY_F(i + 1) == k) {
-      fkeys[i][0] = L'F';
-      fkeys[i][1] = L'1';
-      fkeys[i][2] = i + 38;
-      fkeys[i][3] = L'\0';
-      return fkeys[i];
-    }
-  }
-
-  // All other keys
-  if (k >= 33 && k <= 126) {
-    // Key corresponds to a printable character; return it
-    okeys[k - 33][0] = L'\'';
-    okeys[k - 33][1] = k;
-    okeys[k - 33][2] = L'\'';
-    okeys[k - 33][3] = L'\0';
-    return okeys[k - 33];
-  } else {
-    // Key does not correspond to a printable character; return "???"
-    return L"???";
-  }
 }
 
 // Helper of tui_help(). Draw the help menu into wimm. keys_names contains the
@@ -316,20 +226,26 @@ void init_tui() {
   raw();
   keypad(stdscr, true);
   noecho();
-  curs_set(1);
+  curs_set(0);
   timeout(2000);
   start_color();
 
   colour = has_colors() && COLORS >= 8;
   colour_256 = has_colors() && COLORS >= 256;
   colour_hi = colour_256 && can_change_color();
+
   unicode = colour_256;
+
+  char *term = getenv("TERM");
+  if (0 == strcmp(term, "alacritty") || 0 == strcmp(term, "xterm-kitty"))
+    clipboard = true;
 }
 
 void init_tui_colours() {
   if (colour) {
     init_colour(config.colours.text);
     init_colour(config.colours.search);
+    init_colour(config.colours.mark);
     init_colour(config.colours.link_man);
     init_colour(config.colours.link_man_f);
     init_colour(config.colours.link_http);
@@ -368,11 +284,23 @@ void init_tui_colours() {
 }
 
 void init_tui_mouse() {
-  if (config.mouse.enable)
+  if (config.mouse.enable) {
     mousemask(BUTTON1_PRESSED | BUTTON1_RELEASED | BUTTON3_PRESSED |
                   BUTTON3_RELEASED | BUTTON2_PRESSED | BUTTON2_RELEASED |
                   BUTTON4_PRESSED | BUTTON5_PRESSED | REPORT_MOUSE_POSITION,
               NULL);
+
+    // Initialize terminal to enable drag-and-drop
+    char *term = getenv("TERM");
+    if (0 != strcmp(term, "xterm-1002")) {
+      sendescseq("[?1002h");
+    }
+  }
+}
+
+void sendescseq(char *s) {
+  printf("\033%s", s);
+  fflush(stdout);
 }
 
 void init_windows() {
@@ -437,6 +365,104 @@ bool termsize_changed() {
   }
 
   return false;
+}
+
+int cgetch() {
+  curs_set(1);
+  int ret = getch();
+  curs_set(0);
+
+  return ret;
+}
+
+wchar_t *ch2name(int k) {
+  static wchar_t fkeys[12][4]; // placeholders for function key representations
+  static wchar_t okeys[94]
+                      [4]; // placeholders for representations of all other keys
+  unsigned i;              // iterator
+
+  // Navigation and "special" keys
+  switch (k) {
+  case KEY_UP:
+    return L"UP";
+    break;
+  case KEY_DOWN:
+    return L"DOWN";
+    break;
+  case KEY_LEFT:
+    return L"LEFT";
+    break;
+  case KEY_RIGHT:
+    return L"RIGHT";
+    break;
+  case KEY_PPAGE:
+    return L"PGUP";
+    break;
+  case KEY_NPAGE:
+    return L"PGDN";
+    break;
+  case KEY_HOME:
+    return L"HOME";
+    break;
+  case KEY_END:
+    return L"END";
+    break;
+  case '\e':
+    return L"ESC";
+    break;
+  case KEY_BREAK:
+  case 0x03:
+    return L"CTRL-C";
+    break;
+  case KEY_ENTER:
+  case '\n':
+    return L"ENTER";
+    break;
+  case KEY_BACKSPACE:
+  case '\b':
+    return L"BACKSPACE";
+    break;
+  case '\t':
+    return L"TAB";
+    break;
+  case ' ':
+    return L"SPACE";
+    break;
+  }
+
+  // F1 to F9
+  for (i = 0; i <= 8; i++) {
+    if (KEY_F(i + 1) == k) {
+      fkeys[i][0] = L'F';
+      fkeys[i][1] = i + 48;
+      fkeys[i][2] = L'\0';
+      return fkeys[i];
+    }
+  }
+
+  // F10 to F12
+  for (i = 9; i <= 11; i++) {
+    if (KEY_F(i + 1) == k) {
+      fkeys[i][0] = L'F';
+      fkeys[i][1] = L'1';
+      fkeys[i][2] = i + 38;
+      fkeys[i][3] = L'\0';
+      return fkeys[i];
+    }
+  }
+
+  // All other keys
+  if (k >= 33 && k <= 126) {
+    // Key corresponds to a printable character; return it
+    okeys[k - 33][0] = L'\'';
+    okeys[k - 33][1] = k;
+    okeys[k - 33][2] = L'\'';
+    okeys[k - 33][3] = L'\0';
+    return okeys[k - 33];
+  } else {
+    // Key does not correspond to a printable character; return "???"
+    return L"???";
+  }
 }
 
 void termsize_adjust() {
@@ -553,6 +579,27 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
         apply_colour(wmain, y, results[s].start - page_left,
                      results[s].end - results[s].start, config.colours.search);
       s++;
+    }
+
+    // If some text is marked, apply the appropriate color to it
+    if (mark.enabled) {
+      unsigned cx = 0, cn = 0; // x and n parameters for apply_colour()
+      if (ly == mark.start_line && ly == mark.end_line) {
+        cx = MAX(0, (int)mark.start_char - (int)page_left);
+        cn = MAX(0, (int)mark.end_char - (int)mark.start_char + 1);
+        if (mark.start_char < page_left)
+          cn = MAX(0, (int)cn - (int)(page_left - mark.start_char));
+      } else if (ly == mark.start_line && ly < mark.end_line) {
+        cx = MAX(0, (int)mark.start_char - (int)page_left);
+        cn = getmaxx(wmain) - 1;
+      } else if (ly > mark.start_line && ly < mark.end_line) {
+        cx = 0;
+        cn = getmaxx(wmain) - 1;
+      } else if (ly > mark.start_line && ly == mark.end_line) {
+        cx = 0;
+        cn = MAX(0, (int)mark.end_char - (int)page_left + 1);
+      }
+      apply_colour(wmain, y, cx, cn, config.colours.mark);
     }
   }
 
@@ -707,8 +754,7 @@ int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
   int ret;                 // next return value
   int chr = '\0';          // user character input
   int wget_stat;           // mvwget_wch() return value
-  mouse_t ms = {BT_NONE, false, false,
-                WH_NONE, -1,    -1}; // mouse status corresponding to wget_stat
+  mouse_t ms = MS_EMPTY;   // mouse status corresponding to wget_stat
 
   if (NULL != trgt) {
     // First call; initialize res, res_len, and pos
@@ -718,7 +764,9 @@ int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
   }
 
   // Get input from user
+  curs_set(1);
   wget_stat = mvwget_wch(w, y, x + pos, (wint_t *)&chr);
+  curs_set(0);
   ms = get_mouse_status(chr);
 
   if (BT_RIGHT == ms.button && ms.up) {
@@ -812,7 +860,10 @@ action_t get_action(int chr) {
 }
 
 mouse_t get_mouse_status(int chr) {
-  mouse_t ret = {BT_NONE, false, false, WH_NONE, -1, -1};
+  mouse_t ret = MS_EMPTY;  // return value
+  static bool dnd = false; // set to true when we are in drag-and-drop
+  static short dnd_y = -1,
+               dnd_x = -1; // cursor position where drag-and-drop was initiated
 
   if (!config.mouse.enable || !has_mouse()) {
     // If mouse is disabled, always return an empty status
@@ -856,6 +907,29 @@ mouse_t get_mouse_status(int chr) {
           ret.button = BT_LEFT;
       }
 
+      // Record drag-and-drop
+      if (BT_LEFT == ret.button && ret.down) {
+        dnd = true;
+        dnd_y = ev.y;
+        dnd_x = ev.x;
+      } else if (dnd) {
+        char tmp[BS_SHORT];
+        sprintf(tmp,
+                "ALL=%u   REPORT_MOUSE_POSITION=%ld   BUTTON1_PRESSED=%ld   "
+                "BUTTON1_RELEASED=%ld",
+                ev.bstate, ev.bstate & REPORT_MOUSE_POSITION,
+                ev.bstate & BUTTON1_PRESSED, ev.bstate & BUTTON1_RELEASED);
+        loggit(tmp);
+        if (!(ev.bstate & REPORT_MOUSE_POSITION)) {
+          dnd = false;
+          dnd_y = -1;
+          dnd_x = -1;
+        }
+        ret.dnd = dnd;
+        ret.dnd_y = dnd_y;
+        ret.dnd_x = dnd_x;
+      }
+
       // Record mouse wheel activations
       if (ev.bstate & BUTTON4_PRESSED)
         ret.wheel = WH_UP;
@@ -880,6 +954,34 @@ void ctbeep() {
     cbeep();
 }
 
+void editcopy(wchar_t *src) {
+  unsigned srcs_len = 3 * wcslen(src); // Length of char* version of src
+  char *srcs = salloca(srcs_len);      // char* version of src
+  wcstombs(srcs, src, srcs_len);
+
+  size_t src64_len; // Base64-encoded version of src
+  char *src64 = base64_encode((unsigned char *)srcs, srcs_len, &src64_len);
+
+  if (clipboard) {
+    // If supported, copy using escape code 52
+    char *seq = salloca(7 + strlen(src64));
+    sprintf(seq, "]52;c;%s\07", src64);
+    sendescseq(seq);
+  } else {
+    // Fallback: copy using xclip and/or wl-copy
+    struct stat sb;
+    if (stat("/usr/bin/xclip", &sb) == 0 && sb.st_mode & S_IXUSR) {
+      FILE *pp = xpopen("/usr/bin/xclip -i -selection clipboard", "w");
+      fprintf(pp, "%s\r", srcs);
+      xpclose(pp);
+    } else if (stat("/usr/bin/wl-copy", &sb) == 0 && sb.st_mode & S_IXUSR) {
+      FILE *pp = xpopen("/usr/bin/wl-copy", "w");
+      fputs(srcs, pp);
+      xpclose(pp);
+    }
+  }
+}
+
 void winddown_tui() {
   if (NULL != wmain)
     delwin(wmain);
@@ -894,6 +996,13 @@ void winddown_tui() {
   wstat = NULL;
 
   reset_color_pairs();
+
+  // Initialize terminal to disable drag-and-drop
+  char *term = getenv("TERM");
+  if (0 != strcmp(term, "xterm-1002")) {
+    sendescseq("[?1002l");
+  }
+
   endwin();
 }
 
@@ -1372,13 +1481,12 @@ bool tui_history() {
   swprintf(help, BS_SHORT, L"%ls/%ls: choose   %ls: jump   %ls/%ls: abort",
            ch2name(config.keys[PA_UP][0]), ch2name(config.keys[PA_DOWN][0]),
            ch2name(config.keys[PA_OPEN][0]), ch2name(KEY_BREAK), ch2name('\e'));
-  int hinput; // keyboard/mouse input from the user
-  mouse_t hms = {BT_NONE, false, false,
-                 WH_NONE, -1,    -1}; // mouse status corresponding to hinput
-  action_t haction = PA_NULL;         // program action corresponding to hinput
-  unsigned height;                    // history window height
-  unsigned top;                       // first history entry to be printed
-  int focus = history_cur;            // focused history entry
+  int hinput;                 // keyboard/mouse input from the user
+  mouse_t hms = MS_EMPTY;     // mouse status corresponding to hinput
+  action_t haction = PA_NULL; // program action corresponding to hinput
+  unsigned height;            // history window height
+  unsigned top;               // first history entry to be printed
+  int focus = history_cur;    // focused history entry
 
   // Create the history window, retrieve height, and calculate top
   draw_imm(true, false, L"History", help);
@@ -1395,7 +1503,7 @@ bool tui_history() {
     doupdate();
 
     // Get user input
-    hinput = getch();
+    hinput = cgetch();
     hms = get_mouse_status(hinput);
     if ('\e' == hinput || KEY_BREAK == hinput || 0x03 == hinput ||
         (BT_RIGHT == hms.button && hms.up)) {
@@ -1439,13 +1547,6 @@ bool tui_history() {
         focus++;
         if (history_top + 1 == focus)
           focus = 0;
-      } else if (BT_LEFT == hms.button && hms.down) {
-        // On left button press, focus on the history entry under the cursor
-        int iy = hms.y, ix = hms.x;
-        unsigned ih = getmaxy(wimm);
-        if (wmouse_trafo(wimm, &iy, &ix, false))
-          if (iy > 1 && iy < ih - 3 && history_top >= top + iy - 2)
-            focus = top + iy - 2;
       } else if (BT_LEFT == hms.button && hms.up) {
         // On left button release, focus on the history entry under the cursor
         int iy = hms.y, ix = hms.x;
@@ -1659,13 +1760,12 @@ bool tui_help() {
            L"%ls/%ls: choose action   %ls: fire   %ls/%ls: abort",
            ch2name(config.keys[PA_UP][0]), ch2name(config.keys[PA_DOWN][0]),
            ch2name(config.keys[PA_OPEN][0]), ch2name(KEY_BREAK), ch2name('\e'));
-  int hinput; // keyboard/mouse input from the user
-  mouse_t hms = {BT_NONE, false, false,
-                 WH_NONE, -1,    -1}; // mouse status corresponding to hinput
-  action_t haction = PA_NULL;         // program action corresponding to hinput
-  unsigned top = 1;                   // first action to be printed
-  unsigned focus = 1;                 // focused action
-  unsigned height;                    // help window height
+  int hinput;                 // keyboard/mouse input from the user
+  mouse_t hms = MS_EMPTY;     // mouse status corresponding to hinput
+  action_t haction = PA_NULL; // program action corresponding to hinput
+  unsigned top = 1;           // first action to be printed
+  unsigned focus = 1;         // focused action
+  unsigned height;            // help window height
 
   // For each action...
   for (i = 0; i <= PA_QUIT; i++) {
@@ -1702,7 +1802,7 @@ bool tui_help() {
     doupdate();
 
     // Get user input
-    hinput = getch();
+    hinput = cgetch();
     hms = get_mouse_status(hinput);
     if ('\e' == hinput || KEY_BREAK == hinput || 0x03 == hinput ||
         (BT_RIGHT == hms.button && hms.up)) {
@@ -1743,13 +1843,6 @@ bool tui_help() {
         focus++;
         if (PA_QUIT + 1 == focus)
           focus = 1;
-      } else if (BT_LEFT == hms.button && hms.down) {
-        // On left button press, focus on the help entry under the cursor
-        int iy = hms.y, ix = hms.x;
-        unsigned ih = getmaxy(wimm);
-        if (wmouse_trafo(wimm, &iy, &ix, false))
-          if (iy > 1 && iy < ih - 3 && PA_QUIT >= top + iy - 2)
-            focus = top + iy - 2;
       } else if (BT_LEFT == hms.button && hms.up) {
         // On left button release, focus on the help entry under the cursor
         int iy = hms.y, ix = hms.x;
@@ -1805,6 +1898,21 @@ bool tui_mouse_click(short y, short x) {
   int my = y, mx = x; // locations in wmain that correspond to y and x
   int sy = y, sx = x; // locations in wsbar that correspond to y and x
 
+  // If text was being marked with tui_mouse_dnd(), copy it to clipboard and
+  // clear the selection
+  if (mark.enabled) {
+    wchar_t *mt;
+    get_mark(&mt, mark, page, page_len);
+    editcopy(mt);
+    free(mt);
+
+    mark.enabled = false;
+
+    tui_redraw();
+    tui_error(L"Copied to clipboard");
+    return false;
+  }
+
   // If the cursor is on a link, make it the focused link
   if (wmouse_trafo(wmain, &my, &mx, false)) {
     unsigned ln = page_top + my; // line number that corresponds to my
@@ -1827,6 +1935,65 @@ bool tui_mouse_click(short y, short x) {
 
   // If the cursor is on the scrollbar, jump to the appropriate page position
   if (wmouse_trafo(wsbar, &sy, &sx, false)) {
+    unsigned sh = getmaxy(wsbar); // scrollbar window height
+    unsigned bp = (MAX(
+        1, MIN(sh - 2, sy))); // where the scrollbar knob should be repositioned
+
+    page_top = bp == 1 ? 0 : (bp * (page_len - sh + 1) - 1) / (sh - 2);
+    const link_loc_t fl = first_link(page, page_len, page_top,
+                                     page_top + config.layout.main_height - 1);
+    if (fl.ok && (page_flink.line != fl.line || page_flink.link != fl.link))
+      page_flink = fl;
+
+    return true;
+  }
+
+  return false;
+}
+
+bool tui_mouse_dnd(short y, short x, short dy, short dx) {
+  int my = y, mx = x;     // locations in wmain that correspond to y and x
+  int sy = y;             // location in wsbar that corresponds to y
+  int mdy = dy, mdx = dx; // locations in wmain that correspond to dy and dx
+  int sdy = dy, sdx = dx; // locations in wsbar that correspond to dy and dx
+
+  // If dragging was initiated on the main window, mark text
+  if (wmouse_trafo(wmain, &mdy, &mdx, false)) {
+    // Make sure my and mx are always within the confines of wmain
+    if (my >= getmaxy(wmain)) {
+      my = getmaxy(wmain) - 1;
+      mx = getmaxx(wmain) - 1;
+    }
+    if (mx >= getmaxx(wmain))
+      mx = getmaxx(wmain) - 1;
+
+    unsigned start_line = MIN(page_len - 1, page_top + mdy);
+    unsigned start_char = MIN(page[start_line].length - 1, page_left + mdx);
+    unsigned end_line = MIN(page_len - 1, page_top + my);
+    unsigned end_char = MIN(page[end_line].length - 1, page_left + mx);
+
+    // If drag was right-to-left and/or bottom-to-top, swap start_char with
+    // end_char and/or start_line with end_line as needed
+    if (start_line > end_line) {
+      swap(start_line, end_line);
+      swap(start_char, end_char);
+    } else if (start_line == end_line && start_char > end_char) {
+      swap(start_char, end_char);
+    }
+
+    // Mark text
+    mark.enabled = true;
+    mark.start_line = start_line;
+    mark.start_char = start_char;
+    mark.end_line = end_line;
+    mark.end_char = end_char;
+
+    return true;
+  }
+
+  // If dragging was initiated on the scrollbar, jump to the appropriate page
+  // position
+  if (wmouse_trafo(wsbar, &sdy, &sdx, false)) {
     unsigned sh = getmaxy(wsbar); // scrollbar window height
     unsigned bp = (MAX(
         1, MIN(sh - 2, sy))); // where the scrollbar knob should be repositioned
@@ -1888,7 +2055,7 @@ void tui() {
     doupdate();
 
     // Get user input
-    input = getch();
+    input = cgetch();
     action = get_action(input);
     mouse_status = get_mouse_status(input);
 
@@ -1979,12 +2146,13 @@ void tui() {
       } else if (BT_RIGHT == mouse_status.button && mouse_status.up) {
         // Right mouse button click causes PA_HELP
         redraw = tui_help();
-      } else if (BT_LEFT == mouse_status.button && mouse_status.down) {
-        // On left mouse button press, we call tui_mouse_click()
-        redraw = tui_mouse_click(mouse_status.y, mouse_status.x);
       } else if (BT_LEFT == mouse_status.button && mouse_status.up) {
-        // Ditto on left mouse button release
+        // On left mouse button release, call tui_mouse_click()
         redraw = tui_mouse_click(mouse_status.y, mouse_status.x);
+      } else if (mouse_status.dnd) {
+        // On left mouse drag-and-drop, call tui_mouse_dnd()
+        redraw = tui_mouse_dnd(mouse_status.y, mouse_status.x,
+                               mouse_status.dnd_y, mouse_status.dnd_x);
       } else
         redraw = true;
       break;

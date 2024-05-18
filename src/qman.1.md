@@ -44,9 +44,11 @@ also to be fast and tiny, so that it can be used everywhere.
 pager such as **less(1)**, and from an ncurses-based browser such as
 **links(1)**. Manual, apropos, and whatis pages are adorned with links to other
 manual pages, HTTP locations, e-mail addresses, or in-page locations. These
-links can be selected and opened. The program also offers incremental search
-facilities for locating manual pages, and for searching through the text of the
-page currently being displayed, together with on-line help.
+links can be selected and opened.
+
+The program provides a scrollbar, a status line, incremental search facilities
+for locating manual pages, and facilities for searching through the text of the
+page currently being displayed. On-line help is also available.
 
 The table below summarizes the program's actions and their default associated
 keyboard mappings:
@@ -83,21 +85,32 @@ information, see **CONFIGURATION**.
 
 # MOUSE SUPPORT
 
-Mouse input is supported but is considered experimental. The **CONFIGURATION**
-section contains instructions on how to disable it.
+Mouse input is supported but is considered experimental and is disabled by
+default. The **CONFIGURATION** section contains instructions on how to enable
+it. Most terminal emulators still provide basic mouse support when mouse input
+is disabled.
 
-When mouse input is enabled, the scroll wheel can be used as an alternative way
-for invoking the UP and DOWN program actions. Clicking the left mouse button
-causes the link under the cursor to be selected. Clicking the middle button (the
-scroll wheel in most mice) invokes the OPEN action. Finally, clicking the right
-button invokes HELP.
+When mouse input is enabled:
 
-In situations where the user is asked to input text or select from a menu, the
-middle button acts as a substitute for the ENTER key, and the right button as a
-substitute for CTRL-C. When selecting from a menu, clicking the left button
-causes the menu entry under the cursor to be selected.
+- The scroll wheel can be used as an alternative way for scrolling, invoking the
+  UP and DOWN program actions
+- Pressing and dragging the left mouse button over page text causes it to be
+  selected and copied to the clipboard (this feature is experimental and may not
+  work reliably with all terminals/environments)
+- Pressing and dragging the left mouse button over the scrollbar allows for
+  scrolling through the page
+- Clicking the left mouse button on a link causes the link under the cursor to
+  be selected
+- Clicking the middle button (the scroll wheel for most mice) invokes the OPEN
+  action, opening the currently selected link
+- Clicking the right button invokes the HELP action
+- When inputting a search query or selecting from a menu, the middle button acts
+  as a substitute for the ENTER key, and the right button as a substitute for
+  CTRL-C
+- When selecting from a menu, clicking the left button causes the menu entry
+  under the cursor to be selected
 
-The above behaviour can be customized. For more information, see
+The above behavior can be customized. For more information, see
 **CONFIGURATION**.
 
 # OPTIONS
@@ -105,7 +118,7 @@ The program accepts the following non-argument options:
 
 **-n, \-\-index**
 : Show a list of all manual pages on the system, together with their sections
-  and short descriptions. (This is the default behaviour, if the program is
+  and short descriptions. (This is the default behavior, if the program is
   launched with no command-line options and no arguments.)
 
 **-k, \-\-apropos** _regexp_ ...
@@ -233,15 +246,15 @@ _key_1_ _key_2_ _key_3_ _key_4_ _key_5_ _key_6_ _key_7_ _key_8_
 
 The value of each _key_i_ can take one of the following values:
 
-1. Any character, surch as 'a', 'b', 'c', etc.
-2. Any ncurses(3x) keycode, such as 'KEY_UP' or 'KEY_HOME'
-3. 'F1' to 'F12' (for the function keys)
-4. 'ESC' (for the ESC key)
-5. 'EXT' (for CTRL-C)
-6. 'LF' (for the ENTER key)
-7. 'BS' (for the BACKSPACE key)
-8. 'HT' (for the TAB key)
-9. 'SPACE' (for the spacebar)
+- Any character, surch as 'a', 'b', 'c', etc.
+- Any ncurses(3x) keycode, such as 'KEY_UP' or 'KEY_HOME'
+- 'F1' to 'F12' (for the function keys)
+- 'ESC' (for the ESC key)
+- 'EXT' (for CTRL-C)
+- 'LF' (for the ENTER key)
+- 'BS' (for the BACKSPACE key)
+- 'HT' (for the TAB key)
+- 'SPACE' (for the spacebar)
 
 For reasons of compatibility with various terminals, mapping the ENTER key
 requires specifying both 'KEY_ENTER' and 'LF'. Similarly, mapping CTRL-C
@@ -253,7 +266,7 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 
 | Option   | Type         | Def. value | Description                           |
 |----------|--------------|------------|---------------------------------------|
-| enable   | boolean      | true       | Enables mouse support                 |
+| enable   | boolean      | false      | Enables mouse support                 |
 | left_handed | boolean   | false      | Swaps the left and right mouse buttons |
 | left_click_open | boolean | false    | Causes the left mouse button to invoke the OPEN action and/or act as the ENTER key |
 

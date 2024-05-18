@@ -23,6 +23,7 @@ src = [
   config_h,
   config_c,
   'util.c',
+  'base64.c',
   'program.c',
   'cli.c',
   'tui.c',

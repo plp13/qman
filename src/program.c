@@ -58,6 +58,8 @@ result_t *results = NULL;
 
 unsigned results_len = 0;
 
+mark_t mark = {false, 0, 0, 0, 0};
+
 full_regex_t re_man, re_http, re_email;
 
 //
@@ -1147,11 +1149,51 @@ int search_next(result_t *res, unsigned res_len, unsigned from) {
 int search_prev(result_t *res, unsigned res_len, unsigned from) {
   int i;
 
-  for (i = res_len - 1; i >=0; i--)
+  for (i = res_len - 1; i >= 0; i--)
     if (res[i].line <= from)
       return res[i].line;
 
   return -1;
+}
+
+extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines,
+                         unsigned lines_len) {
+  // Return if no text is marked
+  if (!mark.enabled) {
+    *dst = NULL;
+    return 0;
+  }
+
+  wchar_t *res = walloc(BS_LINE * config.layout.height); // return value
+  memset(res, 0, sizeof(wchar_t) * BS_LINE * config.layout.height);
+  wchar_t tmp[BS_LINE]; // temporary
+  unsigned ln;          // current line number
+
+  // Generate return value
+  if (mark.start_line == mark.end_line) {
+    // Marked text is in a single line
+    wcsncpy(res, &lines[mark.start_line].text[mark.start_char],
+            1 + mark.end_char - mark.start_char);
+  } else {
+    // Marked text is in multiple lines
+    for (ln = mark.start_line; ln <= mark.end_line; ln++) {
+      if (ln == mark.start_line) {
+        // First line; append text from start_char to end of line
+        wcscat(res, &lines[ln].text[mark.start_char]);
+      } else if (ln == mark.end_line) {
+        // Last line; append text from beginning of line to end_char
+        wcsncpy(tmp, lines[ln].text, 1 + mark.end_char);
+        tmp[1 + mark.end_char] = L'\0';
+        wcscat(res, tmp);
+      } else {
+        // Intermediary lines; append entire line text
+        wcscat(res, lines[ln].text);
+      }
+    }
+  }
+
+  *dst = res;
+  return wcslen(res);
 }
 
 void populate_page() {
@@ -1234,6 +1276,9 @@ void lines_free(line_t *lines, unsigned lines_len) {
 void winddown(int ec, const wchar_t *em) {
   // Shut ncurses down
   winddown_tui();
+
+  // Deallocate memory used by base64
+  base64_cleanup();
 
   // Deallocate memory used by config global
   if (NULL != config.chars.sbar_top)

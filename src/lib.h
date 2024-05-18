@@ -11,6 +11,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/param.h>
 #include <locale.h>
 #include <string.h>
@@ -23,6 +25,7 @@
 #include <ini.h>
 
 #include "util.h"
+#include "base64.h"
 #include "config.h"
 #include "program.h"
 #include "cli.h"

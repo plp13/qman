@@ -67,6 +67,7 @@ config_def = {
     "colours": {
         "text": (("colour",), ("white", "black", "false"), True, "page text"),
         "search": (("colour",), ("black", "white", "false"), True, "matched search terms in page text"),
+        "mark": (("colour",), ("white", "cyan", "false"), True, "marked text"),
         "link_man": (("colour",), ("green", "black", "false"), True, "links to manual pages"),
         "link_man_f": (("colour",), ("black", "green", "false"), True, "links to manual pages (focused)"),
         "link_http": (("colour",), ("magenta", "black", "false"), True, "HTTP links"),
@@ -122,7 +123,7 @@ config_def = {
         "quit": (("key",), ("q", "Q"), True, "Exit the program")
     },
     "mouse": {
-        "enable": (("bool",), ("true",), True, "enable mouse support"),
+        "enable": (("bool",), ("false",), True, "enable mouse support"),
         "left_handed": (("bool",), ("false",), True, "swap the left and right mouse buttons"),
         "left_click_open": (("bool",), ("false",), True, "causes the left mouse button to invoke the OPEN action and/or act as the ENTER key")
     },

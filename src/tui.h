@@ -30,10 +30,23 @@ typedef struct {
   mouse_button_t button; // which mouse button
   bool down;             // the button was pressed
   bool up;               // the button was released
-  mouse_wheel_t wheel;   // activation of the mouse wheel
-  short y;               // cursor vertical position
-  short x;               // cursor horizontal position
+  bool dnd;    // we are in drag-and-drop (button was previously pressed but not
+               // yet released)
+  short dnd_y; // vertical position where drag-and-drop was initiated
+  short dnd_x; // horizontal position where drag-and-drop was initiated
+  mouse_wheel_t wheel; // activation of the mouse wheel
+  short y;             // cursor vertical position
+  short x;             // cursor horizontal position
 } mouse_t;
+
+//
+// Constants
+//
+
+#define MS_EMPTY                                                               \
+  {                                                                            \
+    BT_NONE, false, false, false, -1, -1, WH_NONE, -1, -1                      \
+  } // empty mouse status (used for initialization)
 
 //
 // Global variables
@@ -54,6 +67,9 @@ extern bool colour_hi;
 // reliable way to determine this this. Therefore we set this variable to the
 // same value as that of colour_256.)
 extern bool unicode;
+
+// True if the terminal supports clipboard interaction using escape code 52
+extern bool clipboard;
 
 // (ncurses windows)
 
@@ -128,6 +144,10 @@ extern void init_tui_colours();
 // Initialize ncurses mouse support
 extern void init_tui_mouse();
 
+// Send escape secuense s to the terminal. This is done by bypassing ncurses. s
+// must not include the initial escape character.
+extern void sendescseq(char *s);
+
 // init_windows() and all draw_...() functions call wnoutrefresh() in order to
 // update the virtual screen before returning. It's your responsibility to call
 // doupdate() afterwards, to update the physical screen.
@@ -139,6 +159,13 @@ extern void init_windows();
 // If terminal width and/or height have changed, update config.layout and return
 // true. Otherwise, return false.
 extern bool termsize_changed();
+
+// Wrapper for getch(). Makes the cursor visible right before getch() is called,
+// invisible right after
+extern int cgetch();
+
+// Return a (statically allocated) string representation of key character k
+extern wchar_t *ch2name(int k);
 
 // Corrects page_top and page_flink whenever the terminal has been resized. Must
 // be called whenever termsize_changed() returned true and right before calling
@@ -221,6 +248,12 @@ extern void cbeep();
 // Beep if config.layout.beep is true, and terminal size has not been changed
 extern void ctbeep();
 
+// Copy src to clipboard. This is done using the escape code 52 (which may or
+// may not be supported by the user's terminal) and also via xclip (if running
+// in X11) or wl-copy (if running in Wayland), to ensure the maximum possible
+// success rate.
+extern void editcopy(wchar_t *src);
+
 // Delete all windows and wind down ncurses. No need to call this function
 // normally, as it's called by winddown().
 extern void winddown_tui();
@@ -299,6 +332,10 @@ extern bool tui_help();
 
 // Called whenever the left mouse button is pressed at position (y, x)
 extern bool tui_mouse_click(short y, short x);
+
+// Called whenever the mouse is left-button dragged to position (y, x). (dy, dx)
+// indicates the position the dragging was initiated.
+extern bool tui_mouse_dnd(short y, short x, short dy, short dx);
 
 // Main handler/loop for the TUI
 extern void tui();
