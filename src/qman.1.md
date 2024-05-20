@@ -135,6 +135,16 @@ The program accepts the following non-argument options:
   searching through the system's manual collection. Each _file_ will be
   interpreted as an nroff source file in the correct format.
 
+**-K \-\-global\-apropos** _regexp_ ...
+: Show the contents of all manual pages whose names and/or short descriptions
+  match any of the _regexp_ arguments. This option may take a long time to
+  execute and must be used with care and/or in conjuction with **-T**.
+
+**-a \-\-all** _page_ ...
+: Show the contents of all manual pages whose names matches any of the _page_
+  arguments. This option may take a long time to execute and must be used with
+  care and/or in conjuction with **-T**.
+
 **-T, \-\-cli**
 : Suppress the text user interface and output directly to the terminal. This
   option can be used to redirect the program's formatted output to a text file

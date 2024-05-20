@@ -11,22 +11,27 @@ option_t options[] = {
      L"Show all manual pages (default behaviour if no PAGE has been specified)",
      OA_NONE, true},
     {"apropos", 'k',
-     L"Search among manual pages and their descriptions for PAGE (apropos)",
+     L"Show a list of all pages whose name and/or description contains PAGE "
+     L"(apropos)",
      OA_NONE, true},
-    {"whatis", 'f', L"Show all pages whose name matches PAGE (whatis)", OA_NONE,
+    {"whatis", 'f',
+     L"Show a list of all pages whose name matches PAGE (whatis)", OA_NONE,
      true},
     {"local-file", 'l', L"Interpret PAGE argument(s) as local filename(s)",
      OA_NONE, true},
-    {"all", 'a', L"Show all matching manual pages across all sections", OA_NONE,
-     true},
+    {"global-apropos", 'K',
+     L"Show the contents of all pages whose name and/or description contains "
+     L"PAGE (global apropos)",
+     OA_NONE, true},
+    {"all", 'a',
+     L"Show the contents of all pages whose name matches PAGE (global whatis)",
+     OA_NONE, true},
     {"cli", 'T', L"Suppress the TUI and output directly to the terminal",
      OA_NONE, true},
     {"config-path", 'C', L"Use ARG as the configuration file path", OA_REQUIRED,
      true},
     {"help", 'h', L"Display this help message", OA_NONE, true},
     {0, 0, 0, 0, false}};
-
-bool opt_all = false;
 
 request_t *history = NULL;
 
@@ -323,9 +328,13 @@ int parse_options(int argc, char *const *argv) {
       // -l or --local-file was passed; try to show a man page from a local file
       history_replace(RT_MAN_LOCAL, NULL);
       break;
+    case 'K':
+      // -k or --global-apropos was passed; make sure it will be passed on to man
+      config.misc.global_apropos = true;
+      break;
     case 'a':
-      // -a or --all was passed; set opt_all to true
-      opt_all = true;
+      // -a or --all was passed; make sure it will be passed on to man
+      config.misc.global_whatis = true;
       break;
     case 'T':
       // -T or --cli was passed; do not launch the TUI
@@ -340,6 +349,7 @@ int parse_options(int argc, char *const *argv) {
     case 'h':
       // -h or --help was passed; print usage and exit
       usage();
+      free(longopts);
       winddown(ES_SUCCESS, NULL);
       break;
     case '?':
@@ -391,7 +401,9 @@ void parse_args(int argc, char *const *argv) {
     // Surround all members of argv with single quotes, and flatten them into
     // the tmp string
     tmp_len = 0;
-    if (opt_all)
+    if (config.misc.global_apropos)
+      wcscpy(tmp, L"-K ");
+    else if (config.misc.global_whatis)
       wcscpy(tmp, L"-a ");
     else
       wcscpy(tmp, L"");
@@ -1329,8 +1341,10 @@ void winddown(int ec, const wchar_t *em) {
     free(config.chars.box_bl);
   if (NULL != config.chars.box_br)
     free(config.chars.box_br);
-  if (NULL != config.misc.program_name)
-    free(config.misc.program_name);
+  if (NULL != config.chars.arrow_up)
+    free(config.chars.arrow_up);
+  if (NULL != config.chars.arrow_down)
+    free(config.chars.arrow_down);
   if (NULL != config.misc.program_version)
     free(config.misc.program_version);
   if (NULL != config.misc.config_path)

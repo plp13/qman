@@ -441,6 +441,9 @@ for section, options in config_def.config_def.items():
 
 [[[end]]]*/
 
+  if (NULL == config.misc.program_name)
+    config.misc.program_name = program_invocation_short_name;
+
   set_transition_colours;
 }
 

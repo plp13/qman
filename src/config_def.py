@@ -147,8 +147,8 @@ config_def = {
         "tabstop": (("int", 0, 100), ("8",), True, "number of characters in a tab stop")
     },
     "misc": {
-        "program_name": (("wstring",), ("Qman",), False, "this program's name"),
-        "program_version": (("wstring",), ("Qman nightly",), False, "version string"),
+        "program_name": (("string",), None, False, "program executable basename (discovered automatically)"),
+        "program_version": (("wstring",), ("Qman nightly",), False, "formal program name and version"),
         "config_path": (("string",), None, False, "path to the configuration file"),
         "man_path": (("string",), ("/usr/bin/man",), True, "path to the man(1) command"),
         "whatis_path": (("string",), ("/usr/bin/whatis",), True, "path to the whatis(1) command"),
@@ -159,6 +159,8 @@ config_def = {
         "reset_after_email": (("bool",), ("true",), True, "re-initialize curses after opening an e-mail link"),
         "history_size": (("int", 0, 256 * 1024), ("65536",), True, "maximum number of history entries"),
         "hyphenate": (("bool",), ("true",), True, "hyphenate long words in manual pages"),
-        "justify": (("bool",), ("true",), True, "justify manual pages text")
+        "justify": (("bool",), ("true",), True, "justify manual pages text"),
+        "global_whatis": (("bool",), ("false",), False, "-a / --all option was passed"),
+        "global_apropos": (("bool",), ("false",), False, "-k / --global-whatis option was passed")
     }
 }

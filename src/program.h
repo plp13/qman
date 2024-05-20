@@ -135,9 +135,6 @@ typedef struct {
 // Program options
 extern option_t options[];
 
-// True if '-a' or '--all' was passed to the program, false otherwise
-extern bool opt_all;
-
 // History of page requests
 extern request_t *history;
 

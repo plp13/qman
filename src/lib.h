@@ -24,6 +24,10 @@
 #undef lines
 #include <ini.h>
 
+#define _GNU_SOURCE
+extern char *program_invocation_short_name;
+#undef _GNU_SOURCE
+
 #include "util.h"
 #include "base64.h"
 #include "config.h"
