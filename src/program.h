@@ -35,6 +35,8 @@ typedef struct {
 
 // Page request type
 typedef enum {
+  RT_NONE,      // empty request; set by init() and then replaced during program
+                // runtime
   RT_INDEX,     // show a list of all manual pages
   RT_MAN,       // show a manual page
   RT_MAN_LOCAL, // show a manual page stored in a local file
@@ -132,6 +134,9 @@ typedef struct {
 
 // Program options
 extern option_t options[];
+
+// True if '-a' or '--all' was passed to the program, false otherwise
+extern bool opt_all;
 
 // History of page requests
 extern request_t *history;

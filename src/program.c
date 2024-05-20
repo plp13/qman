@@ -17,12 +17,16 @@ option_t options[] = {
      true},
     {"local-file", 'l', L"Interpret PAGE argument(s) as local filename(s)",
      OA_NONE, true},
+    {"all", 'a', L"Show all matching manual pages across all sections", OA_NONE,
+     true},
     {"cli", 'T', L"Suppress the TUI and output directly to the terminal",
      OA_NONE, true},
     {"config-path", 'C', L"Use ARG as the configuration file path", OA_REQUIRED,
      true},
     {"help", 'h', L"Display this help message", OA_NONE, true},
     {0, 0, 0, 0, false}};
+
+bool opt_all = false;
 
 request_t *history = NULL;
 
@@ -244,7 +248,7 @@ void init() {
   history_cur = 0;
   history_top = 0;
   history = aalloc(config.misc.history_size, request_t);
-  history_replace(RT_INDEX, NULL);
+  history_replace(RT_NONE, NULL);
 
   // Initialize aw_all and sc_all
   aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"''");
@@ -319,6 +323,10 @@ int parse_options(int argc, char *const *argv) {
       // -l or --local-file was passed; try to show a man page from a local file
       history_replace(RT_MAN_LOCAL, NULL);
       break;
+    case 'a':
+      // -a or --all was passed; set opt_all to true
+      opt_all = true;
+      break;
     case 'T':
       // -T or --cli was passed; do not launch the TUI
       config.layout.tui = false;
@@ -348,15 +356,21 @@ void parse_args(int argc, char *const *argv) {
   wchar_t tmp[BS_LINE], tmp2[BS_SHORT]; // temporary
   unsigned tmp_len; // length of tmp (used to guard against buffer overflows)
 
-  // If the user has specified at least one argument, we should show a manual
-  // page rather than the index page; set the request type of
-  // history[history_cur] to RT_MAN
-  if (RT_INDEX == history[history_cur].request_type && argc >= 1)
-    history_replace(RT_MAN, NULL);
+  // If the user hasn't specfied any options...
+  if (RT_NONE == history[history_cur].request_type) {
+    if (0 == argc) {
+      // ...and no arguments, show the index page
+      history_replace(RT_INDEX, NULL);
+    } else {
+      // ...but has specified arguments, try to show the manual page that
+      // corresponds to said arguments
+      history_replace(RT_MAN, NULL);
+    }
+  }
 
-  // If we are showing a manual, apropos, or whatis page...
-  if (RT_INDEX != history[history_cur].request_type) {
-    // But the user hasn't specified an argument...
+  // If we are showing a manual, apropos, whatis, or local page...
+  if (history[history_cur].request_type > RT_INDEX) {
+    // ...but the user hasn't specified an argument...
     if (0 == argc) {
       // Exit with error message
       switch (history[history_top].request_type) {
@@ -377,14 +391,17 @@ void parse_args(int argc, char *const *argv) {
     // Surround all members of argv with single quotes, and flatten them into
     // the tmp string
     tmp_len = 0;
-    wcscpy(tmp, L"");
+    if (opt_all)
+      wcscpy(tmp, L"-a ");
+    else
+      wcscpy(tmp, L"");
     for (i = 0; i < argc; i++) {
       swprintf(tmp2, BS_SHORT, L"'%s'", argv[i]);
       if (tmp_len + wcslen(tmp2) < BS_LINE) {
         wcscat(tmp, tmp2);
         tmp_len += wcslen(tmp2);
       }
-      if (i < argc - 1 && tmp_len + 1 < BS_LINE) {
+      if (i < argc - 1 && tmp_len + 4 < BS_LINE) {
         wcscat(tmp, L" ");
         tmp_len++;
       }
@@ -520,8 +537,8 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   else
     sprintf(cmdstr, "%s -l %ls 2>>/dev/null", config.misc.apropos_path, args);
 
-  // Execute apropos, and enter its result into a temporary file. lines becomes
-  // the total number of lines copied.
+  // Execute apropos, and enter its result into a temporary file. lines
+  // becomes the total number of lines copied.
   FILE *pp = xpopen(cmdstr, "r");
   FILE *fp = xtmpfile();
   const unsigned lines = scopylines(pp, fp);
@@ -1231,6 +1248,9 @@ void populate_page() {
              history[history_cur].args);
     page_len = aprowhat(&page, AW_WHATIS, history[history_cur].args, L"WHATIS",
                         page_title);
+    break;
+  default:
+    winddown(ES_OPER_ERROR, L"Unexpected program request");
   }
 
   // Reset search results
