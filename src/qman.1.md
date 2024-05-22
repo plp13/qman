@@ -95,12 +95,11 @@ When mouse input is enabled:
 - The scroll wheel can be used as an alternative way for scrolling, invoking the
   UP and DOWN program actions
 - Pressing and dragging the left mouse button over page text causes it to be
-  selected and copied to the clipboard (this feature is experimental and may not
-  work reliably with all terminals/environments)
+  selected and copied to the clipboard (see **NOTE 1 & 2**)
 - Pressing and dragging the left mouse button over the scrollbar allows for
-  scrolling through the page
+  scrolling through the page (see **NOTE 2**)
 - Clicking the left mouse button on a link causes the link under the cursor to
-  be selected
+  be selected (see **NOTE 2**)
 - Clicking the middle button (the scroll wheel for most mice) invokes the OPEN
   action, opening the currently selected link
 - Clicking the right button invokes the HELP action
@@ -112,6 +111,17 @@ When mouse input is enabled:
 
 The above behavior can be customized. For more information, see
 **CONFIGURATION**.
+
+**NOTE 1**
+: There is no reliable method for terminal clients to copy data to the
+  clipboard. An escape code (OSC 52) does exist but is only reliably supported
+  by **kitty(1)**. For all other terminals, **Qman** will try to use
+  **xclip(1)** and/or **wl-clipboard(1)**. However, this will only work when
+  running locally and within a desktop environment (not when using SSH).
+
+**NOTE 2**
+: Some terminals may report cursor position inaccurately, causing difficulties
+  with clicking and dragging.
 
 # OPTIONS
 The program accepts the following non-argument options:
@@ -137,12 +147,12 @@ The program accepts the following non-argument options:
 
 **-K \-\-global\-apropos** _regexp_ ...
 : Show the contents of all manual pages whose names and/or short descriptions
-  match any of the _regexp_ arguments. This option may take a long time to
-  execute and must be used with care and/or in conjuction with **-T**.
+  match any of the _regexp_ arguments. This option can cause long execution time
+  and must be used with care and/or in conjuction with **-T**.
 
 **-a \-\-all** _page_ ...
-: Show the contents of all manual pages whose names matches any of the _page_
-  arguments. This option may take a long time to execute and must be used with
+: Show the contents of all manual pages whose names match any of the _page_
+  arguments. This option can cause long execution time and must be used with
   care and/or in conjuction with **-T**.
 
 **-T, \-\-cli**

@@ -65,10 +65,10 @@ Make sure all of the above dependencies are installed on your system, and do the
 following:
 
 ```
-  $ meson setup build/ src/
-  $ cd build/
-  $ meson compile
-  $ sudo meson install
+$ meson setup build/ src/
+$ cd build/
+$ meson compile
+$ sudo meson install
 ```
 
 For Arch Linux users, there is a an [AUR package](https://aur.archlinux.org/packages/qman-git).
@@ -78,7 +78,7 @@ Always make sure you are up-to-date with the `main` branch. And, of course,
 RTFM:
 
 ```
-qman qman
+$ qman qman
 ```
 
 *What is the location of the configuration file?*
@@ -88,36 +88,34 @@ qman qman
 *Calling `qman` without any parameters fails with message `Apropos '': nothing
 appropriate`*
 
-Your system does not have a manual page index. This can be fixed by running (as
-root):
+Your system does not have a manual page indexi cache. This can be fixed by
+running (as root):
 
 ```
-  # mandb
+# mandb
 ```
 
-*I can't select text with the mouse and/or mouse input behaves erratically*
+*I have enabled mouse support by adding `enable=true` to the `[mouse]` section
+of my configuration file, but now I'm unable to copy text to the clipboard using
+the mouse, and/or my mouse behaves erratically*
 
-Mouse support is experimental. To disable it, add the following to your
-configuration file:
-
-```
-[mouse]
-enable=false
-```
+Mouse support is experimental, and depends on features that are not fully
+implemented by all terminals. See the manual page for more information.
 
 *Trying to open an HTTP or e-mail causes the program to terminate (or does
 nothing)*
 
-By default, `qman` uses `xdg-open` to open such links. On desktop Linux systems,
+By default, Qman uses `xdg-open` to open such links. On desktop Linux systems,
 this is sufficient to open them using the default browser / email client. On all
 other systems, you must specify alternative programs with the `browser_path` and
 `mailer_path` options in the `misc` section of `qman`'s configuration file.
 To avoid opening such links altogether, set both options to a command that does
 nothing, e.g. `/usr/bin/false`.
 
-*`qman` does not look as pretty on my system as in the screenshots*
+*Qman does not look as pretty on my system as in the screenshots*
 
-That look can be achieved by pasting the directives in the supplied
-[modernity.conf](https://github.com/plp13/qman/blob/main/config/modernity.conf).
-into your configuration file. Your terminal must support at least 256 colours
-and Unicode fonts.
+That look can be achieved by using one of the supplied
+[modernity.conf](https://github.com/plp13/qman/blob/main/config/modernity.conf)
+and [modernity_gui.conf](https://github.com/plp13/qman/blob/main/config/modernity_gui.conf)
+configuration files. Both files require a modern virtual terminal with support
+for Unicode fonts and 256 colors.
