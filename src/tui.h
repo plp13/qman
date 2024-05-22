@@ -10,6 +10,17 @@
 // Types
 //
 
+// Terminal capabilities
+typedef struct {
+  char *term;     // contents of the TERM environment variable
+  short colours;  // number of colors supported by the terminal, or 0 if the
+                  // terminal is black and white
+  bool rgb;       // true if terminal colors can be re-defined
+  bool unicode;   // true if the terminal supports Unicode fonts
+  bool clipboard; // true if the terminal supports clipboard operations using
+                  // escape code 52
+} tcap_t;
+
 // A mouse button
 typedef enum {
   BT_NONE,  // n/a
@@ -52,24 +63,8 @@ typedef struct {
 // Global variables
 //
 
-// (terminal detection)
-
-// True if the terminal supports at least 8 colors
-extern bool colour;
-
-// True if the terminal supports at least 256 colours
-extern bool colour_256;
-
-// True if the terminal supports at least 256 colours that can be re-defined
-extern bool colour_hi;
-
-// True if the terminal can display non-ASCII characters. (Note that there's no
-// reliable way to determine this this. Therefore we set this variable to the
-// same value as that of colour_256.)
-extern bool unicode;
-
-// True if the terminal supports clipboard interaction using escape code 52
-extern bool clipboard;
+// Terminal capabilities
+extern tcap_t tcap;
 
 // (ncurses windows)
 
@@ -105,7 +100,7 @@ extern mouse_t mouse_status;
 
 // Change the color for window win to col (a variable of type colour_t)
 #define change_colour(win, col)                                                \
-  if (colour) {                                                                \
+  if (tcap.colours) {                                                          \
     if (col.bold)                                                              \
       wattr_set(win, WA_BOLD, col.pair, NULL);                                 \
     else                                                                       \
@@ -116,7 +111,7 @@ extern mouse_t mouse_status;
 // window win to attr
 #define change_colour_attr(win, col, attr)                                     \
   {                                                                            \
-    if (colour)                                                                \
+    if (tcap.colours)                                                          \
       wattr_set(win, attr, col.pair, NULL);                                    \
     else                                                                       \
       wattrset(win, attr);                                                     \
@@ -124,7 +119,7 @@ extern mouse_t mouse_status;
 
 // Apply color col to n characters, starting at location (y, x) in window w
 #define apply_colour(win, y, x, n, col)                                        \
-  if (colour) {                                                                \
+  if (tcap.colours) {                                                          \
     if (col.bold)                                                              \
       mvwchgat(win, y, x, n, WA_BOLD, col.pair, NULL);                         \
     else                                                                       \
@@ -135,7 +130,7 @@ extern mouse_t mouse_status;
 // Functions (utility)
 //
 
-// Initialize ncurses and set the terminal detection globals
+// Initialize and set up ncurses, and also initialize the tcap global
 extern void init_tui();
 
 // Initialize ncurses color pairs

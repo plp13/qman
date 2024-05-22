@@ -6,15 +6,7 @@
 // Global variables
 //
 
-bool colour = false;
-
-bool colour_256 = false;
-
-bool colour_hi = false;
-
-bool unicode = false;
-
-bool clipboard = false;
+tcap_t tcap;
 
 WINDOW *wmain = NULL;
 
@@ -222,6 +214,7 @@ void draw_history(request_t *history, unsigned history_cur,
 //
 
 void init_tui() {
+  // Initialize and set up ncurses
   initscr();
   raw();
   keypad(stdscr, true);
@@ -230,19 +223,19 @@ void init_tui() {
   timeout(2000);
   start_color();
 
-  colour = has_colors() && COLORS >= 8;
-  colour_256 = has_colors() && COLORS >= 256;
-  colour_hi = colour_256 && can_change_color();
-
-  unicode = colour_256;
-
-  char *term = getenv("TERM");
-  if (0 == strcmp(term, "alacritty") || 0 == strcmp(term, "xterm-kitty"))
-    clipboard = true;
+  // Initialize tcap
+  tcap.term = getenv("TERM");
+  if (has_colors())
+    tcap.colours = COLORS;
+  else
+    tcap.colours = 0;
+  tcap.rgb = (tcap.colours >= 256) && can_change_color();
+  tcap.unicode = 0 != strcmp(tcap.term, "linux") && tcap.colours >= 256;
+  tcap.clipboard = 0 == strcmp(tcap.term, "xterm-kitty");
 }
 
 void init_tui_colours() {
-  if (colour) {
+  if (tcap.colours) {
     init_colour(config.colours.text);
     init_colour(config.colours.search);
     init_colour(config.colours.mark);
@@ -299,7 +292,12 @@ void init_tui_mouse() {
 }
 
 void sendescseq(char *s) {
-  printf("\033%s", s);
+  putchar('\033');
+
+  unsigned i = 0;
+  while ('\0' != s[i])
+    putchar(s[i++]);
+
   fflush(stdout);
 }
 
@@ -962,7 +960,7 @@ void editcopy(wchar_t *src) {
   size_t src64_len; // Base64-encoded version of src
   char *src64 = base64_encode((unsigned char *)srcs, srcs_len, &src64_len);
 
-  if (clipboard) {
+  if (tcap.clipboard) {
     // If supported, copy using escape code 52
     char *seq = salloca(7 + strlen(src64));
     sprintf(seq, "]52;c;%s\07", src64);
