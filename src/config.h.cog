@@ -10,6 +10,13 @@
 // Types
 //
 
+// A ternary bit, i.e. one that can take one of 3 values: true, false, or auto
+typedef enum {
+  t_false,
+  t_true,
+  t_auto
+} trit_t;
+
 // The color of a text character. Unlike ncurses colors, which are short
 // integers that correspond to a color value, colour_t combines foreground
 // color, background, color, boldness, and a corresponding initialized ncurses
@@ -28,7 +35,7 @@ import config_def
 
 cog.outl("// A program action")
 cog.outl("typedef enum {")
-cog.outl("  PA_NULL,  // Do nothing (must be first member of action_t)")
+cog.outl("  PA_NULL,                       // Do nothing (must be first member of action_t)")
 
 for option, option_def in config_def.config_def["keys"].items():
   (type, default_value, in_config, comment) = option_def
@@ -68,6 +75,8 @@ for section, options in config_def.config_def.items():
       cog.outl("  bool " + option + ";")
     elif type[0] == "int":
       cog.outl("  unsigned " + option + ";")
+    elif type[0] == "trit":
+      cog.outl("  trit_t " + option + ";")
     elif type[0] == "string":
       cog.outl("  char *" + option + ";")
     elif type[0] == "wstring":

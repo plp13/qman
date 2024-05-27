@@ -16,9 +16,8 @@ typedef struct {
   short colours;  // number of colors supported by the terminal, or 0 if the
                   // terminal is black and white
   bool rgb;       // true if terminal colors can be re-defined
-  bool unicode;   // true if the terminal supports Unicode fonts
-  bool clipboard; // true if the terminal supports clipboard operations using
-                  // escape code 52
+  bool unicode;   // true if the terminal supports Unicode
+  bool clipboard; // true if the terminal supports clipboard operations (OSC 52)
 } tcap_t;
 
 // A mouse button
@@ -100,11 +99,16 @@ extern mouse_t mouse_status;
 
 // Change the color for window win to col (a variable of type colour_t)
 #define change_colour(win, col)                                                \
-  if (tcap.colours) {                                                          \
-    if (col.bold)                                                              \
-      wattr_set(win, WA_BOLD, col.pair, NULL);                                 \
+  {                                                                            \
+    if (tcap.colours) {                                                        \
+      if (col.bold)                                                            \
+        wattr_set(win, WA_BOLD, col.pair, NULL);                               \
+      else                                                                     \
+        wattr_set(win, WA_NORMAL, col.pair, NULL);                             \
+    } else if (COLOR_BLACK == col.fg && (wmain == win || wimm == win))         \
+      wattr_set(win, WA_REVERSE, config.colours.fallback.pair, NULL);          \
     else                                                                       \
-      wattr_set(win, WA_NORMAL, col.pair, NULL);                               \
+      wattr_set(win, WA_NORMAL, config.colours.fallback.pair, NULL);           \
   }
 
 // Change the color for window win to col, and also set text attribute for
@@ -113,17 +117,25 @@ extern mouse_t mouse_status;
   {                                                                            \
     if (tcap.colours)                                                          \
       wattr_set(win, attr, col.pair, NULL);                                    \
-    else                                                                       \
-      wattrset(win, attr);                                                     \
+    else if (wmain == win || wimm == win)                                      \
+      wattr_set(win, attr, config.colours.fallback.pair, NULL);                \
   }
 
 // Apply color col to n characters, starting at location (y, x) in window w
 #define apply_colour(win, y, x, n, col)                                        \
-  if (tcap.colours) {                                                          \
-    if (col.bold)                                                              \
-      mvwchgat(win, y, x, n, WA_BOLD, col.pair, NULL);                         \
-    else                                                                       \
-      mvwchgat(win, y, x, n, WA_NORMAL, col.pair, NULL);                       \
+  {                                                                            \
+    if (tcap.colours) {                                                        \
+      if (col.bold)                                                            \
+        mvwchgat(win, y, x, n, WA_BOLD, col.pair, NULL);                       \
+      else                                                                     \
+        mvwchgat(win, y, x, n, WA_NORMAL, col.pair, NULL);                     \
+    } else {                                                                   \
+      if (COLOR_BLACK == col.fg && (wmain == win || wimm == win))              \
+        mvwchgat(win, y, x, n, WA_REVERSE, config.colours.fallback.pair,       \
+                 NULL);                                                        \
+      else                                                                     \
+        mvwchgat(win, y, x, n, WA_NORMAL, config.colours.fallback.pair, NULL); \
+    }                                                                          \
   }
 
 //
@@ -132,6 +144,10 @@ extern mouse_t mouse_status;
 
 // Initialize and set up ncurses, and also initialize the tcap global
 extern void init_tui();
+
+// Initialize tcap with the correct terminal capabilities. These are normally
+// sniffed, but this can be overridden in the [tcap] configuration section.
+extern void init_tui_tcap();
 
 // Initialize ncurses color pairs
 extern void init_tui_colours();

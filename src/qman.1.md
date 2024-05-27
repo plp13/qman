@@ -282,7 +282,7 @@ requires specifying both 'KEY_BREAK' and 'ETX', and mapping BACKSPACE requires
 specifying both 'KEY_BACKSPACE' and 'BS'.
 
 **Section [mouse]**
-: This sections contains the following options that pertain to mouse support:
+: This section contains the following options that pertain to mouse support:
 
 | Option   | Type         | Def. value | Description                           |
 |----------|--------------|------------|---------------------------------------|
@@ -300,7 +300,19 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 | beep     | boolean      | true       | Indicates whether to beep the terminal on error |
 | lmargin  | unsigned int | 2          | Size of margin between the left side of the screen, and the page text |
 | rmargin  | unsigned int | 2          | Size of margin between the page text and the scroll bar and/or the right side of the screen |
-| tabstop  | unsigned int | true       | Number of characters in a tab stop (used by actions LEFT and RIGHT) |
+| tabstop  | unsigned int | 8          | Number of characters in a tab stop (used by actions LEFT and RIGHT) |
+
+**Section [tcap]**
+: Normally **Qman** detects the terminal's capabilities automatically. Options
+  in this section provide the ability to specify them explicitly, overriding
+  this behavior:
+
+| Option   | Type         | Def. value | Description                           |
+|----------|--------------|------------|---------------------------------------|
+| colours  | int          | -1         | Number of colors supported by the terminal, or -1 to auto-detect |
+| rgb      | ternary      | auto       | True if terminal can re-define colors, false if not, auto to auto-detect |
+| unicode  | ternary      | auto       | True if terminal supports Unicode, false if not, auto to auto-detect |
+| clipboard| ternary      | auto       | True if terminal supports clipboard operations (OSC 52), false if not, auto to auto-detect |
 
 **Section [misc]**
 : This section contains various miscellaneous options:

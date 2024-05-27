@@ -49,25 +49,58 @@ cog.outl("};")
       config.colours.stat_input_em.pair;
 
 // Helper of various conf_...() functions and methods. Return true if src is
-// equal to 'true', 'yes', or '1'. Return false otherwise.
+// equal to 'true', 'yes', or '1'. Return false if it's equal to 'false', 'no',
+// or '0'. Set errno to 0 if parsed successfully or to -1 if not.
 bool str2bool(const char *src) {
   if (0 == strcasecmp(src, "TRUE") || 0 == strcasecmp(src, "YES") ||
-      0 == strcmp(src, "1"))
+      0 == strcmp(src, "1")) {
+    errno = 0;
     return true;
-  else
+  } else if (0 == strcasecmp(src, "FALSE") || 0 == strcasecmp(src, "NO") ||
+             0 == strcasecmp(src, "0")) {
+    errno = 0;
     return false;
+  } else {
+    errno = -1;
+    return false;
+  }
+}
+
+// Helper of various conf_...() functions and methods. Return t_true if src is
+// equal to 'true', 'yes', or '1'. Return t_false if it's equal to 'false',
+// 'no', or '0'. Return t_auto if it's equal to 'auto' or '-'. Set errno to 0 if
+// parsed successfully or to -1 if not.
+trit_t str2trit(const char *src) {
+  if (0 == strcasecmp(src,"TRUE") || 0 == strcasecmp(src, "YES") ||
+      0 == strcasecmp(src, "1")) {
+    errno = 0;
+    return t_true;
+  } else if (0 == strcasecmp(src, "FALSE") || 0 == strcasecmp(src, "NO") ||
+      0 == strcmp(src, "0")) {
+    errno = 0;
+    return t_false;
+  } else if (0 == strcasecmp(src, "AUTO") || 0 == strcasecmp(src, "-")) {
+    errno = 0;
+    return t_auto;
+  } else {
+    errno = -1;
+    return t_false;
+  }
 }
 
 // Helper of various conf_...() functions and methods. Return the integer value
-// held into src as an integer. If src cannot be parsed into an integer,
-// return INT_MIN.
+// held into src as an integer, and set errno to 0. If src cannot be parsed into
+// an integer return INT_MIN and set errno to -1.
 int str2int(const char *src) {
   int val, vals_read;
   vals_read = sscanf(src, "%d", &val);
-  if (1 != vals_read)
+  if (1 != vals_read) {
+    errno = -1;
     return INT_MIN;
-  else
+  } else {
+    errno = 0;
     return val;
+  }
 }
 
 // Helper of various conf_...() functions and methods. Return the ncurses color
@@ -78,7 +111,7 @@ int str2int(const char *src) {
 short str2colour(const char *src) {
   // Try to parse src as integer. If successful, return it.
   const int srci = str2int(src);
-  if (srci >= 0) {
+  if (errno == 0 && srci >= 0) {
     if (tcap.colours < 256) {
       // Terminal does not support 256 colors; return -2
       return -2;
@@ -200,85 +233,35 @@ int str2ch(const char *src) {
 // equal to s.
 #define conf_section(s) if (0 == strcmp(section, s))
 
-// Helper of conf_handler(). Set trgt to the color that corresponds to value,
-// if name is equal to n. value is formatted as 2 color definitions (as
-// accepted by str2colour) and one boolean, separated by whitespace.
-#define conf_set_colour(n, trgt)                                               \
-  if (0 == strcmp(name, n)) {                                                  \
-    char fg[10], bg[10], bold[10];                                             \
-    unsigned nfg, nbg;                                                         \
-    bool nbold;                                                                \
-    const int vals_read = sscanf(value, "%9s%9s%9s", fg, bg, bold);            \
-    if (3 != vals_read) {                                                      \
-      swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid color value '%s'",       \
-               section, name, value);                                          \
-      winddown(ES_CONFIG_ERROR, errmsg);                                       \
-    }                                                                          \
-    nfg = str2colour(fg);                                                      \
-    if (-1 == nfg) {                                                           \
-      swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid foreground color '%s'",  \
-               section, name, fg);                                             \
-      winddown(ES_CONFIG_ERROR, errmsg);                                       \
-    }                                                                          \
-    nbg = str2colour(bg);                                                      \
-    if (-1 == nbg) {                                                           \
-      swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid background color '%s'",  \
-               section, name, bg);                                             \
-      winddown(ES_CONFIG_ERROR, errmsg);                                       \
-    }                                                                          \
-    nbold = str2bool(bold);                                                    \
-    /* Apply colour changes only if the terminal supports it                */ \
-    if (-2 != nfg && -2 != nbg) {                                              \
-      trgt.fg = nfg;                                                           \
-      trgt.bg = nbg;                                                           \
-      trgt.bold = nbold;                                                       \
-    }                                                                          \
-    return true;                                                               \
-  }
-
-// Helper of conf_handler(). Set trgt to the set of key mappings that
-// correspond to value, if name is equal to n. value is formatted as 8 key
-// mapping definitions (as accepted by str2ch) separated by whitespace.
-#define conf_set_key(n, trgt)                                                  \
-  if (0 == strcmp(name, n)) {                                                  \
-    unsigned i;                                                                \
-    char *keys[8];                                                             \
-    for (i = 0; i < 8; i++)                                                    \
-      keys[i] = walloca(BS_SHORT);                                             \
-    const int keys_read = sscanf(value, "%s%s%s%s%s%s%s%s", keys[0], keys[1],  \
-                                 keys[2], keys[3], keys[4], keys[5], keys[6],  \
-                                 keys[7]);                                     \
-    if (0 == keys_read) {                                                      \
-      swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid key mapping value '%s'", \
-               section, name, value);                                          \
-      winddown(ES_CONFIG_ERROR, errmsg);                                       \
-    }                                                                          \
-    for (i = 0; i < keys_read; i++) {                                          \
-      trgt[i] = str2ch(keys[i]);                                               \
-      if (-1 == trgt[i]) {                                                     \
-        swprintf(                                                              \
-            errmsg, BS_SHORT,                                                  \
-            L"Config parse error at %s/%s: key mapping no. %d is invalid",     \
-            section, name, value);                                             \
-        winddown(ES_CONFIG_ERROR, errmsg);                                     \
-      }                                                                        \
-    }                                                                          \
-    for (i = keys_read; i < 8; i++)                                            \
-      trgt[i] = 0;                                                             \
-    return true;                                                               \
-  }
-
 // Helper of conf_handler(). Set trgt to the boolean stored in value, using
 // str2bool(), if name is equal to n.
 #define conf_set_bool(n, trgt)                                                 \
   if (0 == strcmp(name, n)) {                                                  \
-    trgt = str2bool(value);                                                    \
+    const bool val = str2bool(value);                                          \
+    if (0 != errno) {                                                          \
+      swprintf(errmsg, BS_SHORT,                                               \
+               L"Config parse error at %s/%s: invalid boolean value '%s'",     \
+               section, name, value);                                          \
+      winddown(ES_CONFIG_ERROR, errmsg);                                       \
+    }                                                                          \
+    trgt = val;                                                                \
     return true;                                                               \
   }
+
+// Helper of conf_handler. Set trgt to the trit_t stored in value, using
+// str2trit(), if name is equal to n.
+#define conf_set_trit(n, trgt)                                                 \
+  if (0 == strcmp(name, n)) {                                                  \
+    const trit_t val = str2trit(value);                                        \
+    if (0 != errno) {                                                          \
+      swprintf(errmsg, BS_SHORT,                                               \
+               L"Config parse error at %s/%s: invalid ternary value '%s'",     \
+               section, name, value);                                          \
+      winddown(ES_CONFIG_ERROR, errmsg);                                       \
+    }                                                                          \
+    trgt = val;                                                                \
+    return true;                                                               \
+  }                                                                            \
 
 // Helper of conf_handler(). Set trgt to the integer stored in value, using
 // str2int(), if name is equal to n. min and max can be used to define a lower
@@ -286,9 +269,10 @@ int str2ch(const char *src) {
 #define conf_set_int(n, trgt, min, max)                                        \
   if (0 == strcmp(name, n)) {                                                  \
     const int val = str2int(value);                                            \
-    if (INT_MIN == val) {                                                      \
+    if (0 != errno) {                                                          \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: not an integer", section, name); \
+               L"Config parse error at %s/%s: invalid integer value '%s'",     \
+               section, name, value);                                          \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
     if (val < min || val > max) {                                              \
@@ -335,6 +319,84 @@ int str2ch(const char *src) {
     return true;                                                               \
   }
 
+// Helper of conf_handler(). Set trgt to the color that corresponds to value,
+// if name is equal to n. value is formatted as 2 color definitions (as
+// accepted by str2colour) and one boolean, separated by whitespace.
+#define conf_set_colour(n, trgt)                                               \
+  if (0 == strcmp(name, n)) {                                                  \
+    char fg[10], bg[10], bold[10];                                             \
+    unsigned nfg, nbg;                                                         \
+    bool nbold;                                                                \
+    const int vals_read = sscanf(value, "%9s%9s%9s", fg, bg, bold);            \
+    if (3 != vals_read) {                                                      \
+      swprintf(errmsg, BS_SHORT,                                               \
+               L"Config parse error at %s/%s: invalid color value '%s'",       \
+               section, name, value);                                          \
+      winddown(ES_CONFIG_ERROR, errmsg);                                       \
+    }                                                                          \
+    nfg = str2colour(fg);                                                      \
+    if (-1 == nfg) {                                                           \
+      swprintf(errmsg, BS_SHORT,                                               \
+               L"Config parse error at %s/%s: invalid foreground color '%s'",  \
+               section, name, fg);                                             \
+      winddown(ES_CONFIG_ERROR, errmsg);                                       \
+    }                                                                          \
+    nbg = str2colour(bg);                                                      \
+    if (-1 == nbg) {                                                           \
+      swprintf(errmsg, BS_SHORT,                                               \
+               L"Config parse error at %s/%s: invalid background color '%s'",  \
+               section, name, bg);                                             \
+      winddown(ES_CONFIG_ERROR, errmsg);                                       \
+    }                                                                          \
+    nbold = str2bool(bold);                                                    \
+    if (0 != errno) {                                                          \
+      swprintf(errmsg, BS_SHORT,                                               \
+               L"Config parse error at %s/%s: invalid boolean value '%s'",     \
+               section, name, bold);                                           \
+      winddown(ES_CONFIG_ERROR, errmsg);                                       \
+    }                                                                          \
+    /* Apply colour changes only if the terminal supports it                */ \
+    if (-2 != nfg && -2 != nbg) {                                              \
+      trgt.fg = nfg;                                                           \
+      trgt.bg = nbg;                                                           \
+      trgt.bold = nbold;                                                       \
+    }                                                                          \
+    return true;                                                               \
+  }
+
+// Helper of conf_handler(). Set trgt to the set of key mappings that
+// correspond to value, if name is equal to n. value is formatted as 8 key
+// mapping definitions (as accepted by str2ch) separated by whitespace.
+#define conf_set_key(n, trgt)                                                  \
+  if (0 == strcmp(name, n)) {                                                  \
+    unsigned i;                                                                \
+    char *keys[8];                                                             \
+    for (i = 0; i < 8; i++)                                                    \
+      keys[i] = walloca(BS_SHORT);                                             \
+    const int keys_read = sscanf(value, "%s%s%s%s%s%s%s%s", keys[0], keys[1],  \
+                                 keys[2], keys[3], keys[4], keys[5], keys[6],  \
+                                 keys[7]);                                     \
+    if (0 == keys_read) {                                                      \
+      swprintf(errmsg, BS_SHORT,                                               \
+               L"Config parse error at %s/%s: invalid key mapping value '%s'", \
+               section, name, value);                                          \
+      winddown(ES_CONFIG_ERROR, errmsg);                                       \
+    }                                                                          \
+    for (i = 0; i < keys_read; i++) {                                          \
+      trgt[i] = str2ch(keys[i]);                                               \
+      if (-1 == trgt[i]) {                                                     \
+        swprintf(                                                              \
+            errmsg, BS_SHORT,                                                  \
+            L"Config parse error at %s/%s: key mapping no. %d is invalid",     \
+            section, name, value);                                             \
+        winddown(ES_CONFIG_ERROR, errmsg);                                     \
+      }                                                                        \
+    }                                                                          \
+    for (i = keys_read; i < 8; i++)                                            \
+      trgt[i] = 0;                                                             \
+    return true;                                                               \
+  }
+
 // Helper of conf_handler(). Error out with a "no such option" error message.
 #define conf_no_such_option                                                    \
   swprintf(errmsg, BS_SHORT,                                                   \
@@ -369,6 +431,8 @@ for section, options in config_def.config_def.items():
     # Option is allowed in the config file
     if type[0] == "bool":
       cog.outl("    conf_set_bool(\"" + option + "\", config." + section + "." + option + ");")
+    if type[0] == "trit":
+      cog.outl("    conf_set_trit(\"" + option + "\", config." + section + "." + option + ");")
     elif type[0] == "int":
       cog.outl("    conf_set_int(\"" + option + "\", config." + section + "." + option + ", " + str(type[1]) + ", " + str(type[2]) + ");")
     elif type[0] == "string":
@@ -391,6 +455,60 @@ for section, options in config_def.config_def.items():
   conf_no_such_section;
 }
 
+// Helper of configure(). Initialize configuration in sections [chars] and
+// [colours] to sane defaults.
+void conf_init_chars_colours() {
+/*[[[cog
+
+pair = 10
+
+for section, options in config_def.config_def.items():
+  if section in ["chars", "colours"]:
+    for option, option_def in options.items():
+      (type, default_value, in_config, comment) = option_def
+
+      if None != comment:
+        cog.outl("  // Default value for: " + comment)
+      else:
+        cog.outl("  // Default value for: config." + section + "." + option)
+
+      if type[0] == "bool":
+        cog.outl("  config." + section + "." + option + " = str2bool(\"" + default_value[0] + "\");")
+      elif type[0] == "trit":
+        cog.outl("  config." + section + "." + option + " = str2trit(\"" + default_value[0] + "\");")
+      elif type[0] == "int":
+        cog.outl("  config." + section + "." + option + " = str2int(\"" + default_value[0] + "\");")
+      elif type[0] == "string":
+        if None == default_value:
+          cog.outl("  config." + section + "." + option + " = NULL;")
+        else:
+          cog.outl("  config." + section + "." + option + " = xstrdup(\"" + default_value[0] + "\");")
+      elif type[0] == "wstring":
+        if None == default_value:
+          cog.outl("  config." + section + "." + option + " = NULL;")
+        else:
+          cog.outl("  config." + section + "." + option + " = xwcsdup(L\"" + default_value[0] + "\");")
+      elif type[0] == "colour":
+        cog.outl("  config." + section + "." + option + ".fg = str2colour(\"" + default_value[0] + "\");")
+        cog.outl("  config." + section + "." + option + ".bg = str2colour(\"" + default_value[1] + "\");")
+        cog.outl("  config." + section + "." + option + ".bold = str2bool(\"" + default_value[2] + "\");")
+        cog.outl("  config." + section + "." + option + ".pair = " + str(pair) + ";")
+        pair += 1
+      elif type[0] == "key":
+        for i in range(8):
+          if i < len(default_value):
+            cog.outl("  config." + section + "[PA_" + option.upper() + "][" + str(i) + "] = str2ch(\"" + default_value[i] + "\");")
+          else:
+            cog.outl("  config." + section + "[PA_" + option.upper() + "][" + str(i) + "] = 0;")
+
+      cog.outl()
+]]]
+
+[[[end]]]*/
+
+  set_transition_colours;
+}
+
 //
 // Functions
 //
@@ -411,6 +529,8 @@ for section, options in config_def.config_def.items():
 
     if type[0] == "bool":
       cog.outl("  config." + section + "." + option + " = str2bool(\"" + default_value[0] + "\");")
+    elif type[0] == "trit":
+      cog.outl("  config." + section + "." + option + " = str2trit(\"" + default_value[0] + "\");")
     elif type[0] == "int":
       cog.outl("  config." + section + "." + option + " = str2int(\"" + default_value[0] + "\");")
     elif type[0] == "string":
@@ -448,8 +568,17 @@ for section, options in config_def.config_def.items():
 }
 
 void configure() {
+  static bool ft = true;    // true if this is the first invocation of
+                            // configure()
   FILE *fp;                 // config file
   wchar_t errmsg[BS_SHORT]; // error message
+
+  // If this isn't the first invocation of configure(), call
+  // conf_init_chars_colours()
+  if (ft)
+    ft = false;
+  else
+    conf_init_chars_colours();
 
   // Find and open the config file
   if (NULL != config.misc.config_path) {

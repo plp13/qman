@@ -65,6 +65,7 @@ mouse_t mouse_status = MS_EMPTY;
   {                                                                            \
     winddown_tui();                                                            \
     init_tui();                                                                \
+    init_tui_tcap();                                                           \
     init_tui_colours();                                                        \
     init_tui_mouse();                                                          \
     termsize_changed();                                                        \
@@ -222,19 +223,59 @@ void init_tui() {
   curs_set(0);
   timeout(2000);
   start_color();
+}
 
-  // Initialize tcap
+void init_tui_tcap() {
   tcap.term = getenv("TERM");
-  if (has_colors())
-    tcap.colours = COLORS;
-  else
-    tcap.colours = 0;
-  tcap.rgb = (tcap.colours >= 256) && can_change_color();
-  tcap.unicode = 0 != strcmp(tcap.term, "linux") && tcap.colours >= 256;
-  tcap.clipboard = 0 == strcmp(tcap.term, "xterm-kitty");
+
+  if (-1 == config.tcap.colours) {
+    if (has_colors())
+      tcap.colours = COLORS;
+    else
+      tcap.colours = 0;
+  } else {
+    tcap.colours = config.tcap.colours;
+  }
+
+  switch (config.tcap.rgb) {
+  case t_true:
+    tcap.rgb = true;
+    break;
+  case t_false:
+    tcap.rgb = false;
+    break;
+  case t_auto:
+    tcap.rgb = (tcap.colours >= 256) && can_change_color();
+  }
+
+  switch (config.tcap.unicode) {
+  case t_true:
+    tcap.unicode = true;
+    break;
+  case t_false:
+    tcap.unicode = false;
+    break;
+  case t_auto:
+    tcap.unicode = 0 != strcmp(tcap.term, "linux") && tcap.colours >= 256;
+  }
+
+  switch (config.tcap.clipboard) {
+  case t_true:
+    tcap.clipboard = true;
+    break;
+  case t_false:
+    tcap.clipboard = false;
+    break;
+  case t_auto:
+    tcap.clipboard = 0 == strcmp(tcap.term, "xterm-kitty");
+  }
 }
 
 void init_tui_colours() {
+  // Always initialize fallback color for B&W terminals
+  init_colour(config.colours.fallback);
+
+  // Initialize other colors only if the terminal supports color
   if (tcap.colours) {
     init_colour(config.colours.text);
     init_colour(config.colours.search);
@@ -2018,6 +2059,13 @@ void tui() {
   // Initialize TUI
   init_tui();
   configure();
+  init_tui_tcap();
+  if (-1 == config.tcap.colours || t_auto == config.tcap.rgb ||
+      t_auto == config.tcap.unicode || t_auto == config.tcap.clipboard) {
+    // Options were set in the [pcap] configuration section; we must run
+    // configure() again
+    configure();
+  }
   init_tui_colours();
   init_tui_mouse();
   termsize_changed();
