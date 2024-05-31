@@ -1,9 +1,7 @@
 """
 Program configuration registry
 
-A dictionary that describes the config structures used by the program. To add,
-remove, or change the members of these structures, please modify this
-dictionary and re-compile.
+A dictionary that describes the configuration options used by the program.
 
 Structure:
     {

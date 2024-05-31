@@ -2062,8 +2062,9 @@ void tui() {
   init_tui_tcap();
   if (-1 == config.tcap.colours || t_auto == config.tcap.rgb ||
       t_auto == config.tcap.unicode || t_auto == config.tcap.clipboard) {
-    // Options were set in the [pcap] configuration section; we must run
-    // configure() again
+    // Options were defined in the [pcap] configuration section; we must run
+    // configure() again, to re-initialize configuration options whose final
+    // value might depend on terminal capabilities
     configure();
   }
   init_tui_colours();

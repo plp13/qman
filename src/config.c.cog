@@ -574,7 +574,8 @@ void configure() {
   wchar_t errmsg[BS_SHORT]; // error message
 
   // If this isn't the first invocation of configure(), call
-  // conf_init_chars_colours()
+  // conf_init_chars_colours() to reset UI characters and colors to their
+  // default values
   if (ft)
     ft = false;
   else
@@ -591,7 +592,8 @@ void configure() {
       winddown(ES_CONFIG_ERROR, errmsg);
     }
   } else {
-    // No -C option; try to open specified config file at the standard locations
+    // No -C option; try to find and open a config file at the standard
+    // locations: ~/.config/qman.conf and /etc/xdg/qman.conf
     const char *home = getenv("HOME");
     const unsigned hc_len = strlen(home) + 19;
     char *hc = salloca(hc_len);
