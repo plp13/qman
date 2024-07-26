@@ -5,7 +5,7 @@ project('qman', 'c',
 )
 
 # Configuration subsystem sources (generated from config_def.py using cog)
-cog = find_program('cog')
+cog = find_program('cogapp', 'cog')
 cog_cmd = [cog, '-d', '-o', '@OUTPUT@', '@INPUT@']
 config_h = custom_target('config.h',
   input: 'config.h.cog',

@@ -60,6 +60,26 @@ Qman is written in plain C, and thus requires a compiler such as `gcc` or
 uses the `meson` build system. Its manual page is written in Markdown, and is
 compiled using `pandoc`.
 
+In order for the program to make sense, a Unix manual pages database must also
+be installed.
+
+The following commands should install all necessary dependencies for different
+operating systems and distros:
+
+### Arch Linux
+
+```
+  $ pacman -Sy
+  $ pacman -S base-devel git meson libinih python-cogapp pandoc man-db man-pages
+```
+
+### Ubuntu 24.04
+
+```
+  $ apt update
+  $ apt install build-essential git meson cmake pkg-config libncurses-dev libinih-dev python3-cogapp pandoc man-db
+```
+
 ## Building and installing
 Make sure all of the above dependencies are installed on your system, and do the
 following:
