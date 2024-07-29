@@ -67,17 +67,22 @@ The following commands should install all necessary dependencies for different
 operating systems and distros:
 
 ### Arch Linux
-
 ```
-  $ pacman -Sy
-  $ pacman -S base-devel git meson libinih python-cogapp pandoc man-db man-pages
+  # pacman -Sy
+  # pacman -S base-devel git meson libinih python-cogapp pandoc man-db man-pages
 ```
 
 ### Ubuntu 24.04
-
 ```
-  $ apt update
-  $ apt install build-essential git meson cmake pkg-config libncurses-dev libinih-dev python3-cogapp pandoc man-db
+  # apt update
+  # apt install build-essential git meson cmake pkg-config libncurses-dev libinih-dev python3-cogapp pandoc man-db
+```
+
+### Ubuntu 22.04 and 20.04
+```
+  # apt update
+  # apt install build-essential git meson cmake pkg-config libncurses-dev libinih-dev python3-pip pandoc man-db
+  # pip install cogapp
 ```
 
 ## Building and installing
@@ -85,13 +90,18 @@ Make sure all of the above dependencies are installed on your system, and do the
 following:
 
 ```
-  $ meson setup build/ src/
-  $ cd build/
-  $ meson compile
-  $ sudo meson install
+$ meson setup build/ src/
+$ cd build/
+$ meson compile
+$ sudo meson install
 ```
 
-For Arch Linux users, there is a an [AUR package](https://aur.archlinux.org/packages/qman-git).
+Note that, if using an older version of `meson`, you may need to substitute the
+aforementioned `meson compile` command with `ninja`.
+
+### Packages
+For Arch Linux users, there is a an
+[AUR package](https://aur.archlinux.org/packages/qman-git).
 
 ## Troubleshooting
 Always make sure you are up-to-date with the `main` branch. And, of course,
