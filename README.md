@@ -72,6 +72,24 @@ operating systems and distros:
   # pacman -S base-devel git meson libinih python-cogapp pandoc man-db man-pages
 ```
 
+### Debian 12
+```
+  # apt update
+  # apt install build-essential git meson pkg-config libncurses-dev libinih-dev pipx pandoc man-db
+  $ pipx install cogapp
+```
+
+Note that, by default, `pipx` will install the `cog` executable in
+`~/.local/bin`. You will have to add this directory to your path before
+proceeding with `meson setup`.
+
+### Debian 11
+```
+  # apt update
+  # apt install build-essential git meson pkg-config libncurses-dev libinih-dev python3-pip pandoc man-db
+  # pip install cogapp
+```
+
 ### Ubuntu 24.04
 ```
   # apt update
