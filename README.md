@@ -90,6 +90,30 @@ proceeding with `meson setup`.
   # pip install cogapp
 ```
 
+### Rocky Linux 9
+```
+  # dnf install epel-release
+  # dnf update
+  # dnf group install "Development Tools"
+  # dnf install man-db man-pages ncurses-devel python3-pip pandoc
+  # dnf --enablerepo devel install meson inih-devel
+  # pip install cogapp
+```
+
+These steps should also work with Red Hat Enterprise Linux 9 and AlmaLinux 9.
+
+### Rocky Linux 8
+```
+  # dnf install epel-release
+  # dnf update
+  # dnf group install "Development Tools"
+  # dnf install man-db man-pages ncurses-devel python3-pip inih-devel
+  # dnf --enablerepo devel install meson pandoc
+  # pip3 install cogapp
+```
+
+These steps should also work with Red Hat Enterprise Linux 8 and AlmaLinux 8.
+
 ### Ubuntu 24.04
 ```
   # apt update
