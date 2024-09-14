@@ -120,15 +120,15 @@ The above behavior can be customized. For more information, see
   running locally and within a desktop environment (not when using SSH).
 
 **NOTE 2**
-: Some terminals may report cursor position inaccurately, causing difficulties
-  with clicking and dragging.
+: Some terminals may report the cursor position inaccurately, causing
+  difficulties with clicking and dragging.
 
 # OPTIONS
 The program accepts the following non-argument options:
 
 **-n, \-\-index**
 : Show a list of all manual pages on the system, together with their sections
-  and short descriptions. (This is the default behavior, if the program is
+  and short descriptions. (This is the default behavior when the program is
   launched with no command-line options and no arguments.)
 
 **-k, \-\-apropos** _regexp_ ...
@@ -148,12 +148,12 @@ The program accepts the following non-argument options:
 **-K \-\-global\-apropos** _regexp_ ...
 : Show the contents of all manual pages whose names and/or short descriptions
   match any of the _regexp_ arguments. Beware that this option might cause
-  long execution times. If not used in conjuction with **-T**, it is ignored.
+  long execution times. If not used in conjunction with **-T**, it is ignored.
 
 **-a \-\-all** _page_ ...
 : Show the contents of all manual pages whose names match any of the _page_
   arguments. Beware that this option might cause long execution times. If not
-  used in conjuction with **-T**, it is ignored.
+  used in conjunction with **-T**, it is ignored.
 
 **-T, \-\-cli**
 : Suppress the text user interface and output directly to the terminal. This
@@ -176,8 +176,9 @@ are not cumulative.
 If the user specifies the **-C** option, the program instead tries to load its
 configuration from the file specified by the user.
 
-**Qman** uses the INI file format (https://en.wikipedia.org/wiki/INI_file). The
-following sections and configuration options are accepted:
+**Qman** uses the INI file format (https://en.wikipedia.org/wiki/INI_file).
+Different configuration options are grouped into sections. The paragraphs
+below summarize the sections and configuration options that are available:
 
 **Section [chars]**
 : Options in this section specify what characters will be used to draw the text
@@ -202,11 +203,14 @@ following sections and configuration options are accepted:
 | arrow_up          | up arrow                                                 |
 | arrow_down        | down arrow                                               |
 
-Each configuration option value in this section must consist of a single
-Unicode character.
+Each configuration option value must consist of a single Unicode character.
 
-The default values for this section are sensible enough to allow **Qman** to
-work with most terminals and/or environments.
+The default values for this section have been chosen to allow **Qman** to work
+correctly with virtually all terminals, including the venerable **xterm(1)** and
+the Linux console, and with all fonts. Depending on the terminal's capabilities,
+**Qman** may choose to revert to said defaults, and ignore any options you have
+specified in this section. This behavior can be overridden in the **[tcap]**
+section.
 
 **Section [colours]**
 : Options in this section specify the user interface colors:
@@ -236,7 +240,7 @@ work with most terminals and/or environments.
 | sp_input          | pop-up input dialog prompt                               |
 | sp_text           | pop-up input dialog progressive search text              |
 | sp_text_f         | pop-up input dialog progressive search text (focused)    |
-| help_text         | help dialog etries text                                  |
+| help_text         | help dialog entries text                                 |
 | help_text_f       | help dialog entries text (focused)                       |
 
 Each color is defined using three words separated by whitespace:
@@ -252,8 +256,11 @@ values higher than 7 and/or RGB values.
 _bold_ is a boolean that signifies whether the foreground color will have a
 high (true) or low (false) intensity.
 
-The default values for this section are sensible enough to allow **Qman** to
-work with most terminals and/or environments.
+The default values for this section have been chosen to allow **Qman** to work
+correctly with virtually all terminals, including the venerable **xterm(1)** and
+the Linux console. Depending on the terminal's capabilities, **Qman** may
+choose to revert to said defaults, and ignore any options you have specified in
+this section. This behavior can be overridden in the **[tcap]** section.
 
 **Section [keys]**
 : Options in this section specify which keys are mapped to each program action.
@@ -303,7 +310,7 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 | tabstop  | unsigned int | 8          | Number of characters in a tab stop (used by actions LEFT and RIGHT) |
 
 **Section [tcap]**
-: Normally **Qman** detects the terminal's capabilities automatically. Options
+: Normally, **Qman** detects the terminal's capabilities automatically. Options
   in this section provide the ability to specify them explicitly, overriding
   this behavior:
 
@@ -313,6 +320,12 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 | rgb      | ternary      | auto       | True if terminal can re-define colors, false if not, auto to auto-detect |
 | unicode  | ternary      | auto       | True if terminal supports Unicode, false if not, auto to auto-detect |
 | clipboard| ternary      | auto       | True if terminal supports clipboard operations (OSC 52), false if not, auto to auto-detect |
+
+Beware that **Qman** uses these capabilities to decide whether to either honor
+or ignore various configuration options specified elsewhere, particularly in
+the **[chars]** and **[colours]** sections mentioned above. Auto-detection
+should work correctly in most cases; it's therefore recommended to not modify
+any of the options in this section, except when discovering or reporting bugs.
 
 **Section [misc]**
 : This section contains various miscellaneous options:
@@ -327,8 +340,8 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 | reset_after_http | boolean  | true       | Re-initialize curses after opening an http(s) link |
 | reset_after_email| boolean  | true       | Re-initialize curses after opening an e-mail link |
 | history_size | unsigned int | 256k       | Maximum number of history entries |
-| hyphenate    | boolean      | true       | Hyphenate long words in manual pages |
-| justify      | boolean      | true       | Justify manual pages text         |
+| hyphenate    | boolean      | true       | Whether to hyphenate long words in manual pages |
+| justify      | boolean      | true       | Whether to justify manual pages text         |
 
 When using a horizontally narrow terminal, setting _hyphenate_ to 'true' and/or
 _justify_ to 'false' can improve the program's output.

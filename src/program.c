@@ -1248,7 +1248,7 @@ void populate_page() {
     page_len = index_page(&page);
     break;
   case RT_MAN:
-    swprintf(page_title, BS_SHORT, L"Manual page for: %ls",
+    swprintf(page_title, BS_SHORT, L"Manual page(s) for: %ls",
              history[history_cur].args);
     page_len = man(&page, history[history_cur].args, false);
     break;
