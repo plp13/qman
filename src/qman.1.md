@@ -147,13 +147,13 @@ The program accepts the following non-argument options:
 
 **-K \-\-global\-apropos** _regexp_ ...
 : Show the contents of all manual pages whose names and/or short descriptions
-  match any of the _regexp_ arguments. This option can cause long execution time
-  and must be used with care and/or in conjuction with **-T**.
+  match any of the _regexp_ arguments. Beware that this option might cause
+  long execution times. If not used in conjuction with **-T**, it is ignored.
 
 **-a \-\-all** _page_ ...
 : Show the contents of all manual pages whose names match any of the _page_
-  arguments. This option can cause long execution time and must be used with
-  care and/or in conjuction with **-T**.
+  arguments. Beware that this option might cause long execution times. If not
+  used in conjuction with **-T**, it is ignored.
 
 **-T, \-\-cli**
 : Suppress the text user interface and output directly to the terminal. This

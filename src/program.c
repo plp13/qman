@@ -116,52 +116,50 @@ void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
 // signifies the link type to add.
 void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
                     const link_type_t type) {
-  unsigned loff = 0;     // offset (in line text) to start searching for links
-  range_t lrng;          // location of link in line
+  wchar_t ltext[BS_LINE * 2]; // text of line (or text of line merged with text
+                              // of line_next, if line is hyphenated)
+  memset(ltext, 0, sizeof(wchar_t) * BS_LINE * 2);
+  const bool lhyph =
+      line->text[line->length - 2] == L'‐'; // whether line is hyphenated
+  unsigned loff = 0;     // offset (in ltext) to start searching for links
+  range_t lrng;          // location of link in ltext
   wchar_t trgt[BS_LINE]; // link target
 
+  // Prepare ltext
+  wcsncpy(ltext, line->text, line->length - 1);
+  if (lhyph) {
+    unsigned lnme = wmargend(line_next->text); // left margin end of line_next
+    ltext[line->length - 2] = L'\0';
+    wcsncat(ltext, &line_next->text[lnme], line_next->length);
+  }
+
   // While a link has been found...
-  lrng = fr_search(re, &line->text[loff]);
+  lrng = fr_search(re, &ltext[loff]);
   while (lrng.beg != lrng.end) {
-    if (loff + lrng.end == line->length - 2 &&
-        line->text[line->length - 2] == L'‐') {
+    // Extract link target from line
+    wcsncpy(trgt, &ltext[loff + lrng.beg], lrng.end - lrng.beg);
+    trgt[lrng.end - lrng.beg] = L'\0';
+
+    if (lhyph && loff + lrng.beg < line->length &&
+        loff + lrng.end >= line->length) {
       // Link is broken by a hyphen
 
-      wchar_t
-          tmp_text[BS_LINE * 2]; // will hold merged text of line and line_next
-      memset(tmp_text, 0, sizeof(wchar_t) * BS_LINE * 2);
-      range_t tmp_lrng; // will hold link target in merged text
-      unsigned lnme =
+      const unsigned lnme =
           wmargend(line_next->text); // position where actual text (without
-                                     // margin) of line_text starts
-
-      // Merge texts of line with line_next and extract link target from that
-      wcsncpy(tmp_text, line->text, line->length - 2);
-      tmp_text[line->length - 2] = L'\0';
-      wcsncat(tmp_text, &line_next->text[lnme], line_next->length);
-      tmp_lrng = fr_search(re, tmp_text);
-      wcsncpy(trgt, &tmp_text[loff + lrng.beg], tmp_lrng.end - tmp_lrng.beg);
-      trgt[tmp_lrng.end - tmp_lrng.beg] = L'\0';
-
-      // If successful, add the link to line
-      if (tmp_lrng.beg != tmp_lrng.end) {
-        const unsigned lstart = loff + tmp_lrng.beg; // starting pos. in line
-        const unsigned lend = line->length - 2;      // ending pos. in line
-        const unsigned nlstart = lnme; // starting pos in next line
-        const unsigned nlend = lnme + (tmp_lrng.end - tmp_lrng.beg) -
-                               (lend - lstart); // ending pos in next line
-        if (LT_MAN == type) {
-          if (aprowhat_has(trgt, aw_all, aw_all_len))
-            add_link(line, lstart, lend, true, nlstart, nlend, type, trgt);
-        } else
+                                     // margin) of line_next starts
+      const unsigned lstart = loff + lrng.beg; // starting pos. in line
+      const unsigned lend = line->length - 2;  // ending pos. in line
+      const unsigned nlstart = lnme;           // starting pos in next line
+      const unsigned nlend = lnme + (lrng.end - lrng.beg) -
+                             (lend - lstart); // ending pos in next line
+      // Add the link to line
+      if (LT_MAN == type) {
+        if (aprowhat_has(trgt, aw_all, aw_all_len))
           add_link(line, lstart, lend, true, nlstart, nlend, type, trgt);
-      }
-    } else {
+      } else
+        add_link(line, lstart, lend, true, nlstart, nlend, type, trgt);
+    } else if (loff + lrng.end < line->length) {
       // Link is not broken by a hyphen
-
-      // Extract link target from line
-      wcsncpy(trgt, &line->text[loff + lrng.beg], lrng.end - lrng.beg);
-      trgt[lrng.end - lrng.beg] = L'\0';
 
       // Add the link to line
       if (LT_MAN == type) {
@@ -177,7 +175,7 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
     loff += lrng.end;
     if (loff < line->length) {
       // Offset is not beyond the end of line; look for another link
-      lrng = fr_search(re, &line->text[loff]);
+      lrng = fr_search(re, &ltext[loff]);
     } else {
       // Offset is beyond the end of line; exit the loop
       lrng.beg = 0;
@@ -329,7 +327,8 @@ int parse_options(int argc, char *const *argv) {
       history_replace(RT_MAN_LOCAL, NULL);
       break;
     case 'K':
-      // -k or --global-apropos was passed; make sure it will be passed on to man
+      // -k or --global-apropos was passed; make sure it will be passed on to
+      // man
       config.misc.global_apropos = true;
       break;
     case 'a':
@@ -366,13 +365,13 @@ void parse_args(int argc, char *const *argv) {
   wchar_t tmp[BS_LINE], tmp2[BS_SHORT]; // temporary
   unsigned tmp_len; // length of tmp (used to guard against buffer overflows)
 
-  // If the user hasn't specfied any options...
+  // If the user hasn't asked for a specific request type...
   if (RT_NONE == history[history_cur].request_type) {
     if (0 == argc) {
-      // ...and no arguments, show the index page
+      // ...and hasn't provided any arguments, show the index page
       history_replace(RT_INDEX, NULL);
     } else {
-      // ...but has specified arguments, try to show the manual page that
+      // ...but has provided arguments, try to show the manual page that
       // corresponds to said arguments
       history_replace(RT_MAN, NULL);
     }
@@ -398,15 +397,24 @@ void parse_args(int argc, char *const *argv) {
       }
     }
 
+    wcscpy(tmp, L"");
+    tmp_len = 0;
+
+    if (history[history_cur].request_type == RT_MAN && !config.layout.tui) {
+      // If we are showing a manual page, we are in CLI mode...
+      if (config.misc.global_apropos) {
+        // ...and the user has requested global apropos, add '-K' to tmp
+        wcscpy(tmp, L"-K ");
+        tmp_len = 3;
+      } else if (config.misc.global_whatis) {
+        // ...and the user has requested global whatis, add '-a' to tmp
+        wcscpy(tmp, L"-a ");
+        tmp_len = 3;
+      }
+    }
+
     // Surround all members of argv with single quotes, and flatten them into
     // the tmp string
-    tmp_len = 0;
-    if (config.misc.global_apropos)
-      wcscpy(tmp, L"-K ");
-    else if (config.misc.global_whatis)
-      wcscpy(tmp, L"-a ");
-    else
-      wcscpy(tmp, L"");
     for (i = 0; i < argc; i++) {
       swprintf(tmp2, BS_SHORT, L"'%s'", argv[i]);
       if (tmp_len + wcslen(tmp2) < BS_LINE) {
@@ -1240,12 +1248,12 @@ void populate_page() {
     page_len = index_page(&page);
     break;
   case RT_MAN:
-    swprintf(page_title, BS_SHORT, L"Manual page(s) for: %ls",
+    swprintf(page_title, BS_SHORT, L"Manual page for: %ls",
              history[history_cur].args);
     page_len = man(&page, history[history_cur].args, false);
     break;
   case RT_MAN_LOCAL:
-    swprintf(page_title, BS_SHORT, L"Manual page(s) in local file(s): %ls",
+    swprintf(page_title, BS_SHORT, L"Manual page in local file(s): %ls",
              history[history_cur].args);
     page_len = man(&page, history[history_cur].args, true);
     break;
