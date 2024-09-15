@@ -236,6 +236,11 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
   ((i + 6 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 5] == L'm'))
 
+// true if tmpw[i] contains an esape-]8 (link embedding) sequence
+#define got_esc8                                                               \
+  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L']') &&             \
+   (tmpw[i + 2] == L'8') && (tmpw[i + 3] == L';'))
+
 //
 // Functions
 //
@@ -925,20 +930,26 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     sprintf(cmdstr, "%s --warnings='!all' %ls 2>>/dev/null",
             config.misc.man_path, args);
 
-  // Execute man and, read its output, and process it into res
+  // Execute man
   FILE *pp = xpopen(cmdstr, "r");
 
-  // For each line...
+  // For each line of man's output (read into tmps/tmpw)
   xfgets(tmps, BS_LINE, pp);
   while (!feof(pp)) {
-
-    // Insert text and formatting attirbutes into line
     len = mbstowcs(tmpw, tmps, BS_LINE);
+
     if (-1 == len)
       winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
+
+    // Allocate memory for a new line in res
     line_alloc(res[ln], config.layout.lmargin + len);
+
+    // Add spaces for left margin
     for (j = 0; j < config.layout.lmargin; j++)
       res[ln].text[j] = L' ';
+
+    // Read the contents of tmpw one character at a time, and build the line's
+    // text, reg, bold, italic, and uline members
     for (i = 0; i < len; i++) {
       if (got_not_bold) {
         bset(res[ln].reg, j);
@@ -961,6 +972,10 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
         i += 4;
       } else if (got_any_3) {
         i += 5;
+      } else if (got_esc8) {
+        i += 3;
+        while (i < len && !(tmpw[i - 1] == L'\e' && tmpw[i] == L'\\'))
+          i++;
       } else if (tmpw[i] != L'\n') {
         res[ln].text[j] = tmpw[i];
         j++;
