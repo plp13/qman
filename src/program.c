@@ -125,12 +125,16 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
   range_t lrng;          // location of link in ltext
   wchar_t trgt[BS_LINE]; // link target
 
+  char tmp[BS_LINE * 2];
+  sprintf(tmp, "text='%ls' length=%d", line->text, line->length);
+  loggit(tmp);
+  sprintf(tmp, "lhyph=%d checked=%d actual=%d", lhyph, L'‐', line->text[line->length - 2]);
+  loggit(tmp);
   // Prepare ltext
   wcsncpy(ltext, line->text, line->length - 1);
   if (lhyph) {
     unsigned lnme = wmargend(line_next->text); // left margin end of line_next
-    ltext[line->length - 2] = L'\0';
-    wcsncat(ltext, &line_next->text[lnme], line_next->length);
+    wcsncpy(&ltext[line->length - 2], &line_next->text[lnme], line_next->length - lnme);
   }
 
   // While a link has been found...
@@ -267,7 +271,7 @@ void init() {
 
   // initialize regular expressions
   fr_init(&re_man, "[a-zA-Z0-9\\.:@_-]+\\([a-zA-Z0-9]+\\)", L")");
-  fr_init(&re_http, "https?:\\/\\/[a-zA-Z0-9\\.\\/\\?\\+:@_#%=-]+", L"http");
+  fr_init(&re_http, "https?:\\/\\/[a-zA-Z0-9\\.\\/\\?\\+:@_#%=~-]+", L"http");
   fr_init(
       &re_email,
       "[a-zA-Z0-9\\.\\$\\*\\+\\?\\^\\|!#%&'/=_`{}~-][a-zA-Z0-9\\.\\$\\*\\+\\/"
@@ -942,7 +946,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
       winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
 
     // Allocate memory for a new line in res
-    line_alloc(res[ln], config.layout.lmargin + len);
+    line_alloc(res[ln], config.layout.lmargin + len + 1);
 
     // Add spaces for left margin
     for (j = 0; j < config.layout.lmargin; j++)
@@ -981,6 +985,11 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
         j++;
       }
     }
+
+    // Insert the obligatory 0 byte at the end of the line's text, and set its
+    // exact length
+    res[ln].text[j] = L'\0';
+    res[ln].length = j + 1;
 
     xfgets(tmps, BS_LINE, pp);
 
