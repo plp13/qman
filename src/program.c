@@ -125,11 +125,6 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
   range_t lrng;          // location of link in ltext
   wchar_t trgt[BS_LINE]; // link target
 
-  char tmp[BS_LINE * 2];
-  sprintf(tmp, "text='%ls' length=%d", line->text, line->length);
-  loggit(tmp);
-  sprintf(tmp, "lhyph=%d checked=%d actual=%d", lhyph, L'‐', line->text[line->length - 2]);
-  loggit(tmp);
   // Prepare ltext
   wcsncpy(ltext, line->text, line->length - 1);
   if (lhyph) {

@@ -479,11 +479,15 @@ for section, options in config_def.config_def.items():
       elif type[0] == "int":
         cog.outl("  config." + section + "." + option + " = str2int(\"" + default_value[0] + "\");")
       elif type[0] == "string":
+        cog.outl("  if (NULL != config." + section + "." + option + ")")
+        cog.outl("    free(config." + section + "." + option + ");")
         if None == default_value:
           cog.outl("  config." + section + "." + option + " = NULL;")
         else:
           cog.outl("  config." + section + "." + option + " = xstrdup(\"" + default_value[0] + "\");")
       elif type[0] == "wstring":
+        cog.outl("  if (NULL != config." + section + "." + option + ")")
+        cog.outl("    free(config." + section + "." + option + ");")
         if None == default_value:
           cog.outl("  config." + section + "." + option + " = NULL;")
         else:

@@ -952,13 +952,6 @@ mouse_t get_mouse_status(int chr) {
         dnd_y = ev.y;
         dnd_x = ev.x;
       } else if (dnd) {
-        char tmp[BS_SHORT];
-        sprintf(tmp,
-                "ALL=%u   REPORT_MOUSE_POSITION=%ld   BUTTON1_PRESSED=%ld   "
-                "BUTTON1_RELEASED=%ld",
-                ev.bstate, ev.bstate & REPORT_MOUSE_POSITION,
-                ev.bstate & BUTTON1_PRESSED, ev.bstate & BUTTON1_RELEASED);
-        loggit(tmp);
         if (!(ev.bstate & REPORT_MOUSE_POSITION)) {
           dnd = false;
           dnd_y = -1;
