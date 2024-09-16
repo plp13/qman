@@ -10,6 +10,16 @@
 // Types
 //
 
+// Terminal capabilities
+typedef struct {
+  char *term;     // contents of the TERM environment variable
+  short colours;  // number of colors supported by the terminal, or 0 if the
+                  // terminal is black and white
+  bool rgb;       // true if terminal colors can be re-defined
+  bool unicode;   // true if the terminal supports Unicode
+  bool clipboard; // true if the terminal supports clipboard operations (OSC 52)
+} tcap_t;
+
 // A mouse button
 typedef enum {
   BT_NONE,  // n/a
@@ -30,30 +40,30 @@ typedef struct {
   mouse_button_t button; // which mouse button
   bool down;             // the button was pressed
   bool up;               // the button was released
-  mouse_wheel_t wheel;   // activation of the mouse wheel
-  short y;               // cursor vertical position
-  short x;               // cursor horizontal position
+  bool dnd;    // we are in drag-and-drop (button was previously pressed but not
+               // yet released)
+  short dnd_y; // vertical position where drag-and-drop was initiated
+  short dnd_x; // horizontal position where drag-and-drop was initiated
+  mouse_wheel_t wheel; // activation of the mouse wheel
+  short y;             // cursor vertical position
+  short x;             // cursor horizontal position
 } mouse_t;
+
+//
+// Constants
+//
+
+#define MS_EMPTY                                                               \
+  {                                                                            \
+    BT_NONE, false, false, false, -1, -1, WH_NONE, -1, -1                      \
+  } // empty mouse status (used for initialization)
 
 //
 // Global variables
 //
 
-// (terminal detection)
-
-// True if the terminal supports at least 8 colors
-extern bool colour;
-
-// True if the terminal supports at least 256 colours
-extern bool colour_256;
-
-// True if the terminal supports at least 256 colours that can be re-defined
-extern bool colour_hi;
-
-// True if the terminal can display non-ASCII characters. (Note that there's no
-// reliable way to determine this this. Therefore we set this variable to the
-// same value as that of colour_256.)
-extern bool unicode;
+// Terminal capabilities
+extern tcap_t tcap;
 
 // (ncurses windows)
 
@@ -89,44 +99,65 @@ extern mouse_t mouse_status;
 
 // Change the color for window win to col (a variable of type colour_t)
 #define change_colour(win, col)                                                \
-  if (colour) {                                                                \
-    if (col.bold)                                                              \
-      wattr_set(win, WA_BOLD, col.pair, NULL);                                 \
+  {                                                                            \
+    if (tcap.colours) {                                                        \
+      if (col.bold)                                                            \
+        wattr_set(win, WA_BOLD, col.pair, NULL);                               \
+      else                                                                     \
+        wattr_set(win, WA_NORMAL, col.pair, NULL);                             \
+    } else if (COLOR_BLACK == col.fg && (wmain == win || wimm == win))         \
+      wattr_set(win, WA_REVERSE, config.colours.fallback.pair, NULL);          \
     else                                                                       \
-      wattr_set(win, WA_NORMAL, col.pair, NULL);                               \
+      wattr_set(win, WA_NORMAL, config.colours.fallback.pair, NULL);           \
   }
 
 // Change the color for window win to col, and also set text attribute for
 // window win to attr
 #define change_colour_attr(win, col, attr)                                     \
   {                                                                            \
-    if (colour)                                                                \
+    if (tcap.colours)                                                          \
       wattr_set(win, attr, col.pair, NULL);                                    \
-    else                                                                       \
-      wattrset(win, attr);                                                     \
+    else if (wmain == win || wimm == win)                                      \
+      wattr_set(win, attr, config.colours.fallback.pair, NULL);                \
   }
 
 // Apply color col to n characters, starting at location (y, x) in window w
 #define apply_colour(win, y, x, n, col)                                        \
-  if (colour) {                                                                \
-    if (col.bold)                                                              \
-      mvwchgat(win, y, x, n, WA_BOLD, col.pair, NULL);                         \
-    else                                                                       \
-      mvwchgat(win, y, x, n, WA_NORMAL, col.pair, NULL);                       \
+  {                                                                            \
+    if (tcap.colours) {                                                        \
+      if (col.bold)                                                            \
+        mvwchgat(win, y, x, n, WA_BOLD, col.pair, NULL);                       \
+      else                                                                     \
+        mvwchgat(win, y, x, n, WA_NORMAL, col.pair, NULL);                     \
+    } else {                                                                   \
+      if (COLOR_BLACK == col.fg && (wmain == win || wimm == win))              \
+        mvwchgat(win, y, x, n, WA_REVERSE, config.colours.fallback.pair,       \
+                 NULL);                                                        \
+      else                                                                     \
+        mvwchgat(win, y, x, n, WA_NORMAL, config.colours.fallback.pair, NULL); \
+    }                                                                          \
   }
 
 //
 // Functions (utility)
 //
 
-// Initialize ncurses and set the terminal detection globals
+// Initialize and set up ncurses, and also initialize the tcap global
 extern void init_tui();
+
+// Initialize tcap with the correct terminal capabilities. These are normally
+// sniffed, but this can be overridden in the [tcap] configuration section.
+extern void init_tui_tcap();
 
 // Initialize ncurses color pairs
 extern void init_tui_colours();
 
 // Initialize ncurses mouse support
 extern void init_tui_mouse();
+
+// Send escape secuense s to the terminal. This is done by bypassing ncurses. s
+// must not include the initial escape character.
+extern void sendescseq(char *s);
 
 // init_windows() and all draw_...() functions call wnoutrefresh() in order to
 // update the virtual screen before returning. It's your responsibility to call
@@ -139,6 +170,13 @@ extern void init_windows();
 // If terminal width and/or height have changed, update config.layout and return
 // true. Otherwise, return false.
 extern bool termsize_changed();
+
+// Wrapper for getch(). Makes the cursor visible right before getch() is called,
+// invisible right after
+extern int cgetch();
+
+// Return a (statically allocated) string representation of key character k
+extern wchar_t *ch2name(int k);
 
 // Corrects page_top and page_flink whenever the terminal has been resized. Must
 // be called whenever termsize_changed() returned true and right before calling
@@ -221,6 +259,12 @@ extern void cbeep();
 // Beep if config.layout.beep is true, and terminal size has not been changed
 extern void ctbeep();
 
+// Copy src to clipboard. This is done using the escape code 52 (which may or
+// may not be supported by the user's terminal) and also via xclip (if running
+// in X11) or wl-copy (if running in Wayland), to ensure the maximum possible
+// success rate.
+extern void editcopy(wchar_t *src);
+
 // Delete all windows and wind down ncurses. No need to call this function
 // normally, as it's called by winddown().
 extern void winddown_tui();
@@ -299,6 +343,10 @@ extern bool tui_help();
 
 // Called whenever the left mouse button is pressed at position (y, x)
 extern bool tui_mouse_click(short y, short x);
+
+// Called whenever the mouse is left-button dragged to position (y, x). (dy, dx)
+// indicates the position the dragging was initiated.
+extern bool tui_mouse_dnd(short y, short x, short dy, short dx);
 
 // Main handler/loop for the TUI
 extern void tui();

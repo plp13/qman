@@ -44,9 +44,11 @@ also to be fast and tiny, so that it can be used everywhere.
 pager such as **less(1)**, and from an ncurses-based browser such as
 **links(1)**. Manual, apropos, and whatis pages are adorned with links to other
 manual pages, HTTP locations, e-mail addresses, or in-page locations. These
-links can be selected and opened. The program also offers incremental search
-facilities for locating manual pages, and for searching through the text of the
-page currently being displayed, together with on-line help.
+links can be selected and opened.
+
+The program provides a scrollbar, a status line, incremental search facilities
+for locating manual pages, and facilities for searching through the text of the
+page currently being displayed. On-line help is also available.
 
 The table below summarizes the program's actions and their default associated
 keyboard mappings:
@@ -83,29 +85,50 @@ information, see **CONFIGURATION**.
 
 # MOUSE SUPPORT
 
-Mouse input is supported but is considered experimental. The **CONFIGURATION**
-section contains instructions on how to disable it.
+Mouse input is supported but is considered experimental and is disabled by
+default. The **CONFIGURATION** section contains instructions on how to enable
+it. Most terminal emulators still provide basic mouse support when mouse input
+is disabled.
 
-When mouse input is enabled, the scroll wheel can be used as an alternative way
-for invoking the UP and DOWN program actions. Clicking the left mouse button
-causes the link under the cursor to be selected. Clicking the middle button (the
-scroll wheel in most mice) invokes the OPEN action. Finally, clicking the right
-button invokes HELP.
+When mouse input is enabled:
 
-In situations where the user is asked to input text or select from a menu, the
-middle button acts as a substitute for the ENTER key, and the right button as a
-substitute for CTRL-C. When selecting from a menu, clicking the left button
-causes the menu entry under the cursor to be selected.
+- The scroll wheel can be used as an alternative way for scrolling, invoking the
+  UP and DOWN program actions
+- Pressing and dragging the left mouse button over page text causes it to be
+  selected and copied to the clipboard (see **NOTE 1 & 2**)
+- Pressing and dragging the left mouse button over the scrollbar allows for
+  scrolling through the page (see **NOTE 2**)
+- Clicking the left mouse button on a link causes the link under the cursor to
+  be selected (see **NOTE 2**)
+- Clicking the middle button (the scroll wheel for most mice) invokes the OPEN
+  action, opening the currently selected link
+- Clicking the right button invokes the HELP action
+- When inputting a search query or selecting from a menu, the middle button acts
+  as a substitute for the ENTER key, and the right button as a substitute for
+  CTRL-C
+- When selecting from a menu, clicking the left button causes the menu entry
+  under the cursor to be selected
 
-The above behaviour can be customized. For more information, see
+The above behavior can be customized. For more information, see
 **CONFIGURATION**.
+
+**NOTE 1**
+: There is no reliable method for terminal clients to copy data to the
+  clipboard. An escape code (OSC 52) does exist but is only reliably supported
+  by **kitty(1)**. For all other terminals, **Qman** will try to use
+  **xclip(1)** and/or **wl-clipboard(1)**. However, this will only work when
+  running locally and within a desktop environment (not when using SSH).
+
+**NOTE 2**
+: Some terminals may report the cursor position inaccurately, causing
+  difficulties with clicking and dragging.
 
 # OPTIONS
 The program accepts the following non-argument options:
 
 **-n, \-\-index**
 : Show a list of all manual pages on the system, together with their sections
-  and short descriptions. (This is the default behaviour, if the program is
+  and short descriptions. (This is the default behavior when the program is
   launched with no command-line options and no arguments.)
 
 **-k, \-\-apropos** _regexp_ ...
@@ -121,6 +144,16 @@ The program accepts the following non-argument options:
 : Activate "local" mode. Format and display each local manual _file_ instead of
   searching through the system's manual collection. Each _file_ will be
   interpreted as an nroff source file in the correct format.
+
+**-K \-\-global\-apropos** _regexp_ ...
+: Show the contents of all manual pages whose names and/or short descriptions
+  match any of the _regexp_ arguments. Beware that this option might cause
+  long execution times. If not used in conjunction with **-T**, it is ignored.
+
+**-a \-\-all** _page_ ...
+: Show the contents of all manual pages whose names match any of the _page_
+  arguments. Beware that this option might cause long execution times. If not
+  used in conjunction with **-T**, it is ignored.
 
 **-T, \-\-cli**
 : Suppress the text user interface and output directly to the terminal. This
@@ -143,8 +176,9 @@ are not cumulative.
 If the user specifies the **-C** option, the program instead tries to load its
 configuration from the file specified by the user.
 
-**Qman** uses the INI file format (https://en.wikipedia.org/wiki/INI_file). The
-following sections and configuration options are accepted:
+**Qman** uses the INI file format (https://en.wikipedia.org/wiki/INI_file).
+Different configuration options are grouped into sections. The paragraphs
+below summarize the sections and configuration options that are available:
 
 **Section [chars]**
 : Options in this section specify what characters will be used to draw the text
@@ -169,11 +203,14 @@ following sections and configuration options are accepted:
 | arrow_up          | up arrow                                                 |
 | arrow_down        | down arrow                                               |
 
-Each configuration option value in this section must consist of a single
-Unicode character.
+Each configuration option value must consist of a single Unicode character.
 
-The default values for this section are sensible enough to allow **Qman** to
-work with most terminals and/or environments.
+The default values for this section have been chosen to allow **Qman** to work
+correctly with virtually all terminals, including the venerable **xterm(1)** and
+the Linux console, and with all fonts. Depending on the terminal's capabilities,
+**Qman** may choose to revert to said defaults, and ignore any options you have
+specified in this section. This behavior can be overridden in the **[tcap]**
+section.
 
 **Section [colours]**
 : Options in this section specify the user interface colors:
@@ -203,7 +240,7 @@ work with most terminals and/or environments.
 | sp_input          | pop-up input dialog prompt                               |
 | sp_text           | pop-up input dialog progressive search text              |
 | sp_text_f         | pop-up input dialog progressive search text (focused)    |
-| help_text         | help dialog etries text                                  |
+| help_text         | help dialog entries text                                 |
 | help_text_f       | help dialog entries text (focused)                       |
 
 Each color is defined using three words separated by whitespace:
@@ -219,8 +256,11 @@ values higher than 7 and/or RGB values.
 _bold_ is a boolean that signifies whether the foreground color will have a
 high (true) or low (false) intensity.
 
-The default values for this section are sensible enough to allow **Qman** to
-work with most terminals and/or environments.
+The default values for this section have been chosen to allow **Qman** to work
+correctly with virtually all terminals, including the venerable **xterm(1)** and
+the Linux console. Depending on the terminal's capabilities, **Qman** may
+choose to revert to said defaults, and ignore any options you have specified in
+this section. This behavior can be overridden in the **[tcap]** section.
 
 **Section [keys]**
 : Options in this section specify which keys are mapped to each program action.
@@ -233,15 +273,15 @@ _key_1_ _key_2_ _key_3_ _key_4_ _key_5_ _key_6_ _key_7_ _key_8_
 
 The value of each _key_i_ can take one of the following values:
 
-1. Any character, surch as 'a', 'b', 'c', etc.
-2. Any ncurses(3x) keycode, such as 'KEY_UP' or 'KEY_HOME'
-3. 'F1' to 'F12' (for the function keys)
-4. 'ESC' (for the ESC key)
-5. 'EXT' (for CTRL-C)
-6. 'LF' (for the ENTER key)
-7. 'BS' (for the BACKSPACE key)
-8. 'HT' (for the TAB key)
-9. 'SPACE' (for the spacebar)
+- Any character, surch as 'a', 'b', 'c', etc.
+- Any ncurses(3x) keycode, such as 'KEY_UP' or 'KEY_HOME'
+- 'F1' to 'F12' (for the function keys)
+- 'ESC' (for the ESC key)
+- 'EXT' (for CTRL-C)
+- 'LF' (for the ENTER key)
+- 'BS' (for the BACKSPACE key)
+- 'HT' (for the TAB key)
+- 'SPACE' (for the spacebar)
 
 For reasons of compatibility with various terminals, mapping the ENTER key
 requires specifying both 'KEY_ENTER' and 'LF'. Similarly, mapping CTRL-C
@@ -249,11 +289,11 @@ requires specifying both 'KEY_BREAK' and 'ETX', and mapping BACKSPACE requires
 specifying both 'KEY_BACKSPACE' and 'BS'.
 
 **Section [mouse]**
-: This sections contains the following options that pertain to mouse support:
+: This section contains the following options that pertain to mouse support:
 
 | Option   | Type         | Def. value | Description                           |
 |----------|--------------|------------|---------------------------------------|
-| enable   | boolean      | true       | Enables mouse support                 |
+| enable   | boolean      | false      | Enables mouse support                 |
 | left_handed | boolean   | false      | Swaps the left and right mouse buttons |
 | left_click_open | boolean | false    | Causes the left mouse button to invoke the OPEN action and/or act as the ENTER key |
 
@@ -267,7 +307,25 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 | beep     | boolean      | true       | Indicates whether to beep the terminal on error |
 | lmargin  | unsigned int | 2          | Size of margin between the left side of the screen, and the page text |
 | rmargin  | unsigned int | 2          | Size of margin between the page text and the scroll bar and/or the right side of the screen |
-| tabstop  | unsigned int | true       | Number of characters in a tab stop (used by actions LEFT and RIGHT) |
+| tabstop  | unsigned int | 8          | Number of characters in a tab stop (used by actions LEFT and RIGHT) |
+
+**Section [tcap]**
+: Normally, **Qman** detects the terminal's capabilities automatically. Options
+  in this section provide the ability to specify them explicitly, overriding
+  this behavior:
+
+| Option   | Type         | Def. value | Description                           |
+|----------|--------------|------------|---------------------------------------|
+| colours  | int          | -1         | Number of colors supported by the terminal, or -1 to auto-detect |
+| rgb      | ternary      | auto       | True if terminal can re-define colors, false if not, auto to auto-detect |
+| unicode  | ternary      | auto       | True if terminal supports Unicode, false if not, auto to auto-detect |
+| clipboard| ternary      | auto       | True if terminal supports clipboard operations (OSC 52), false if not, auto to auto-detect |
+
+Beware that **Qman** uses these capabilities to decide whether to either honor
+or ignore various configuration options specified elsewhere, particularly in
+the **[chars]** and **[colours]** sections mentioned above. Auto-detection
+should work correctly in most cases; it's therefore recommended to not modify
+any of the options in this section, except when discovering or reporting bugs.
 
 **Section [misc]**
 : This section contains various miscellaneous options:
@@ -282,8 +340,8 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 | reset_after_http | boolean  | true       | Re-initialize curses after opening an http(s) link |
 | reset_after_email| boolean  | true       | Re-initialize curses after opening an e-mail link |
 | history_size | unsigned int | 256k       | Maximum number of history entries |
-| hyphenate    | boolean      | true       | Hyphenate long words in manual pages |
-| justify      | boolean      | true       | Justify manual pages text         |
+| hyphenate    | boolean      | true       | Whether to hyphenate long words in manual pages |
+| justify      | boolean      | true       | Whether to justify manual pages text         |
 
 When using a horizontally narrow terminal, setting _hyphenate_ to 'true' and/or
 _justify_ to 'false' can improve the program's output.

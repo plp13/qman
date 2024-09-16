@@ -6,13 +6,7 @@
 // Global variables
 //
 
-bool colour = false;
-
-bool colour_256 = false;
-
-bool colour_hi = false;
-
-bool unicode = false;
+tcap_t tcap;
 
 WINDOW *wmain = NULL;
 
@@ -24,7 +18,7 @@ WINDOW *wimm = NULL;
 
 action_t action = PA_NULL;
 
-mouse_t mouse_status = {BT_NONE, false, false, WH_NONE, -1, -1};
+mouse_t mouse_status = MS_EMPTY;
 
 //
 // Helper macros and functions
@@ -66,11 +60,12 @@ mouse_t mouse_status = {BT_NONE, false, false, WH_NONE, -1, -1};
     }                                                                          \
   }
 
-// Helper of tui_open. Re-initialize ncurses after shelling out
+// Helper of tui_open(). Re-initialize ncurses after shelling out.
 #define tui_reset                                                              \
   {                                                                            \
     winddown_tui();                                                            \
     init_tui();                                                                \
+    init_tui_tcap();                                                           \
     init_tui_colours();                                                        \
     init_tui_mouse();                                                          \
     termsize_changed();                                                        \
@@ -135,8 +130,290 @@ void aw_quick_search(wchar_t *needle) {
   wnoutrefresh(wimm);
 }
 
-// Helper of tui_help(). Return a (statically allocated) string representation
-// of key mapping k.
+// Helper of tui_help(). Draw the help menu into wimm. keys_names contains the
+// string representations of key character mappings corresponding to all program
+// actions, keys_names_max is the length of the longest string in keys_names,
+// top is the first action to print help for, and focus is the action to focus
+// on.
+void draw_help(const wchar_t *const *keys_names, unsigned keys_names_max,
+               unsigned top, unsigned focus) {
+  const unsigned width = getmaxx(wimm);  // help window width
+  const unsigned height = getmaxy(wimm); // help window height
+  const unsigned end = MIN(PA_QUIT,
+                           top + height - 6); // last action to print help for
+  wchar_t *buf = walloca(width - 2);          // temporary
+  unsigned i, j;                              // iterator
+
+  j = 2;
+  for (i = top; i <= end; i++) {
+    wchar_t glyph;
+    if (i == top && i > 1)
+      glyph = *config.chars.arrow_up;
+    else if (i == end && i < PA_QUIT)
+      glyph = *config.chars.arrow_down;
+    else
+      glyph = L' ';
+
+    swprintf(buf, width - 1, L" %-*ls  %-*.*ls %lc", keys_names_max,
+             keys_names[i], width - keys_names_max - 7,
+             width - keys_names_max - 7, keys_help[i], glyph);
+    if (i == focus) {
+      change_colour(wimm, config.colours.help_text_f);
+    } else {
+      change_colour(wimm, config.colours.help_text);
+    }
+    mvwaddnwstr(wimm, j, 1, buf, width - 1);
+    j++;
+  }
+
+  wmove(wimm, height - 2, width - 2);
+  wnoutrefresh(wimm);
+}
+
+// Helper for tui_history(). Draw the history menu into wimm. history,
+// history_cur, and history_top have the same meanings as the history,
+// history_cur, and history_top globals respectively. top is the first history
+// entry to print, and focus indicates the entry to focus on.
+void draw_history(request_t *history, unsigned history_cur,
+                  unsigned history_top, unsigned top, unsigned focus) {
+  const unsigned width = getmaxx(wimm);  // help window width
+  const unsigned height = getmaxy(wimm); // help window height
+  const unsigned end = MIN(history_top,
+                           top + height - 6); // last entry to print
+  wchar_t *buf = walloca(width - 2);          // temporary
+  unsigned i, j;                              // iterator
+
+  j = 2;
+  for (i = top; i <= end; i++) {
+    wchar_t glyph;
+    if (i == top && i > 0)
+      glyph = *config.chars.arrow_up;
+    else if (i == end && i < history_top)
+      glyph = *config.chars.arrow_down;
+    else
+      glyph = L' ';
+
+    swprintf(buf, width - 1, L"%1ls %-7ls  %-*ls %lc",
+             i == history_cur ? L"»" : L" ",
+             request_type_str(history[i].request_type), width - 15,
+             NULL == history[i].args ? L"" : history[i].args, glyph);
+    if (i == focus) {
+      change_colour(wimm, config.colours.help_text_f);
+    } else {
+      change_colour(wimm, config.colours.help_text);
+    }
+    mvwaddnwstr(wimm, j, 1, buf, width - 1);
+    j++;
+  }
+
+  wmove(wimm, height - 2, width - 2);
+  wnoutrefresh(wimm);
+}
+
+//
+// Functions (utility)
+//
+
+void init_tui() {
+  // Initialize and set up ncurses
+  initscr();
+  raw();
+  keypad(stdscr, true);
+  noecho();
+  curs_set(0);
+  timeout(2000);
+  start_color();
+}
+
+void init_tui_tcap() {
+  tcap.term = getenv("TERM");
+
+  if (-1 == config.tcap.colours) {
+    if (has_colors())
+      tcap.colours = COLORS;
+    else
+      tcap.colours = 0;
+  } else {
+    tcap.colours = config.tcap.colours;
+  }
+
+  switch (config.tcap.rgb) {
+  case t_true:
+    tcap.rgb = true;
+    break;
+  case t_false:
+    tcap.rgb = false;
+    break;
+  case t_auto:
+    tcap.rgb = (tcap.colours >= 256) && can_change_color();
+  }
+
+  switch (config.tcap.unicode) {
+  case t_true:
+    tcap.unicode = true;
+    break;
+  case t_false:
+    tcap.unicode = false;
+    break;
+  case t_auto:
+    tcap.unicode = 0 != strcmp(tcap.term, "linux") && tcap.colours >= 256;
+  }
+
+  switch (config.tcap.clipboard) {
+  case t_true:
+    tcap.clipboard = true;
+    break;
+  case t_false:
+    tcap.clipboard = false;
+    break;
+  case t_auto:
+    tcap.clipboard = 0 == strcmp(tcap.term, "xterm-kitty");
+  }
+}
+
+void init_tui_colours() {
+  // Always initialize fallback color for B&W terminals
+  init_colour(config.colours.fallback);
+
+  // Initialize other colors only if the terminal supports color
+  if (tcap.colours) {
+    init_colour(config.colours.text);
+    init_colour(config.colours.search);
+    init_colour(config.colours.mark);
+    init_colour(config.colours.link_man);
+    init_colour(config.colours.link_man_f);
+    init_colour(config.colours.link_http);
+    init_colour(config.colours.link_http_f);
+    init_colour(config.colours.link_email);
+    init_colour(config.colours.link_email_f);
+    init_colour(config.colours.link_ls);
+    init_colour(config.colours.link_ls_f);
+    init_colour(config.colours.sb_line);
+    init_colour(config.colours.sb_block);
+    init_colour(config.colours.stat_indic_mode);
+    init_colour(config.colours.stat_indic_name);
+    init_colour(config.colours.stat_indic_loc);
+    init_colour(config.colours.stat_input_prompt);
+    init_colour(config.colours.stat_input_help);
+    init_colour(config.colours.stat_input_em);
+    init_colour(config.colours.imm_border);
+    init_colour(config.colours.imm_title);
+    init_colour(config.colours.sp_input);
+    init_colour(config.colours.sp_text);
+    init_colour(config.colours.sp_text_f);
+    init_colour(config.colours.help_text);
+    init_colour(config.colours.help_text_f);
+    // Color pairs used for transitions
+    init_pair(config.colours.trans_mode_name, config.colours.stat_indic_mode.bg,
+              config.colours.stat_indic_name.bg);
+    init_pair(config.colours.trans_name_loc, config.colours.stat_indic_name.bg,
+              config.colours.stat_indic_loc.bg);
+    init_pair(config.colours.trans_prompt_help,
+              config.colours.stat_input_prompt.bg,
+              config.colours.stat_input_help.bg);
+    init_pair(config.colours.trans_prompt_em,
+              config.colours.stat_input_prompt.bg,
+              config.colours.stat_input_em.bg);
+  }
+}
+
+void init_tui_mouse() {
+  if (config.mouse.enable) {
+    mousemask(BUTTON1_PRESSED | BUTTON1_RELEASED | BUTTON3_PRESSED |
+                  BUTTON3_RELEASED | BUTTON2_PRESSED | BUTTON2_RELEASED |
+                  BUTTON4_PRESSED | BUTTON5_PRESSED | REPORT_MOUSE_POSITION,
+              NULL);
+
+    // Initialize terminal to enable drag-and-drop
+    char *term = getenv("TERM");
+    if (0 != strcmp(term, "xterm-1002")) {
+      sendescseq("[?1002h");
+    }
+  }
+}
+
+void sendescseq(char *s) {
+  putchar('\033');
+
+  unsigned i = 0;
+  while ('\0' != s[i])
+    putchar(s[i++]);
+
+  fflush(stdout);
+}
+
+void init_windows() {
+  if (NULL != wmain)
+    delwin(wmain);
+  wmain = newwin(config.layout.main_height, config.layout.main_width, 0, 0);
+  keypad(wmain, true);
+
+  if (NULL != wsbar)
+    delwin(wsbar);
+  wsbar = newwin(config.layout.main_height, config.layout.sbar_width, 0,
+                 config.layout.main_width);
+  keypad(wsbar, true);
+
+  if (NULL != wstat)
+    delwin(wstat);
+  wstat = newwin(config.layout.stat_height, config.layout.width,
+                 config.layout.main_height, 0);
+  keypad(wstat, true);
+
+  wnoutrefresh(stdscr);
+}
+
+bool termsize_changed() {
+  const int width = getmaxx(stdscr);
+  const int height = getmaxy(stdscr);
+
+  if (width != config.layout.width || height != config.layout.height) {
+    config.layout.width = width;
+    config.layout.height = height;
+
+    if (width > config.layout.sbar_width)
+      config.layout.main_width = width - config.layout.sbar_width;
+    else
+      config.layout.main_width = 0;
+
+    if (height > config.layout.stat_height)
+      config.layout.main_height = height - config.layout.stat_height;
+    else
+      config.layout.main_height = 0;
+
+    if (config.layout.width > 100) {
+      config.layout.imm_width_wide = config.layout.width - 20;
+      config.layout.imm_width_narrow = 54;
+    } else if (config.layout.width > 60) {
+      config.layout.imm_width_wide = config.layout.width - 6;
+      config.layout.imm_width_narrow = 54;
+    } else {
+      config.layout.imm_width_wide = config.layout.width - 6;
+      config.layout.imm_width_narrow = config.layout.width - 6;
+    }
+
+    if (config.layout.height > 18) {
+      config.layout.imm_height_long = config.layout.height - 8;
+      config.layout.imm_height_short = 6;
+    } else {
+      config.layout.imm_height_long = config.layout.height - 4;
+      config.layout.imm_height_short = config.layout.height - 4;
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
+int cgetch() {
+  curs_set(1);
+  int ret = getch();
+  curs_set(0);
+
+  return ret;
+}
+
 wchar_t *ch2name(int k) {
   static wchar_t fkeys[12][4]; // placeholders for function key representations
   static wchar_t okeys[94]
@@ -225,218 +502,6 @@ wchar_t *ch2name(int k) {
     // Key does not correspond to a printable character; return "???"
     return L"???";
   }
-}
-
-// Helper of tui_help(). Draw the help menu into wimm. keys_names contains the
-// string representations of key character mappings corresponding to all program
-// actions, keys_names_max is the length of the longest string in keys_names,
-// top is the first action to print help for, and focus is the action to focus
-// on.
-void draw_help(const wchar_t *const *keys_names, unsigned keys_names_max,
-               unsigned top, unsigned focus) {
-  const unsigned width = getmaxx(wimm);  // help window width
-  const unsigned height = getmaxy(wimm); // help window height
-  const unsigned end = MIN(PA_QUIT,
-                           top + height - 6); // last action to print help for
-  wchar_t *buf = walloca(width - 2);          // temporary
-  unsigned i, j;                              // iterator
-
-  j = 2;
-  for (i = top; i <= end; i++) {
-    wchar_t glyph;
-    if (i == top && i > 1)
-      glyph = *config.chars.arrow_up;
-    else if (i == end && i < PA_QUIT)
-      glyph = *config.chars.arrow_down;
-    else
-      glyph = L' ';
-
-    swprintf(buf, width - 1, L" %-*ls  %-*.*ls %lc", keys_names_max,
-             keys_names[i], width - keys_names_max - 7,
-             width - keys_names_max - 7, keys_help[i], glyph);
-    if (i == focus) {
-      change_colour(wimm, config.colours.help_text_f);
-    } else {
-      change_colour(wimm, config.colours.help_text);
-    }
-    mvwaddnwstr(wimm, j, 1, buf, width - 1);
-    j++;
-  }
-
-  wmove(wimm, height - 2, width - 2);
-  wnoutrefresh(wimm);
-}
-
-// Helper for tui_history(). Draw the history menu into wimm. history,
-// history_cur, and history_top have the same meanings as the history,
-// history_cur, and history_top globals respectively. top is the first history
-// entry to print, and focus indicates the entry to focus on.
-void draw_history(request_t *history, unsigned history_cur,
-                  unsigned history_top, unsigned top, unsigned focus) {
-  const unsigned width = getmaxx(wimm);  // help window width
-  const unsigned height = getmaxy(wimm); // help window height
-  const unsigned end = MIN(history_top,
-                           top + height - 6); // last entry to print
-  wchar_t *buf = walloca(width - 2);          // temporary
-  unsigned i, j;                              // iterator
-
-  j = 2;
-  for (i = top; i <= end; i++) {
-    wchar_t glyph;
-    if (i == top && i > 0)
-      glyph = *config.chars.arrow_up;
-    else if (i == end && i < history_top)
-      glyph = *config.chars.arrow_down;
-    else
-      glyph = L' ';
-
-    swprintf(buf, width - 1, L"%1ls %-7ls  %-*ls %lc",
-             i == history_cur ? L"»" : L" ",
-             request_type_str(history[i].request_type), width - 15,
-             NULL == history[i].args ? L"" : history[i].args, glyph);
-    if (i == focus) {
-      change_colour(wimm, config.colours.help_text_f);
-    } else {
-      change_colour(wimm, config.colours.help_text);
-    }
-    mvwaddnwstr(wimm, j, 1, buf, width - 1);
-    j++;
-  }
-
-  wmove(wimm, height - 2, width - 2);
-  wnoutrefresh(wimm);
-}
-
-//
-// Functions (utility)
-//
-
-void init_tui() {
-  initscr();
-  raw();
-  keypad(stdscr, true);
-  noecho();
-  curs_set(1);
-  timeout(2000);
-  start_color();
-
-  colour = has_colors() && COLORS >= 8;
-  colour_256 = has_colors() && COLORS >= 256;
-  colour_hi = colour_256 && can_change_color();
-  unicode = colour_256;
-}
-
-void init_tui_colours() {
-  if (colour) {
-    init_colour(config.colours.text);
-    init_colour(config.colours.search);
-    init_colour(config.colours.link_man);
-    init_colour(config.colours.link_man_f);
-    init_colour(config.colours.link_http);
-    init_colour(config.colours.link_http_f);
-    init_colour(config.colours.link_email);
-    init_colour(config.colours.link_email_f);
-    init_colour(config.colours.link_ls);
-    init_colour(config.colours.link_ls_f);
-    init_colour(config.colours.sb_line);
-    init_colour(config.colours.sb_block);
-    init_colour(config.colours.stat_indic_mode);
-    init_colour(config.colours.stat_indic_name);
-    init_colour(config.colours.stat_indic_loc);
-    init_colour(config.colours.stat_input_prompt);
-    init_colour(config.colours.stat_input_help);
-    init_colour(config.colours.stat_input_em);
-    init_colour(config.colours.imm_border);
-    init_colour(config.colours.imm_title);
-    init_colour(config.colours.sp_input);
-    init_colour(config.colours.sp_text);
-    init_colour(config.colours.sp_text_f);
-    init_colour(config.colours.help_text);
-    init_colour(config.colours.help_text_f);
-    // Color pairs used for transitions
-    init_pair(config.colours.trans_mode_name, config.colours.stat_indic_mode.bg,
-              config.colours.stat_indic_name.bg);
-    init_pair(config.colours.trans_name_loc, config.colours.stat_indic_name.bg,
-              config.colours.stat_indic_loc.bg);
-    init_pair(config.colours.trans_prompt_help,
-              config.colours.stat_input_prompt.bg,
-              config.colours.stat_input_help.bg);
-    init_pair(config.colours.trans_prompt_em,
-              config.colours.stat_input_prompt.bg,
-              config.colours.stat_input_em.bg);
-  }
-}
-
-void init_tui_mouse() {
-  if (config.mouse.enable)
-    mousemask(BUTTON1_PRESSED | BUTTON1_RELEASED | BUTTON3_PRESSED |
-                  BUTTON3_RELEASED | BUTTON2_PRESSED | BUTTON2_RELEASED |
-                  BUTTON4_PRESSED | BUTTON5_PRESSED | REPORT_MOUSE_POSITION,
-              NULL);
-}
-
-void init_windows() {
-  if (NULL != wmain)
-    delwin(wmain);
-  wmain = newwin(config.layout.main_height, config.layout.main_width, 0, 0);
-  keypad(wmain, true);
-
-  if (NULL != wsbar)
-    delwin(wsbar);
-  wsbar = newwin(config.layout.main_height, config.layout.sbar_width, 0,
-                 config.layout.main_width);
-  keypad(wsbar, true);
-
-  if (NULL != wstat)
-    delwin(wstat);
-  wstat = newwin(config.layout.stat_height, config.layout.width,
-                 config.layout.main_height, 0);
-  keypad(wstat, true);
-
-  wnoutrefresh(stdscr);
-}
-
-bool termsize_changed() {
-  const int width = getmaxx(stdscr);
-  const int height = getmaxy(stdscr);
-
-  if (width != config.layout.width || height != config.layout.height) {
-    config.layout.width = width;
-    config.layout.height = height;
-
-    if (width > config.layout.sbar_width)
-      config.layout.main_width = width - config.layout.sbar_width;
-    else
-      config.layout.main_width = 0;
-
-    if (height > config.layout.stat_height)
-      config.layout.main_height = height - config.layout.stat_height;
-    else
-      config.layout.main_height = 0;
-
-    if (config.layout.width > 100) {
-      config.layout.imm_width_wide = config.layout.width - 20;
-      config.layout.imm_width_narrow = 54;
-    } else if (config.layout.width > 60) {
-      config.layout.imm_width_wide = config.layout.width - 6;
-      config.layout.imm_width_narrow = 54;
-    } else {
-      config.layout.imm_width_wide = config.layout.width - 6;
-      config.layout.imm_width_narrow = config.layout.width - 6;
-    }
-
-    if (config.layout.height > 18) {
-      config.layout.imm_height_long = config.layout.height - 8;
-      config.layout.imm_height_short = 6;
-    } else {
-      config.layout.imm_height_long = config.layout.height - 4;
-      config.layout.imm_height_short = config.layout.height - 4;
-    }
-
-    return true;
-  }
-
-  return false;
 }
 
 void termsize_adjust() {
@@ -553,6 +618,27 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
         apply_colour(wmain, y, results[s].start - page_left,
                      results[s].end - results[s].start, config.colours.search);
       s++;
+    }
+
+    // If some text is marked, apply the appropriate color to it
+    if (mark.enabled) {
+      unsigned cx = 0, cn = 0; // x and n parameters for apply_colour()
+      if (ly == mark.start_line && ly == mark.end_line) {
+        cx = MAX(0, (int)mark.start_char - (int)page_left);
+        cn = MAX(0, (int)mark.end_char - (int)mark.start_char + 1);
+        if (mark.start_char < page_left)
+          cn = MAX(0, (int)cn - (int)(page_left - mark.start_char));
+      } else if (ly == mark.start_line && ly < mark.end_line) {
+        cx = MAX(0, (int)mark.start_char - (int)page_left);
+        cn = getmaxx(wmain) - 1;
+      } else if (ly > mark.start_line && ly < mark.end_line) {
+        cx = 0;
+        cn = getmaxx(wmain) - 1;
+      } else if (ly > mark.start_line && ly == mark.end_line) {
+        cx = 0;
+        cn = MAX(0, (int)mark.end_char - (int)page_left + 1);
+      }
+      apply_colour(wmain, y, cx, cn, config.colours.mark);
     }
   }
 
@@ -707,8 +793,7 @@ int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
   int ret;                 // next return value
   int chr = '\0';          // user character input
   int wget_stat;           // mvwget_wch() return value
-  mouse_t ms = {BT_NONE, false, false,
-                WH_NONE, -1,    -1}; // mouse status corresponding to wget_stat
+  mouse_t ms = MS_EMPTY;   // mouse status corresponding to wget_stat
 
   if (NULL != trgt) {
     // First call; initialize res, res_len, and pos
@@ -718,7 +803,9 @@ int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
   }
 
   // Get input from user
+  curs_set(1);
   wget_stat = mvwget_wch(w, y, x + pos, (wint_t *)&chr);
+  curs_set(0);
   ms = get_mouse_status(chr);
 
   if (BT_RIGHT == ms.button && ms.up) {
@@ -812,7 +899,10 @@ action_t get_action(int chr) {
 }
 
 mouse_t get_mouse_status(int chr) {
-  mouse_t ret = {BT_NONE, false, false, WH_NONE, -1, -1};
+  mouse_t ret = MS_EMPTY;  // return value
+  static bool dnd = false; // set to true when we are in drag-and-drop
+  static short dnd_y = -1,
+               dnd_x = -1; // cursor position where drag-and-drop was initiated
 
   if (!config.mouse.enable || !has_mouse()) {
     // If mouse is disabled, always return an empty status
@@ -856,6 +946,22 @@ mouse_t get_mouse_status(int chr) {
           ret.button = BT_LEFT;
       }
 
+      // Record drag-and-drop
+      if (BT_LEFT == ret.button && ret.down) {
+        dnd = true;
+        dnd_y = ev.y;
+        dnd_x = ev.x;
+      } else if (dnd) {
+        if (!(ev.bstate & REPORT_MOUSE_POSITION)) {
+          dnd = false;
+          dnd_y = -1;
+          dnd_x = -1;
+        }
+        ret.dnd = dnd;
+        ret.dnd_y = dnd_y;
+        ret.dnd_x = dnd_x;
+      }
+
       // Record mouse wheel activations
       if (ev.bstate & BUTTON4_PRESSED)
         ret.wheel = WH_UP;
@@ -880,6 +986,34 @@ void ctbeep() {
     cbeep();
 }
 
+void editcopy(wchar_t *src) {
+  unsigned srcs_len = 3 * wcslen(src); // Length of char* version of src
+  char *srcs = salloca(srcs_len);      // char* version of src
+  wcstombs(srcs, src, srcs_len);
+
+  size_t src64_len; // Base64-encoded version of src
+  char *src64 = base64_encode((unsigned char *)srcs, srcs_len, &src64_len);
+
+  if (tcap.clipboard) {
+    // If supported, copy using escape code 52
+    char *seq = salloca(7 + strlen(src64));
+    sprintf(seq, "]52;c;%s\07", src64);
+    sendescseq(seq);
+  } else {
+    // Fallback: copy using xclip and/or wl-copy
+    struct stat sb;
+    if (stat("/usr/bin/xclip", &sb) == 0 && sb.st_mode & S_IXUSR) {
+      FILE *pp = xpopen("/usr/bin/xclip -i -selection clipboard", "w");
+      fprintf(pp, "%s\r", srcs);
+      xpclose(pp);
+    } else if (stat("/usr/bin/wl-copy", &sb) == 0 && sb.st_mode & S_IXUSR) {
+      FILE *pp = xpopen("/usr/bin/wl-copy", "w");
+      fputs(srcs, pp);
+      xpclose(pp);
+    }
+  }
+}
+
 void winddown_tui() {
   if (NULL != wmain)
     delwin(wmain);
@@ -894,6 +1028,13 @@ void winddown_tui() {
   wstat = NULL;
 
   reset_color_pairs();
+
+  // Initialize terminal to disable drag-and-drop
+  char *term = getenv("TERM");
+  if (0 != strcmp(term, "xterm-1002")) {
+    sendescseq("[?1002l");
+  }
+
   endwin();
 }
 
@@ -1372,13 +1513,12 @@ bool tui_history() {
   swprintf(help, BS_SHORT, L"%ls/%ls: choose   %ls: jump   %ls/%ls: abort",
            ch2name(config.keys[PA_UP][0]), ch2name(config.keys[PA_DOWN][0]),
            ch2name(config.keys[PA_OPEN][0]), ch2name(KEY_BREAK), ch2name('\e'));
-  int hinput; // keyboard/mouse input from the user
-  mouse_t hms = {BT_NONE, false, false,
-                 WH_NONE, -1,    -1}; // mouse status corresponding to hinput
-  action_t haction = PA_NULL;         // program action corresponding to hinput
-  unsigned height;                    // history window height
-  unsigned top;                       // first history entry to be printed
-  int focus = history_cur;            // focused history entry
+  int hinput;                 // keyboard/mouse input from the user
+  mouse_t hms = MS_EMPTY;     // mouse status corresponding to hinput
+  action_t haction = PA_NULL; // program action corresponding to hinput
+  unsigned height;            // history window height
+  unsigned top;               // first history entry to be printed
+  int focus = history_cur;    // focused history entry
 
   // Create the history window, retrieve height, and calculate top
   draw_imm(true, false, L"History", help);
@@ -1395,7 +1535,7 @@ bool tui_history() {
     doupdate();
 
     // Get user input
-    hinput = getch();
+    hinput = cgetch();
     hms = get_mouse_status(hinput);
     if ('\e' == hinput || KEY_BREAK == hinput || 0x03 == hinput ||
         (BT_RIGHT == hms.button && hms.up)) {
@@ -1439,13 +1579,6 @@ bool tui_history() {
         focus++;
         if (history_top + 1 == focus)
           focus = 0;
-      } else if (BT_LEFT == hms.button && hms.down) {
-        // On left button press, focus on the history entry under the cursor
-        int iy = hms.y, ix = hms.x;
-        unsigned ih = getmaxy(wimm);
-        if (wmouse_trafo(wimm, &iy, &ix, false))
-          if (iy > 1 && iy < ih - 3 && history_top >= top + iy - 2)
-            focus = top + iy - 2;
       } else if (BT_LEFT == hms.button && hms.up) {
         // On left button release, focus on the history entry under the cursor
         int iy = hms.y, ix = hms.x;
@@ -1659,13 +1792,12 @@ bool tui_help() {
            L"%ls/%ls: choose action   %ls: fire   %ls/%ls: abort",
            ch2name(config.keys[PA_UP][0]), ch2name(config.keys[PA_DOWN][0]),
            ch2name(config.keys[PA_OPEN][0]), ch2name(KEY_BREAK), ch2name('\e'));
-  int hinput; // keyboard/mouse input from the user
-  mouse_t hms = {BT_NONE, false, false,
-                 WH_NONE, -1,    -1}; // mouse status corresponding to hinput
-  action_t haction = PA_NULL;         // program action corresponding to hinput
-  unsigned top = 1;                   // first action to be printed
-  unsigned focus = 1;                 // focused action
-  unsigned height;                    // help window height
+  int hinput;                 // keyboard/mouse input from the user
+  mouse_t hms = MS_EMPTY;     // mouse status corresponding to hinput
+  action_t haction = PA_NULL; // program action corresponding to hinput
+  unsigned top = 1;           // first action to be printed
+  unsigned focus = 1;         // focused action
+  unsigned height;            // help window height
 
   // For each action...
   for (i = 0; i <= PA_QUIT; i++) {
@@ -1702,7 +1834,7 @@ bool tui_help() {
     doupdate();
 
     // Get user input
-    hinput = getch();
+    hinput = cgetch();
     hms = get_mouse_status(hinput);
     if ('\e' == hinput || KEY_BREAK == hinput || 0x03 == hinput ||
         (BT_RIGHT == hms.button && hms.up)) {
@@ -1743,13 +1875,6 @@ bool tui_help() {
         focus++;
         if (PA_QUIT + 1 == focus)
           focus = 1;
-      } else if (BT_LEFT == hms.button && hms.down) {
-        // On left button press, focus on the help entry under the cursor
-        int iy = hms.y, ix = hms.x;
-        unsigned ih = getmaxy(wimm);
-        if (wmouse_trafo(wimm, &iy, &ix, false))
-          if (iy > 1 && iy < ih - 3 && PA_QUIT >= top + iy - 2)
-            focus = top + iy - 2;
       } else if (BT_LEFT == hms.button && hms.up) {
         // On left button release, focus on the help entry under the cursor
         int iy = hms.y, ix = hms.x;
@@ -1805,6 +1930,21 @@ bool tui_mouse_click(short y, short x) {
   int my = y, mx = x; // locations in wmain that correspond to y and x
   int sy = y, sx = x; // locations in wsbar that correspond to y and x
 
+  // If text was being marked with tui_mouse_dnd(), copy it to clipboard and
+  // clear the selection
+  if (mark.enabled) {
+    wchar_t *mt;
+    get_mark(&mt, mark, page, page_len);
+    editcopy(mt);
+    free(mt);
+
+    mark.enabled = false;
+
+    tui_redraw();
+    tui_error(L"Copied to clipboard");
+    return false;
+  }
+
   // If the cursor is on a link, make it the focused link
   if (wmouse_trafo(wmain, &my, &mx, false)) {
     unsigned ln = page_top + my; // line number that corresponds to my
@@ -1843,6 +1983,65 @@ bool tui_mouse_click(short y, short x) {
   return false;
 }
 
+bool tui_mouse_dnd(short y, short x, short dy, short dx) {
+  int my = y, mx = x;     // locations in wmain that correspond to y and x
+  int sy = y;             // location in wsbar that corresponds to y
+  int mdy = dy, mdx = dx; // locations in wmain that correspond to dy and dx
+  int sdy = dy, sdx = dx; // locations in wsbar that correspond to dy and dx
+
+  // If dragging was initiated on the main window, mark text
+  if (wmouse_trafo(wmain, &mdy, &mdx, false)) {
+    // Make sure my and mx are always within the confines of wmain
+    if (my >= getmaxy(wmain)) {
+      my = getmaxy(wmain) - 1;
+      mx = getmaxx(wmain) - 1;
+    }
+    if (mx >= getmaxx(wmain))
+      mx = getmaxx(wmain) - 1;
+
+    unsigned start_line = MIN(page_len - 1, page_top + mdy);
+    unsigned start_char = MIN(page[start_line].length - 1, page_left + mdx);
+    unsigned end_line = MIN(page_len - 1, page_top + my);
+    unsigned end_char = MIN(page[end_line].length - 1, page_left + mx);
+
+    // If drag was right-to-left and/or bottom-to-top, swap start_char with
+    // end_char and/or start_line with end_line as needed
+    if (start_line > end_line) {
+      swap(start_line, end_line);
+      swap(start_char, end_char);
+    } else if (start_line == end_line && start_char > end_char) {
+      swap(start_char, end_char);
+    }
+
+    // Mark text
+    mark.enabled = true;
+    mark.start_line = start_line;
+    mark.start_char = start_char;
+    mark.end_line = end_line;
+    mark.end_char = end_char;
+
+    return true;
+  }
+
+  // If dragging was initiated on the scrollbar, jump to the appropriate page
+  // position
+  if (wmouse_trafo(wsbar, &sdy, &sdx, false)) {
+    unsigned sh = getmaxy(wsbar); // scrollbar window height
+    unsigned bp = (MAX(
+        1, MIN(sh - 2, sy))); // where the scrollbar knob should be repositioned
+
+    page_top = bp == 1 ? 0 : (bp * (page_len - sh + 1) - 1) / (sh - 2);
+    const link_loc_t fl = first_link(page, page_len, page_top,
+                                     page_top + config.layout.main_height - 1);
+    if (fl.ok && (page_flink.line != fl.line || page_flink.link != fl.link))
+      page_flink = fl;
+
+    return true;
+  }
+
+  return false;
+}
+
 void tui() {
   int input;                // keyboard/mouse input from user
   bool redraw = true;       // set this to true to redraw the screen
@@ -1853,6 +2052,14 @@ void tui() {
   // Initialize TUI
   init_tui();
   configure();
+  init_tui_tcap();
+  if (-1 == config.tcap.colours || t_auto == config.tcap.rgb ||
+      t_auto == config.tcap.unicode || t_auto == config.tcap.clipboard) {
+    // Options were defined in the [pcap] configuration section; we must run
+    // configure() again, to re-initialize configuration options whose final
+    // value might depend on terminal capabilities
+    configure();
+  }
   init_tui_colours();
   init_tui_mouse();
   termsize_changed();
@@ -1888,7 +2095,7 @@ void tui() {
     doupdate();
 
     // Get user input
-    input = getch();
+    input = cgetch();
     action = get_action(input);
     mouse_status = get_mouse_status(input);
 
@@ -1979,12 +2186,13 @@ void tui() {
       } else if (BT_RIGHT == mouse_status.button && mouse_status.up) {
         // Right mouse button click causes PA_HELP
         redraw = tui_help();
-      } else if (BT_LEFT == mouse_status.button && mouse_status.down) {
-        // On left mouse button press, we call tui_mouse_click()
-        redraw = tui_mouse_click(mouse_status.y, mouse_status.x);
       } else if (BT_LEFT == mouse_status.button && mouse_status.up) {
-        // Ditto on left mouse button release
+        // On left mouse button release, call tui_mouse_click()
         redraw = tui_mouse_click(mouse_status.y, mouse_status.x);
+      } else if (mouse_status.dnd) {
+        // On left mouse drag-and-drop, call tui_mouse_dnd()
+        redraw = tui_mouse_dnd(mouse_status.y, mouse_status.x,
+                               mouse_status.dnd_y, mouse_status.dnd_x);
       } else
         redraw = true;
       break;

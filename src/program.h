@@ -35,6 +35,8 @@ typedef struct {
 
 // Page request type
 typedef enum {
+  RT_NONE,      // empty request; set by init() and then replaced during program
+                // runtime
   RT_INDEX,     // show a list of all manual pages
   RT_MAN,       // show a manual page
   RT_MAN_LOCAL, // show a manual page stored in a local file
@@ -104,6 +106,15 @@ typedef struct {
   unsigned start; // character no. where the result starts
   unsigned end;   // character no. where the result ends
 } result_t;
+
+// Marked text
+typedef struct {
+  bool enabled;        // whether we are marking text
+  unsigned start_line; // line no. where the mark starts
+  unsigned start_char; // character no. where the mark starts
+  unsigned end_line;   // line no. where the mark ends
+  unsigned end_char;   // character no. where the mark ends
+} mark_t;
 
 //
 // Constants
@@ -175,6 +186,9 @@ extern result_t *results;
 
 // Total number of search results in current page
 extern unsigned results_len;
+
+// Marked text
+extern mark_t mark;
 
 // Regular expressions for links to a...
 extern full_regex_t re_man, // manual page
@@ -371,6 +385,12 @@ extern int search_next(result_t *res, unsigned res_len, unsigned from);
 // Return the line number of the member of res that immediately precedes line
 // number from. If no such line exists, return -1. res_len is the length of res.
 extern int search_prev(result_t *res, unsigned res_len, unsigned from);
+
+// Extract from lines (of length lines_len) the text indicated by mark, and
+// place it into dst, allocating all needed memory. Return the length of dst. In
+// case of error, this function sets dst to NULL and returns 0.
+extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines,
+                         unsigned lines_len);
 
 // Populate page, page_title, and page_len, based on the contents of
 // history[history_cur].

@@ -11,11 +11,20 @@ option_t options[] = {
      L"Show all manual pages (default behaviour if no PAGE has been specified)",
      OA_NONE, true},
     {"apropos", 'k',
-     L"Search among manual pages and their descriptions for PAGE (apropos)",
+     L"Show a list of all pages whose name and/or description contains PAGE "
+     L"(apropos)",
      OA_NONE, true},
-    {"whatis", 'f', L"Show all pages whose name matches PAGE (whatis)", OA_NONE,
+    {"whatis", 'f',
+     L"Show a list of all pages whose name matches PAGE (whatis)", OA_NONE,
      true},
     {"local-file", 'l', L"Interpret PAGE argument(s) as local filename(s)",
+     OA_NONE, true},
+    {"global-apropos", 'K',
+     L"Show the contents of all pages whose name and/or description contains "
+     L"PAGE (global apropos)",
+     OA_NONE, true},
+    {"all", 'a',
+     L"Show the contents of all pages whose name matches PAGE (global whatis)",
      OA_NONE, true},
     {"cli", 'T', L"Suppress the TUI and output directly to the terminal",
      OA_NONE, true},
@@ -57,6 +66,8 @@ wchar_t err_msg[BS_LINE];
 result_t *results = NULL;
 
 unsigned results_len = 0;
+
+mark_t mark = {false, 0, 0, 0, 0};
 
 full_regex_t re_man, re_http, re_email;
 
@@ -105,52 +116,49 @@ void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
 // signifies the link type to add.
 void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
                     const link_type_t type) {
-  unsigned loff = 0;     // offset (in line text) to start searching for links
-  range_t lrng;          // location of link in line
+  wchar_t ltext[BS_LINE * 2]; // text of line (or text of line merged with text
+                              // of line_next, if line is hyphenated)
+  memset(ltext, 0, sizeof(wchar_t) * BS_LINE * 2);
+  const bool lhyph =
+      line->text[line->length - 2] == L'‐'; // whether line is hyphenated
+  unsigned loff = 0;     // offset (in ltext) to start searching for links
+  range_t lrng;          // location of link in ltext
   wchar_t trgt[BS_LINE]; // link target
 
+  // Prepare ltext
+  wcsncpy(ltext, line->text, line->length - 1);
+  if (lhyph) {
+    unsigned lnme = wmargend(line_next->text); // left margin end of line_next
+    wcsncpy(&ltext[line->length - 2], &line_next->text[lnme], line_next->length - lnme);
+  }
+
   // While a link has been found...
-  lrng = fr_search(re, &line->text[loff]);
+  lrng = fr_search(re, &ltext[loff]);
   while (lrng.beg != lrng.end) {
-    if (loff + lrng.end == line->length - 2 &&
-        line->text[line->length - 2] == L'‐') {
+    // Extract link target from line
+    wcsncpy(trgt, &ltext[loff + lrng.beg], lrng.end - lrng.beg);
+    trgt[lrng.end - lrng.beg] = L'\0';
+
+    if (lhyph && loff + lrng.beg < line->length &&
+        loff + lrng.end >= line->length) {
       // Link is broken by a hyphen
 
-      wchar_t
-          tmp_text[BS_LINE * 2]; // will hold merged text of line and line_next
-      memset(tmp_text, 0, sizeof(wchar_t) * BS_LINE * 2);
-      range_t tmp_lrng; // will hold link target in merged text
-      unsigned lnme =
+      const unsigned lnme =
           wmargend(line_next->text); // position where actual text (without
-                                     // margin) of line_text starts
-
-      // Merge texts of line with line_next and extract link target from that
-      wcsncpy(tmp_text, line->text, line->length - 2);
-      tmp_text[line->length - 2] = L'\0';
-      wcsncat(tmp_text, &line_next->text[lnme], line_next->length);
-      tmp_lrng = fr_search(re, tmp_text);
-      wcsncpy(trgt, &tmp_text[loff + lrng.beg], tmp_lrng.end - tmp_lrng.beg);
-      trgt[tmp_lrng.end - tmp_lrng.beg] = L'\0';
-
-      // If successful, add the link to line
-      if (tmp_lrng.beg != tmp_lrng.end) {
-        const unsigned lstart = loff + tmp_lrng.beg; // starting pos. in line
-        const unsigned lend = line->length - 2;      // ending pos. in line
-        const unsigned nlstart = lnme; // starting pos in next line
-        const unsigned nlend = lnme + (tmp_lrng.end - tmp_lrng.beg) -
-                               (lend - lstart); // ending pos in next line
-        if (LT_MAN == type) {
-          if (aprowhat_has(trgt, aw_all, aw_all_len))
-            add_link(line, lstart, lend, true, nlstart, nlend, type, trgt);
-        } else
+                                     // margin) of line_next starts
+      const unsigned lstart = loff + lrng.beg; // starting pos. in line
+      const unsigned lend = line->length - 2;  // ending pos. in line
+      const unsigned nlstart = lnme;           // starting pos in next line
+      const unsigned nlend = lnme + (lrng.end - lrng.beg) -
+                             (lend - lstart); // ending pos in next line
+      // Add the link to line
+      if (LT_MAN == type) {
+        if (aprowhat_has(trgt, aw_all, aw_all_len))
           add_link(line, lstart, lend, true, nlstart, nlend, type, trgt);
-      }
-    } else {
+      } else
+        add_link(line, lstart, lend, true, nlstart, nlend, type, trgt);
+    } else if (loff + lrng.end < line->length) {
       // Link is not broken by a hyphen
-
-      // Extract link target from line
-      wcsncpy(trgt, &line->text[loff + lrng.beg], lrng.end - lrng.beg);
-      trgt[lrng.end - lrng.beg] = L'\0';
 
       // Add the link to line
       if (LT_MAN == type) {
@@ -166,7 +174,7 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
     loff += lrng.end;
     if (loff < line->length) {
       // Offset is not beyond the end of line; look for another link
-      lrng = fr_search(re, &line->text[loff]);
+      lrng = fr_search(re, &ltext[loff]);
     } else {
       // Offset is beyond the end of line; exit the loop
       lrng.beg = 0;
@@ -227,6 +235,11 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
   ((i + 6 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 5] == L'm'))
 
+// true if tmpw[i] contains an esape-]8 (link embedding) sequence
+#define got_esc8                                                               \
+  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L']') &&             \
+   (tmpw[i + 2] == L'8') && (tmpw[i + 3] == L';'))
+
 //
 // Functions
 //
@@ -242,7 +255,7 @@ void init() {
   history_cur = 0;
   history_top = 0;
   history = aalloc(config.misc.history_size, request_t);
-  history_replace(RT_INDEX, NULL);
+  history_replace(RT_NONE, NULL);
 
   // Initialize aw_all and sc_all
   aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"''");
@@ -253,7 +266,7 @@ void init() {
 
   // initialize regular expressions
   fr_init(&re_man, "[a-zA-Z0-9\\.:@_-]+\\([a-zA-Z0-9]+\\)", L")");
-  fr_init(&re_http, "https?:\\/\\/[a-zA-Z0-9\\.\\/\\?\\+:@_#%=-]+", L"http");
+  fr_init(&re_http, "https?:\\/\\/[a-zA-Z0-9\\.\\/\\?\\+:@_#%=~-]+", L"http");
   fr_init(
       &re_email,
       "[a-zA-Z0-9\\.\\$\\*\\+\\?\\^\\|!#%&'/=_`{}~-][a-zA-Z0-9\\.\\$\\*\\+\\/"
@@ -317,6 +330,15 @@ int parse_options(int argc, char *const *argv) {
       // -l or --local-file was passed; try to show a man page from a local file
       history_replace(RT_MAN_LOCAL, NULL);
       break;
+    case 'K':
+      // -k or --global-apropos was passed; make sure it will be passed on to
+      // man
+      config.misc.global_apropos = true;
+      break;
+    case 'a':
+      // -a or --all was passed; make sure it will be passed on to man
+      config.misc.global_whatis = true;
+      break;
     case 'T':
       // -T or --cli was passed; do not launch the TUI
       config.layout.tui = false;
@@ -330,6 +352,7 @@ int parse_options(int argc, char *const *argv) {
     case 'h':
       // -h or --help was passed; print usage and exit
       usage();
+      free(longopts);
       winddown(ES_SUCCESS, NULL);
       break;
     case '?':
@@ -346,15 +369,21 @@ void parse_args(int argc, char *const *argv) {
   wchar_t tmp[BS_LINE], tmp2[BS_SHORT]; // temporary
   unsigned tmp_len; // length of tmp (used to guard against buffer overflows)
 
-  // If the user has specified at least one argument, we should show a manual
-  // page rather than the index page; set the request type of
-  // history[history_cur] to RT_MAN
-  if (RT_INDEX == history[history_cur].request_type && argc >= 1)
-    history_replace(RT_MAN, NULL);
+  // If the user hasn't asked for a specific request type...
+  if (RT_NONE == history[history_cur].request_type) {
+    if (0 == argc) {
+      // ...and hasn't provided any arguments, show the index page
+      history_replace(RT_INDEX, NULL);
+    } else {
+      // ...but has provided arguments, try to show the manual page that
+      // corresponds to said arguments
+      history_replace(RT_MAN, NULL);
+    }
+  }
 
-  // If we are showing a manual, apropos, or whatis page...
-  if (RT_INDEX != history[history_cur].request_type) {
-    // But the user hasn't specified an argument...
+  // If we are showing a manual, apropos, whatis, or local page...
+  if (history[history_cur].request_type > RT_INDEX) {
+    // ...but the user hasn't specified an argument...
     if (0 == argc) {
       // Exit with error message
       switch (history[history_top].request_type) {
@@ -372,17 +401,31 @@ void parse_args(int argc, char *const *argv) {
       }
     }
 
+    wcscpy(tmp, L"");
+    tmp_len = 0;
+
+    if (history[history_cur].request_type == RT_MAN && !config.layout.tui) {
+      // If we are showing a manual page, we are in CLI mode...
+      if (config.misc.global_apropos) {
+        // ...and the user has requested global apropos, add '-K' to tmp
+        wcscpy(tmp, L"-K ");
+        tmp_len = 3;
+      } else if (config.misc.global_whatis) {
+        // ...and the user has requested global whatis, add '-a' to tmp
+        wcscpy(tmp, L"-a ");
+        tmp_len = 3;
+      }
+    }
+
     // Surround all members of argv with single quotes, and flatten them into
     // the tmp string
-    tmp_len = 0;
-    wcscpy(tmp, L"");
     for (i = 0; i < argc; i++) {
       swprintf(tmp2, BS_SHORT, L"'%s'", argv[i]);
       if (tmp_len + wcslen(tmp2) < BS_LINE) {
         wcscat(tmp, tmp2);
         tmp_len += wcslen(tmp2);
       }
-      if (i < argc - 1 && tmp_len + 1 < BS_LINE) {
+      if (i < argc - 1 && tmp_len + 4 < BS_LINE) {
         wcscat(tmp, L" ");
         tmp_len++;
       }
@@ -518,8 +561,8 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   else
     sprintf(cmdstr, "%s -l %ls 2>>/dev/null", config.misc.apropos_path, args);
 
-  // Execute apropos, and enter its result into a temporary file. lines becomes
-  // the total number of lines copied.
+  // Execute apropos, and enter its result into a temporary file. lines
+  // becomes the total number of lines copied.
   FILE *pp = xpopen(cmdstr, "r");
   FILE *fp = xtmpfile();
   const unsigned lines = scopylines(pp, fp);
@@ -886,20 +929,26 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     sprintf(cmdstr, "%s --warnings='!all' %ls 2>>/dev/null",
             config.misc.man_path, args);
 
-  // Execute man and, read its output, and process it into res
+  // Execute man
   FILE *pp = xpopen(cmdstr, "r");
 
-  // For each line...
+  // For each line of man's output (read into tmps/tmpw)
   xfgets(tmps, BS_LINE, pp);
   while (!feof(pp)) {
-
-    // Insert text and formatting attirbutes into line
     len = mbstowcs(tmpw, tmps, BS_LINE);
+
     if (-1 == len)
       winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
-    line_alloc(res[ln], config.layout.lmargin + len);
+
+    // Allocate memory for a new line in res
+    line_alloc(res[ln], config.layout.lmargin + len + 1);
+
+    // Add spaces for left margin
     for (j = 0; j < config.layout.lmargin; j++)
       res[ln].text[j] = L' ';
+
+    // Read the contents of tmpw one character at a time, and build the line's
+    // text, reg, bold, italic, and uline members
     for (i = 0; i < len; i++) {
       if (got_not_bold) {
         bset(res[ln].reg, j);
@@ -922,11 +971,20 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
         i += 4;
       } else if (got_any_3) {
         i += 5;
+      } else if (got_esc8) {
+        i += 3;
+        while (i < len && !(tmpw[i - 1] == L'\e' && tmpw[i] == L'\\'))
+          i++;
       } else if (tmpw[i] != L'\n') {
         res[ln].text[j] = tmpw[i];
         j++;
       }
     }
+
+    // Insert the obligatory 0 byte at the end of the line's text, and set its
+    // exact length
+    res[ln].text[j] = L'\0';
+    res[ln].length = j + 1;
 
     xfgets(tmps, BS_LINE, pp);
 
@@ -1147,11 +1205,51 @@ int search_next(result_t *res, unsigned res_len, unsigned from) {
 int search_prev(result_t *res, unsigned res_len, unsigned from) {
   int i;
 
-  for (i = res_len - 1; i >=0; i--)
+  for (i = res_len - 1; i >= 0; i--)
     if (res[i].line <= from)
       return res[i].line;
 
   return -1;
+}
+
+extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines,
+                         unsigned lines_len) {
+  // Return if no text is marked
+  if (!mark.enabled) {
+    *dst = NULL;
+    return 0;
+  }
+
+  wchar_t *res = walloc(BS_LINE * config.layout.height); // return value
+  memset(res, 0, sizeof(wchar_t) * BS_LINE * config.layout.height);
+  wchar_t tmp[BS_LINE]; // temporary
+  unsigned ln;          // current line number
+
+  // Generate return value
+  if (mark.start_line == mark.end_line) {
+    // Marked text is in a single line
+    wcsncpy(res, &lines[mark.start_line].text[mark.start_char],
+            1 + mark.end_char - mark.start_char);
+  } else {
+    // Marked text is in multiple lines
+    for (ln = mark.start_line; ln <= mark.end_line; ln++) {
+      if (ln == mark.start_line) {
+        // First line; append text from start_char to end of line
+        wcscat(res, &lines[ln].text[mark.start_char]);
+      } else if (ln == mark.end_line) {
+        // Last line; append text from beginning of line to end_char
+        wcsncpy(tmp, lines[ln].text, 1 + mark.end_char);
+        tmp[1 + mark.end_char] = L'\0';
+        wcscat(res, tmp);
+      } else {
+        // Intermediary lines; append entire line text
+        wcscat(res, lines[ln].text);
+      }
+    }
+  }
+
+  *dst = res;
+  return wcslen(res);
 }
 
 void populate_page() {
@@ -1174,7 +1272,7 @@ void populate_page() {
     page_len = man(&page, history[history_cur].args, false);
     break;
   case RT_MAN_LOCAL:
-    swprintf(page_title, BS_SHORT, L"Manual page(s) in local file(s): %ls",
+    swprintf(page_title, BS_SHORT, L"Manual page in local file(s): %ls",
              history[history_cur].args);
     page_len = man(&page, history[history_cur].args, true);
     break;
@@ -1189,6 +1287,9 @@ void populate_page() {
              history[history_cur].args);
     page_len = aprowhat(&page, AW_WHATIS, history[history_cur].args, L"WHATIS",
                         page_title);
+    break;
+  default:
+    winddown(ES_OPER_ERROR, L"Unexpected program request");
   }
 
   // Reset search results
@@ -1235,6 +1336,9 @@ void winddown(int ec, const wchar_t *em) {
   // Shut ncurses down
   winddown_tui();
 
+  // Deallocate memory used by base64
+  base64_cleanup();
+
   // Deallocate memory used by config global
   if (NULL != config.chars.sbar_top)
     free(config.chars.sbar_top);
@@ -1264,8 +1368,10 @@ void winddown(int ec, const wchar_t *em) {
     free(config.chars.box_bl);
   if (NULL != config.chars.box_br)
     free(config.chars.box_br);
-  if (NULL != config.misc.program_name)
-    free(config.misc.program_name);
+  if (NULL != config.chars.arrow_up)
+    free(config.chars.arrow_up);
+  if (NULL != config.chars.arrow_down)
+    free(config.chars.arrow_down);
   if (NULL != config.misc.program_version)
     free(config.misc.program_version);
   if (NULL != config.misc.config_path)
