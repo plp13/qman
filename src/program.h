@@ -93,6 +93,9 @@ typedef struct {
   wchar_t *text;         // the line's text
   unsigned links_length; // number of links in line
   link_t *links;         // links in line
+  char section_level;    // for lines that are (sub)section headers, the
+                      // (sub)section level: 0 for section, 1 for sub-section, 2
+                      // for sub-sub-section, and so on; for other lines, -1
   // Places in the line the text becomes...
   bitarr_t reg;    // regular
   bitarr_t bold;   // bold
@@ -207,6 +210,7 @@ extern full_regex_t re_man, // manual page
   line.text[0] = '\0';                                                         \
   line.links_length = 0;                                                       \
   line.links = NULL;                                                           \
+  line.section_level = -1;                                                     \
   if (len > 0) {                                                               \
     line.reg = balloc(len);                                                    \
     bclearall(line.reg, len);                                                  \

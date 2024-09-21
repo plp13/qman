@@ -129,7 +129,8 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
   wcsncpy(ltext, line->text, line->length - 1);
   if (lhyph) {
     unsigned lnme = wmargend(line_next->text); // left margin end of line_next
-    wcsncpy(&ltext[line->length - 2], &line_next->text[lnme], line_next->length - lnme);
+    wcsncpy(&ltext[line->length - 2], &line_next->text[lnme],
+            line_next->length - lnme);
   }
 
   // While a link has been found...
@@ -180,6 +181,42 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
       lrng.beg = 0;
       lrng.end = 0;
     }
+  }
+}
+
+// Helper of man(). If line is a section header, return its level. Otherwise,
+// return -1. This function must initially be called with a NULL argument, every
+// time man() is invoked.
+bool section_header_level(line_t *line) {
+  static unsigned lnme_set[] = {
+      0, 0, 0, 0,
+      0, 0, 0, 0}; // unique and (hopefully) ordered lnme values for all section
+                   // headers encountered so far
+  unsigned i;      // iterator
+
+  // Line is NULL; re-initialize lnme_set and return -1
+  if (NULL == line) {
+    for (i = 0; i < 8; i++)
+      lnme_set[i] = 0;
+
+    return -1;
+  }
+
+  unsigned lnme = wmargend(
+      line->text); // position in line's text where margin whitespace ends
+
+  if (bget(line->bold, lnme) && bget(line->reg, line->length - 1)) {
+    // Line is a section header; return the level that corresponds to its lnme
+    for (i = 0; i < 8; i++) {
+      if (0 == lnme_set[i])
+        lnme_set[i] = lnme;
+      if (lnme == lnme_set[i])
+        return i;
+    }
+    return 7;
+  } else {
+    // Not a section header
+    return -1;
   }
 }
 
@@ -710,6 +747,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
            lmargin_width, "",                         //
            text_width, tmp);
+  res[ln].section_level = 0;
   bset(res[ln].bold, lmargin_width);
   bset(res[ln].reg, lmargin_width + wcslen(tmp));
 
@@ -745,6 +783,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
     // Newline
     inc_ln;
     line_alloc(res[ln], 0);
+
     // Section title
     inc_ln;
     line_alloc(res[ln], line_width);
@@ -752,8 +791,10 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
     swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
              lmargin_width, "",                         //
              text_width, tmp);
+    res[ln].section_level = 0;
     bset(res[ln].bold, lmargin_width);
     bset(res[ln].reg, lmargin_width + wcslen(tmp));
+
     // For each manual page...
     for (j = 0; j < aw_len; j++) {
       // If manual page is in current section...
@@ -932,6 +973,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // Execute man
   FILE *pp = xpopen(cmdstr, "r");
 
+  section_header_level(NULL);
+
   // For each line of man's output (read into tmps/tmpw)
   xfgets(tmps, BS_LINE, pp);
   while (!feof(pp)) {
@@ -985,6 +1028,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     // exact length
     res[ln].text[j] = L'\0';
     res[ln].length = j + 1;
+
+    res[ln].section_level = section_header_level(&res[ln]);
 
     xfgets(tmps, BS_LINE, pp);
 

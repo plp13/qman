@@ -142,7 +142,7 @@ void draw_help(const wchar_t *const *keys_names, unsigned keys_names_max,
   const unsigned end = MIN(PA_QUIT,
                            top + height - 6); // last action to print help for
   wchar_t *buf = walloca(width - 2);          // temporary
-  unsigned i, j;                              // iterator
+  unsigned i, j;                              // iterators
 
   j = 2;
   for (i = top; i <= end; i++) {
@@ -176,12 +176,12 @@ void draw_help(const wchar_t *const *keys_names, unsigned keys_names_max,
 // entry to print, and focus indicates the entry to focus on.
 void draw_history(request_t *history, unsigned history_cur,
                   unsigned history_top, unsigned top, unsigned focus) {
-  const unsigned width = getmaxx(wimm);  // help window width
-  const unsigned height = getmaxy(wimm); // help window height
+  const unsigned width = getmaxx(wimm);  // history window width
+  const unsigned height = getmaxy(wimm); // history window height
   const unsigned end = MIN(history_top,
                            top + height - 6); // last entry to print
   wchar_t *buf = walloca(width - 2);          // temporary
-  unsigned i, j;                              // iterator
+  unsigned i, j;                              // iterators
 
   j = 2;
   for (i = top; i <= end; i++) {
@@ -197,6 +197,45 @@ void draw_history(request_t *history, unsigned history_cur,
              i == history_cur ? L"»" : L" ",
              request_type_str(history[i].request_type), width - 15,
              NULL == history[i].args ? L"" : history[i].args, glyph);
+    if (i == focus) {
+      change_colour(wimm, config.colours.help_text_f);
+    } else {
+      change_colour(wimm, config.colours.help_text);
+    }
+    mvwaddnwstr(wimm, j, 1, buf, width - 1);
+    j++;
+  }
+
+  wmove(wimm, height - 2, width - 2);
+  wnoutrefresh(wimm);
+}
+
+// Helper for tui_toc(). Draw the table of contents into wimm. headers and
+// levels contain the section header texts and levels respectfully. length
+// indicates the size of the headers and levels arrays. cur is the section
+// the user is currently viewing in the main window, top is the first section
+// header to print, and focus indicates the section header to focus on.
+void draw_toc(wchar_t **headers, unsigned *levels, unsigned length,
+              unsigned cur, unsigned top, unsigned focus) {
+  const unsigned width = getmaxx(wimm);  // TOC window width
+  const unsigned height = getmaxy(wimm); // TOC window height
+  const unsigned end = MIN(length - 1,
+                           top + height - 6); // last header to print
+  wchar_t *buf = walloca(width - 2);          // temporary
+  unsigned i, j;                              // iterator
+
+  j = 2;
+  for (i = top; i <= end; i++) {
+    wchar_t glyph;
+    if (i == top && i > 0)
+      glyph = *config.chars.arrow_up;
+    else if (i == end && i < history_top)
+      glyph = *config.chars.arrow_down;
+    else
+      glyph = L' ';
+
+    swprintf(buf, width - 1, L"%1ls %*ls%*ls %lc", i == cur ? L"»" : L" ",
+             2 * levels[i], L"", width - 6 - 2 * levels[i], headers[i], glyph);
     if (i == focus) {
       change_colour(wimm, config.colours.help_text_f);
     } else {
@@ -1530,7 +1569,7 @@ bool tui_history() {
 
   // Main loop
   while (true) {
-    // Draw the help text in the help window
+    // Draw the history text in the history window
     draw_history(history, history_cur, history_top, top, focus);
     doupdate();
 
@@ -1635,6 +1674,8 @@ bool tui_history() {
 
   return true;
 }
+
+bool tui_toc() { return false; }
 
 bool tui_search(bool back) {
   wchar_t *prompt = back ? L"?" : L"/"; // search prompt
@@ -2154,6 +2195,9 @@ void tui() {
       break;
     case PA_HISTORY:
       redraw = tui_history();
+      break;
+    case PA_TOC:
+      redraw = tui_toc();
       break;
     case PA_SEARCH:
       redraw = tui_search(false);

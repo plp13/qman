@@ -121,6 +121,7 @@ config_def = {
         "back": (("key",), ("KEY_BACKSPACE", "BS", "["), True, "Go back one step in history"),
         "fwrd": (("key",), ("]"), True, "Go forward one step in history"),
         "history": (("key",), ("s", "S"), True, "Show history menu"),
+        "toc": (("key",), ("t"), True, "Show table of contents"),
         "search": (("key",), ("/"), True, "Forward search"),
         "search_back": (("key",), ("?"), True, "Backward search"),
         "search_next": (("key",), ("n"), True, "Go to next search result"),
