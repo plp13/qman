@@ -30,6 +30,7 @@ src = [
   'qman.c'
 ]
 deps = [
+  dependency('zlib'),
   dependency('ncursesw'),
   dependency('inih')
 ]

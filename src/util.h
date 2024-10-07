@@ -127,6 +127,12 @@ extern FILE *xpopen(const char *command, const char *type);
 // Safely call pclose()
 extern int xpclose(FILE *stream);
 
+// Safely call gzopen()
+extern gzFile xgzopen(const char *path, const char *mode);
+
+// Safely call gzclose()
+extern int xgzclose(gzFile file);
+
 // Safely call fopen()
 extern FILE *xfopen(const char *pathname, const char *mode);
 
@@ -209,8 +215,9 @@ extern void wsort(wchar_t **trgt, unsigned trgt_len, bool rev);
 // length of src.
 extern unsigned wmaxlen(const wchar_t *const *src, unsigned src_len);
 
-// Return the position of the first character in src that is not whitespace
-extern unsigned wmargend(const wchar_t *src);
+// Return the position of the first character in src that is not whitespace, and
+// not one of the characters in extras.
+extern unsigned wmargend(const wchar_t *src, const wchar_t *extras);
 
 // Case-insensitive version of wcsstr()
 extern wchar_t *wcscasestr(const wchar_t *haystack, const wchar_t *needle);

@@ -19,6 +19,7 @@
 #include <wchar.h>
 #include <time.h>
 #include <regex.h>
+#include <zlib.h>
 #include <curses.h>
 #include <term.h>
 #undef lines

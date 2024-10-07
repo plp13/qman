@@ -61,6 +61,30 @@ int xpclose(FILE *stream) {
   return status;
 }
 
+gzFile xgzopen(const char *path, const char *mode) {
+  gzFile gzfp = gzopen(path, mode);
+
+  if (NULL == gzfp) {
+    static wchar_t errmsg[BS_SHORT];
+    serror(errmsg, L"Unable to gzopen()");
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+
+  return gzfp;
+}
+
+int xgzclose(gzFile file) {
+  const int status = gzclose(file);
+
+  if (Z_OK != status) {
+    static wchar_t errmsg[BS_SHORT];
+    serror(errmsg, L"Unable to gzclose()");
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+
+  return status;
+}
+
 FILE *xfopen(const char *pathname, const char *mode) {
   FILE *const file = fopen(pathname, mode);
 
@@ -338,10 +362,21 @@ unsigned wmaxlen(const wchar_t *const *src, unsigned src_len) {
   return maxlen;
 }
 
-unsigned wmargend(const wchar_t *src) {
-  for (unsigned i = 0; i < wcslen(src); i++)
-    if (!iswspace(src[i]))
-      return i;
+unsigned wmargend(const wchar_t *src, const wchar_t *extras) {
+  unsigned i, j; // iterators
+
+  if (NULL == extras)
+    extras = L"";
+
+  for (i = 0; L'\0' != src[i]; i++)
+    if (!iswspace(src[i])) {
+      for (j = 0; L'\0' != extras[j]; j++) {
+          if (src[i] == extras[j])
+            break;
+        }
+      if (L'\0' == extras[j])
+        return i;
+    }
 
   return 0;
 }

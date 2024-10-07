@@ -80,7 +80,7 @@ full_regex_t re_man, re_http, re_email;
 #define inc_ln                                                                 \
   ln++;                                                                        \
   if (ln == res_len) {                                                         \
-    res_len += 1024;                                                           \
+    res_len += BS_LINE;                                                        \
     res = xreallocarray(res, res_len, sizeof(line_t));                         \
   }
 
@@ -89,7 +89,7 @@ full_regex_t re_man, re_http, re_email;
 #define inc_i                                                                  \
   i++;                                                                         \
   if (i == res_len) {                                                          \
-    res_len += 1024;                                                           \
+    res_len += BS_LINE;                                                        \
     res = xreallocarray(res, res_len, sizeof(result_t));                       \
   }
 
@@ -125,10 +125,17 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
   range_t lrng;          // location of link in ltext
   wchar_t trgt[BS_LINE]; // link target
 
+  char tmp[BS_LINE * 2];
+  sprintf(tmp, "text='%ls' length=%d", line->text, line->length);
+  loggit(tmp);
+  sprintf(tmp, "lhyph=%d checked=%d actual=%d", lhyph, L'‐',
+          line->text[line->length - 2]);
+  loggit(tmp);
   // Prepare ltext
   wcsncpy(ltext, line->text, line->length - 1);
   if (lhyph) {
-    unsigned lnme = wmargend(line_next->text); // left margin end of line_next
+    unsigned lnme =
+        wmargend(line_next->text, NULL); // left margin end of line_next
     wcsncpy(&ltext[line->length - 2], &line_next->text[lnme],
             line_next->length - lnme);
   }
@@ -144,9 +151,9 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
         loff + lrng.end >= line->length) {
       // Link is broken by a hyphen
 
-      const unsigned lnme =
-          wmargend(line_next->text); // position where actual text (without
-                                     // margin) of line_next starts
+      const unsigned lnme = wmargend(
+          line_next->text, NULL); // position where actual text (without
+                                  // margin) of line_next starts
       const unsigned lstart = loff + lrng.beg; // starting pos. in line
       const unsigned lend = line->length - 2;  // ending pos. in line
       const unsigned nlstart = lnme;           // starting pos in next line
@@ -203,7 +210,7 @@ bool section_header_level(line_t *line) {
   }
 
   unsigned lnme = wmargend(
-      line->text); // position in line's text where margin whitespace ends
+      line->text, NULL); // position in line's text where margin whitespace ends
 
   if (bget(line->bold, lnme) && bget(line->reg, line->length - 1)) {
     // Line is a section header; return the level that corresponds to its lnme
@@ -592,11 +599,13 @@ void history_reset() {
 unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
                        const wchar_t *args) {
   // Prepare apropos/whatis command
-  char cmdstr[BS_SHORT];
+  char cmdstr[BS_LINE];
   if (AW_WHATIS == cmd)
-    sprintf(cmdstr, "%s -l %ls 2>>/dev/null", config.misc.whatis_path, args);
+    snprintf(cmdstr, BS_LINE, "%s -l %ls 2>>/dev/null", config.misc.whatis_path,
+             args);
   else
-    sprintf(cmdstr, "%s -l %ls 2>>/dev/null", config.misc.apropos_path, args);
+    snprintf(cmdstr, BS_LINE, "%s -l %ls 2>>/dev/null",
+             config.misc.apropos_path, args);
 
   // Execute apropos, and enter its result into a temporary file. lines
   // becomes the total number of lines copied.
@@ -707,7 +716,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   wchar_t tmp[BS_LINE]; // temporary
   memset(tmp, 0, sizeof(wchar_t) * BS_LINE);
 
-  unsigned res_len = 1024;               // result buffer length
+  unsigned res_len = BS_LINE;            // result buffer length
   line_t *res = aalloc(res_len, line_t); // result buffer
 
   // Header
@@ -944,7 +953,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   wchar_t *tmpw = walloc(BS_LINE); // temporary
   char *tmps = salloc(BS_LINE);    // temporary
 
-  unsigned res_len = 1024;               // result buffer length
+  unsigned res_len = BS_LINE;            // result buffer length
   line_t *res = aalloc(res_len, line_t); // result buffer
 
   // Set up the environment for man to create its output as we want it
@@ -958,17 +967,19 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
           config.misc.justify ? "" : "--nj");
   setenv("MAN_KEEP_FORMATTING", "1", true);
   setenv("GROFF_SGR", "1", true);
+  setenv("MANROFFOPT", "", true);
   setenv("MANOPT", tmps, true);
   unsetenv("GROFF_NO_SGR");
 
   // Prepare man command
-  char cmdstr[BS_SHORT];
+  char cmdstr[BS_LINE];
   if (local_file)
-    sprintf(cmdstr, "%s --warnings='!all' --local-file %ls 2>>/dev/null",
-            config.misc.man_path, args);
+    snprintf(cmdstr, BS_LINE,
+             "%s --warnings='!all' --local-file %ls 2>>/dev/null",
+             config.misc.man_path, args);
   else
-    sprintf(cmdstr, "%s --warnings='!all' %ls 2>>/dev/null",
-            config.misc.man_path, args);
+    snprintf(cmdstr, BS_LINE, "%s --warnings='!all' %ls 2>>/dev/null",
+             config.misc.man_path, args);
 
   // Execute man
   FILE *pp = xpopen(cmdstr, "r");
@@ -1061,6 +1072,37 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 
   *dst = res;
   return ln;
+}
+
+unsigned toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
+  char groff[BS_LINE]; // path to Groff document for manual page
+  unsigned ln = 0;     // current line number (in Groff document)
+  int len;             // length of current line text
+  unsigned i, j;       // iterators
+
+  unsigned res_len = BS_SHORT;                     // result buffer length
+  toc_entry_t *res = aalloc(res_len, toc_entry_t); // result buffer
+
+  // Populate groff
+  if (local_file)
+    wcstombs(groff, args, BS_LINE);
+  else {
+    char cmdstr[BS_LINE];
+    snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
+             config.misc.man_path, args);
+    FILE *pp = xpopen(cmdstr, "r");
+    xfgets(groff, BS_LINE, pp);
+    if (feof(pp)) {
+      loggit("unable to populate groff using man");
+      *dst = res;
+      return 0;
+    }
+  }
+
+  // Open groff
+  gzFile fp = xgzopen(groff, "rb");
+
+  xgzclose(fp);
 }
 
 link_loc_t prev_link(const line_t *lines, unsigned lines_len,
@@ -1200,9 +1242,9 @@ unsigned search(result_t **dst, const wchar_t *needle, const line_t *lines,
   unsigned ln;                                // current line no.
   unsigned i = 0;                             // current result no.
   const unsigned needle_len = wcslen(needle); // length of needle
-  wchar_t *cur_hayst;      // current haystuck (i.e. text of current line)
-  wchar_t *hit = NULL;     // current return value of wcscasestr()
-  unsigned res_len = 1024; // result buffer length
+  wchar_t *cur_hayst;         // current haystuck (i.e. text of current line)
+  wchar_t *hit = NULL;        // current return value of wcscasestr()
+  unsigned res_len = BS_LINE; // result buffer length
   result_t *res = aalloc(res_len, result_t); // result buffer
 
   // For each line...

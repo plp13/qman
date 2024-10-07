@@ -103,6 +103,20 @@ typedef struct {
   bitarr_t uline;  // underlined
 } line_t;
 
+// A table of contents entry type
+typedef enum {
+  TT_HEAD,    // section heading
+  TT_SUBHEAD, // section subheading
+  TT_EXAMPLE, // example
+  TT_TAGPAR   // tagged paragraph
+} toc_type_t;
+
+// A table of contents entry
+typedef struct toc_entry_t {
+  toc_type_t type; // type
+  wchar_t *text;   // text
+} toc_entry_t;
+
 // A search result
 typedef struct {
   unsigned line;  // line number
@@ -193,10 +207,10 @@ extern unsigned results_len;
 // Marked text
 extern mark_t mark;
 
-// Regular expressions for links to a...
-extern full_regex_t re_man, // manual page
-    re_url,                 // http(s) URL
-    re_email;               // email address
+// Regular expressions for a link to...
+extern full_regex_t re_man, // a manual page
+    re_url,                 // an http(s) URL
+    re_email;               // an email address
 
 //
 // Macros
@@ -356,6 +370,11 @@ extern unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const wchar_t *args,
 // of lines in said output. args specifies the arguments for the man command.
 // local_file signifies whether to pass the --local-file option to man.
 extern unsigned man(line_t **dst, const wchar_t *args, bool local_file);
+
+// Use man, zlib, and local logic to extract the table of contents of a manual
+// page. Place the result in dst, and return dst's length. args and local_file
+// have the same meanings as for man().
+extern unsigned toc(toc_entry_t **dst, const wchar_t *args, bool local_file);
 
 // Find the previous link in lines (of linegth lines_len), starting at location
 // start. Return said link's location.
