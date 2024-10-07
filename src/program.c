@@ -917,6 +917,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
           config.misc.justify ? "" : "--nj");
   setenv("MAN_KEEP_FORMATTING", "1", true);
   setenv("GROFF_SGR", "1", true);
+  setenv("MANROFFOPT", "", true);
   setenv("MANOPT", tmps, true);
   unsetenv("GROFF_NO_SGR");
 
