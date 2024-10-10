@@ -142,8 +142,14 @@ extern int xfclose(FILE *stream);
 // Safely call tmpfile()
 extern FILE *xtmpfile();
 
+// Safely call gzgets()
+extern char *xgzgets(gzFile file, char *buf, int len);
+
 // Safely call fgets()
 extern char *xfgets(char *s, int size, FILE *stream);
+
+// Safely call fputs()
+extern int xfputs(const char *s, FILE *stream);
 
 // Safely call fwrite()
 extern size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
@@ -216,8 +222,13 @@ extern void wsort(wchar_t **trgt, unsigned trgt_len, bool rev);
 extern unsigned wmaxlen(const wchar_t *const *src, unsigned src_len);
 
 // Return the position of the first character in src that is not whitespace, and
-// not one of the characters in extras.
+// not one of the characters in extras
 extern unsigned wmargend(const wchar_t *src, const wchar_t *extras);
+
+// Trim all characters at the end of trgt that are either whitespace or one of
+// the charactes in extras. (Trimming is done by inserting 0 or more NULL
+// characters at the end of trgt.) Return the new length of trgt.
+extern unsigned wmargtrim(wchar_t *trgt, const wchar_t *extras);
 
 // Case-insensitive version of wcsstr()
 extern wchar_t *wcscasestr(const wchar_t *haystack, const wchar_t *needle);

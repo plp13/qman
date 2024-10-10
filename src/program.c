@@ -84,6 +84,15 @@ full_regex_t re_man, re_http, re_email;
     res = xreallocarray(res, res_len, sizeof(line_t));                         \
   }
 
+// Helper of toc(). Increase en, and reallocate res in memory, if en has
+// exceeded its size
+#define inc_en                                                                 \
+  en++;                                                                        \
+  if (en == res_len) {                                                         \
+    res_len += BS_SHORT;                                                       \
+    res = xreallocarray(res, res_len, sizeof(toc_entry_t));                    \
+  }
+
 // Helper of search(). Increase i, and reallocate res in memory, if i has
 // exceeded its size.
 #define inc_i                                                                  \
@@ -125,12 +134,6 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
   range_t lrng;          // location of link in ltext
   wchar_t trgt[BS_LINE]; // link target
 
-  char tmp[BS_LINE * 2];
-  sprintf(tmp, "text='%ls' length=%d", line->text, line->length);
-  loggit(tmp);
-  sprintf(tmp, "lhyph=%d checked=%d actual=%d", lhyph, L'‐',
-          line->text[line->length - 2]);
-  loggit(tmp);
   // Prepare ltext
   wcsncpy(ltext, line->text, line->length - 1);
   if (lhyph) {
@@ -283,6 +286,72 @@ bool section_header_level(line_t *line) {
 #define got_esc8                                                               \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L']') &&             \
    (tmpw[i + 2] == L'8') && (tmpw[i + 3] == L';'))
+
+// Helper of toc(). Massage text member of every entry in toc (of size toc_len)
+// with the groff command, in order to remove escaped characters, etc.
+void tocgroff(toc_entry_t *toc, unsigned toc_len) {
+  char *tpath;               // temporary file path
+  char cmdstr[BS_LINE] = ""; // groff 'massage' command
+  char texts[BS_LINE];       // 8-bit version of current toc text
+  unsigned i;                // iterator
+
+  // Prepare tpath and cmdstr
+  tpath = tempnam(NULL, "qman");
+  snprintf(cmdstr, BS_LINE, "%s -man -Tutf8 %s 2>>/dev/null",
+           config.misc.groff_path, tpath);
+
+  // Prepare the environment
+  char *old_groff_no_sgr = getenv("GROFF_NO_SGR");
+  setenv("GROFF_NO_SGR", "1", true);
+
+  // Write all texts of toc into temporary file
+  FILE *fp = xfopen(tpath, "w");
+  xfputs(".ll 100i\n", fp);
+  for (i = 0; i < toc_len; i++)
+    if (NULL != toc[i].text) {
+      wcstombs(texts, toc[i].text, BS_LINE);
+      xfputs(texts, fp);
+      xfputs("\n.sp 0\n", fp);
+    }
+  xfclose(fp);
+
+  // Massage temporary file with groff and put the results back into the texts
+  // of toc
+  FILE *pp = xpopen(cmdstr, "r");
+  for (i = 0; i < toc_len; i++) {
+    xfgets(texts, BS_LINE, pp);
+    mbstowcs(toc[i].text, texts, BS_LINE);
+    wmargtrim(toc[i].text, L"\n");
+  }
+  xpclose(pp);
+
+  // Tidy up and restore the environment
+  // unlink(tpath);
+  free(tpath);
+  if (NULL != old_groff_no_sgr)
+    setenv("GROFF_NO_SGR", old_groff_no_sgr, true);
+}
+
+// Helper of toc(). If src begins with a groff command, return the position (in
+// src) of the first non-whitespace character that follows it. Otherwise,
+// return 0.
+unsigned wgcmdend(wchar_t *src) {
+  unsigned i;
+
+  if (L'.' == src[0]) {
+    for (i = 0; L'\0' != src[i]; i++)
+      if (iswspace(src[i]))
+        break;
+
+    for (; L'\0' != src[i]; i++)
+      if (!iswspace(src[i]))
+        break;
+
+    return i;
+  }
+
+  return 0;
+}
 
 //
 // Functions
@@ -1048,7 +1117,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   }
 
   // Restore the environment
-  setenv("TERM", old_term, true);
+  if (NULL != old_term)
+    setenv("TERM", old_term, true);
 
   xpclose(pp);
   free(tmpw);
@@ -1075,34 +1145,87 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 }
 
 unsigned toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
-  char groff[BS_LINE]; // path to Groff document for manual page
-  unsigned ln = 0;     // current line number (in Groff document)
-  int len;             // length of current line text
-  unsigned i, j;       // iterators
+  char gpath[BS_LINE];    // path to Groff document for manual page
+  int glen;               // length of current line in Groff document
+  wchar_t gline[BS_LINE]; // current line in Groff document
+  unsigned en = 0;        // current entry in TOC
+  char tmp[BS_LINE];      // temporary
 
   unsigned res_len = BS_SHORT;                     // result buffer length
   toc_entry_t *res = aalloc(res_len, toc_entry_t); // result buffer
 
-  // Populate groff
+  // Use GNU man to figure out gpath
   if (local_file)
-    wcstombs(groff, args, BS_LINE);
+    wcstombs(gpath, args, BS_LINE);
   else {
     char cmdstr[BS_LINE];
     snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
              config.misc.man_path, args);
     FILE *pp = xpopen(cmdstr, "r");
-    xfgets(groff, BS_LINE, pp);
-    if (feof(pp)) {
-      loggit("unable to populate groff using man");
-      *dst = res;
-      return 0;
-    }
+    sreadline(gpath, BS_LINE, pp);
+    xpclose(pp);
   }
 
-  // Open groff
-  gzFile fp = xgzopen(groff, "rb");
+  // Open gpath
+  gzFile gp = xgzopen(gpath, "rb");
 
-  xgzclose(fp);
+  // For each line in gpath, gline...
+  xgzgets(gp, tmp, BS_LINE);
+  while (!gzeof(gp)) {
+    glen = mbstowcs(gline, tmp, BS_LINE);
+
+    if (-1 == glen)
+      winddown(ES_OPER_ERROR, L"Failed to read compressed manual page source");
+
+    // If line can be a TOC entry, add the corresponding data to res
+    if (glen >= 3 && L'.' == gline[0] && L'S' == gline[1] && L'H' == gline[2]) {
+      // Section heading
+      res[en].type = TT_HEAD;
+      unsigned textsp = wmargend(&gline[3], L"\"");
+      res[en].text = walloc(BS_LINE);
+      wcscpy(res[en].text, &gline[3 + textsp]);
+      wmargtrim(res[en].text, L"\"");
+      inc_en;
+    } else if (glen >= 3 && L'.' == gline[0] && L'S' == gline[1] &&
+               L'S' == gline[2]) {
+      // Subsection heading
+      res[en].type = TT_SUBHEAD;
+      unsigned textsp = wmargend(&gline[3], L"\"");
+      res[en].text = walloc(BS_LINE);
+      wcscpy(res[en].text, &gline[3 + textsp]);
+      wmargtrim(res[en].text, L"\"");
+      inc_en;
+    } else if (glen >= 3 && L'.' == gline[0] && L'T' == gline[1] &&
+               L'P' == gline[2]) {
+      // Tagged paragraph
+      xgzgets(gp, tmp, BS_LINE);
+      if (!gzeof(gp)) {
+        glen = mbstowcs(gline, tmp, BS_LINE);
+        res[en].type = TT_TAGPAR;
+        unsigned textsp = wmargend(gline, NULL);
+        textsp = wgcmdend(&gline[textsp]);
+        res[en].text = walloc(BS_LINE);
+        wcscpy(res[en].text, &gline[textsp]);
+        glen = wmargtrim(res[en].text, L"\n");
+        if (glen >= 1 && L'\\' == res[en].text[glen - 1])
+          res[en].text[glen - 1] = L'\0';
+        if (glen >= 2 && L'\\' == res[en].text[glen - 2] &&
+            L'c' == res[en].text[glen - 1]) {
+          res[en].text[glen - 2] = L'\0';
+          res[en].text[glen - 1] = L'\0';
+        }
+        inc_en;
+      }
+    }
+
+    xgzgets(gp, tmp, BS_LINE);
+  }
+
+  xgzclose(gp);
+
+  tocgroff(res, en);
+  *dst = res;
+  return en;
 }
 
 link_loc_t prev_link(const line_t *lines, unsigned lines_len,
@@ -1419,6 +1542,17 @@ void lines_free(line_t *lines, unsigned lines_len) {
   free(lines);
 }
 
+void toc_free(toc_entry_t *toc, unsigned toc_len) {
+  unsigned i;
+
+  for (i = 0; i < toc_len; i++) {
+    if (NULL != toc[i].text)
+      free(toc[i].text);
+  }
+
+  free(toc);
+}
+
 void winddown(int ec, const wchar_t *em) {
   // Shut ncurses down
   winddown_tui();
@@ -1465,6 +1599,8 @@ void winddown(int ec, const wchar_t *em) {
     free(config.misc.config_path);
   if (NULL != config.misc.man_path)
     free(config.misc.man_path);
+  if (NULL != config.misc.groff_path)
+    free(config.misc.groff_path);
   if (NULL != config.misc.whatis_path)
     free(config.misc.whatis_path);
   if (NULL != config.misc.apropos_path)

@@ -107,7 +107,6 @@ typedef struct {
 typedef enum {
   TT_HEAD,    // section heading
   TT_SUBHEAD, // section subheading
-  TT_EXAMPLE, // example
   TT_TAGPAR   // tagged paragraph
 } toc_type_t;
 
@@ -427,6 +426,9 @@ extern void aprowhat_free(aprowhat_t *res, unsigned res_len);
 
 // Free the memory occupied by lines (of length lines_len)
 extern void lines_free(line_t *lines, unsigned lines_len);
+
+// Free the memory occupied by toc (of length toc_len)
+extern void toc_free(toc_entry_t *toc, unsigned toc_len);
 
 // Exit the program gracefully, with exit code ec. If em is not NULL, echo it
 // on stdout before exiting.

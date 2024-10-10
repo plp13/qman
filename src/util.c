@@ -121,6 +121,31 @@ FILE *xtmpfile() {
   return file;
 }
 
+char *xgzgets(gzFile file, char *buf, int len) {
+  char *res;
+
+  while (true) {
+    res = gzgets(file, buf, len);
+
+    if (NULL == res && !gzeof(file)) {
+      // There has been an error
+      if (EINTR == errno) {
+        // Sometimes ncurses rudely interrupts gzgets(). If that's the case, try
+        // calling gzgets() again
+        gzclearerr(file);
+      } else {
+        // Otherwise, fail gracefully
+        static wchar_t errmsg[BS_SHORT];
+        serror(errmsg, L"Unable to gzgets()");
+        winddown(ES_OPER_ERROR, errmsg);
+      }
+    } else {
+      // No error; return the result
+      return res;
+    }
+  }
+}
+
 char *xfgets(char *s, int size, FILE *stream) {
   char *res;
 
@@ -144,6 +169,18 @@ char *xfgets(char *s, int size, FILE *stream) {
       return res;
     }
   }
+}
+
+int xfputs(const char *s, FILE *stream) {
+  int res = fputs(s, stream);
+
+  if (EOF == res) {
+    static wchar_t errmsg[BS_SHORT];
+    serror(errmsg, L"Unable to fputs()");
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+
+  return res;
 }
 
 size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
@@ -370,13 +407,42 @@ unsigned wmargend(const wchar_t *src, const wchar_t *extras) {
 
   for (i = 0; L'\0' != src[i]; i++)
     if (!iswspace(src[i])) {
-      for (j = 0; L'\0' != extras[j]; j++) {
-          if (src[i] == extras[j])
-            break;
-        }
+      for (j = 0; L'\0' != extras[j]; j++)
+        if (src[i] == extras[j])
+          break;
       if (L'\0' == extras[j])
         return i;
     }
+
+  return 0;
+}
+
+unsigned wmargtrim(wchar_t *trgt, const wchar_t *extras) {
+  int i;      // iterator
+  unsigned j; // iterator
+  bool trim;  // true if we'll be trimming trgt[i]
+
+  if (NULL == extras)
+    extras = L"";
+
+  for (i = 0; L'\0' != trgt[i]; i++)
+    ;
+
+  i--;
+  while (i >= 0) {
+    trim = false;
+    if (iswspace(trgt[i]))
+      trim = true;
+    else
+      for (j = 0; L'\0' != extras[j]; j++)
+        if (trgt[i] == extras[j])
+          trim = true;
+    if (trim)
+      trgt[i] = L'\0';
+    else
+      return i + 1;
+    i--;
+  }
 
   return 0;
 }

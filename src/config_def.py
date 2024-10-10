@@ -158,6 +158,7 @@ config_def = {
         "program_version": (("wstring",), ("Qman nightly",), False, "Formal program name and version"),
         "config_path": (("string",), None, False, "Path to the configuration file"),
         "man_path": (("string",), ("/usr/bin/man",), True, "Path to the man(1) command"),
+        "groff_path": (("string",), ("/usr/bin/groff",), True, "Path to the groff(1) command"),
         "whatis_path": (("string",), ("/usr/bin/whatis",), True, "Path to the whatis(1) command"),
         "apropos_path": (("string",), ("/usr/bin/apropos",), True, "Path to the apropos(1) command"),
         "browser_path": (("string",), ("/usr/bin/xdg-open",), True, "Path to web browser command"),
