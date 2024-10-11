@@ -105,9 +105,9 @@ typedef struct {
 
 // A table of contents entry type
 typedef enum {
-  TT_HEAD,    // section heading
-  TT_SUBHEAD, // section subheading
-  TT_TAGPAR   // tagged paragraph
+  TT_HEAD = 0,    // section heading
+  TT_SUBHEAD = 1, // section subheading
+  TT_TAGPAR = 2   // tagged paragraph
 } toc_type_t;
 
 // A table of contents entry
@@ -190,6 +190,12 @@ extern unsigned page_top;
 
 // Column where the portion of page displayed to the user begins
 extern unsigned page_left;
+
+// Table of contents for current page
+extern toc_entry_t *toc;
+
+// Number of entries in toc
+extern unsigned toc_len;
 
 // True if last man/apropos/whatis command didn't produce any result
 extern bool err;
@@ -336,8 +342,8 @@ extern unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *buf,
 // text. Return the number of lines. key, title, ver, and date are used for the
 // header and footer.
 extern unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
-                                unsigned aw_len, const wchar_t *const *sc,
-                                unsigned sc_len, const wchar_t *key,
+                                const unsigned aw_len, const wchar_t *const *sc,
+                                const unsigned sc_len, const wchar_t *key,
                                 const wchar_t *title, const wchar_t *ver,
                                 const wchar_t *date);
 
@@ -373,7 +379,12 @@ extern unsigned man(line_t **dst, const wchar_t *args, bool local_file);
 // Use man, zlib, and local logic to extract the table of contents of a manual
 // page. Place the result in dst, and return dst's length. args and local_file
 // have the same meanings as for man().
-extern unsigned toc(toc_entry_t **dst, const wchar_t *args, bool local_file);
+extern unsigned mantoc(toc_entry_t **dst, const wchar_t *args, bool local_file);
+
+// Create the manual page of the an apropos, whatis or index page. The sections
+// of said page must be proviced in sc (of length sc_len).
+extern unsigned sctoc(toc_entry_t **dst, const wchar_t *const *sc,
+                      const unsigned sc_len);
 
 // Find the previous link in lines (of linegth lines_len), starting at location
 // start. Return said link's location.
@@ -414,9 +425,15 @@ extern int search_prev(result_t *res, unsigned res_len, unsigned from);
 extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines,
                          unsigned lines_len);
 
+// Note: for efficiency, we only populate toc and toc_len when the user requests
+// a table of contents
+
 // Populate page, page_title, and page_len, based on the contents of
-// history[history_cur].
+// history[history_cur]. Reset results, results_len, toc and toc_len.
 extern void populate_page();
+
+// Populate toc and toc_len
+extern void populate_toc();
 
 // Free the memory occupied by reqs (of length reqs_len)
 extern void requests_free(request_t *reqs, unsigned reqs_len);

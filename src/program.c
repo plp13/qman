@@ -59,6 +59,10 @@ unsigned page_top = 0;
 
 unsigned page_left = 0;
 
+toc_entry_t *toc = NULL;
+
+unsigned toc_len = 0;
+
 bool err = false;
 
 wchar_t err_msg[BS_LINE];
@@ -321,6 +325,7 @@ void tocgroff(toc_entry_t *toc, unsigned toc_len) {
   for (i = 0; i < toc_len; i++) {
     xfgets(texts, BS_LINE, pp);
     mbstowcs(toc[i].text, texts, BS_LINE);
+    wbs(toc[i].text);
     wmargtrim(toc[i].text, L"\n");
   }
   xpclose(pp);
@@ -762,10 +767,11 @@ unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *aw,
   return res_i;
 }
 
-unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
-                         const wchar_t *const *sc, unsigned sc_len,
-                         const wchar_t *key, const wchar_t *title,
-                         const wchar_t *ver, const wchar_t *date) {
+unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
+                         const unsigned aw_len, const wchar_t *const *sc,
+                         const unsigned sc_len, const wchar_t *key,
+                         const wchar_t *title, const wchar_t *ver,
+                         const wchar_t *date) {
 
   // Text blocks widths
   const unsigned line_width = MAX(60, config.layout.main_width);
@@ -814,44 +820,47 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
        lmargin_width + hfl_width + hfc_width + hfr_width - key_len);
   bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
 
-  // Newline
-  inc_ln;
-  line_alloc(res[ln], 0);
-
-  // Section title for sections
-  inc_ln;
-  line_alloc(res[ln], line_width);
-  wcscpy(tmp, L"SECTIONS");
-  swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
-           lmargin_width, "",                         //
-           text_width, tmp);
-  res[ln].section_level = 0;
-  bset(res[ln].bold, lmargin_width);
-  bset(res[ln].reg, lmargin_width + wcslen(tmp));
-
-  // Sections
-  const unsigned sc_maxwidth = wmaxlen(sc, sc_len); // length of longest section
-  const unsigned sc_cols =
-      text_width / (4 + sc_maxwidth); // number of columns for sections
-  const unsigned sc_lines =
-      sc_len % sc_cols > 0
-          ? 1 + sc_len / sc_cols
-          : MAX(1, sc_len / sc_cols); // number of lines for sections
-  unsigned sc_i;                      // index of current section
-  for (i = 0; i < sc_lines; i++) {
+  if (config.layout.sections_on_top) {
+    // Newline
     inc_ln;
-    line_alloc(res[ln], line_width + 4); // +4 for section margin
-    swprintf(res[ln].text, line_width + 1, L"%*s", lmargin_width, "");
-    for (j = 0; j < sc_cols; j++) {
-      sc_i = sc_cols * i + j;
-      if (sc_i < sc_len) {
-        swprintf(tmp, sc_maxwidth + 5, L"%-*ls", sc_maxwidth + 4, sc[sc_i]);
-        wcscat(res[ln].text, tmp);
-        swprintf(tmp, BS_LINE, L"MANUAL PAGES IN SECTION '%ls'", sc[sc_i]);
-        add_link(&res[ln],                                                 //
-                 lmargin_width + j * (sc_maxwidth + 4),                    //
-                 lmargin_width + j * (sc_maxwidth + 4) + wcslen(sc[sc_i]), //
-                 false, 0, 0, LT_LS, tmp);
+    line_alloc(res[ln], 0);
+
+    // Section title for sections
+    inc_ln;
+    line_alloc(res[ln], line_width);
+    wcscpy(tmp, L"SECTIONS");
+    swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
+             lmargin_width, "",                         //
+             text_width, tmp);
+    res[ln].section_level = 0;
+    bset(res[ln].bold, lmargin_width);
+    bset(res[ln].reg, lmargin_width + wcslen(tmp));
+
+    // Sections
+    const unsigned sc_maxwidth =
+        wmaxlen(sc, sc_len); // length of longest section
+    const unsigned sc_cols =
+        text_width / (4 + sc_maxwidth); // number of columns for sections
+    const unsigned sc_lines =
+        sc_len % sc_cols > 0
+            ? 1 + sc_len / sc_cols
+            : MAX(1, sc_len / sc_cols); // number of lines for sections
+    unsigned sc_i;                      // index of current section
+    for (i = 0; i < sc_lines; i++) {
+      inc_ln;
+      line_alloc(res[ln], line_width + 4); // +4 for section margin
+      swprintf(res[ln].text, line_width + 1, L"%*s", lmargin_width, "");
+      for (j = 0; j < sc_cols; j++) {
+        sc_i = sc_cols * i + j;
+        if (sc_i < sc_len) {
+          swprintf(tmp, sc_maxwidth + 5, L"%-*ls", sc_maxwidth + 4, sc[sc_i]);
+          wcscat(res[ln].text, tmp);
+          swprintf(tmp, BS_LINE, L"MANUAL PAGES IN SECTION '%ls'", sc[sc_i]);
+          add_link(&res[ln],                                                 //
+                   lmargin_width + j * (sc_maxwidth + 4),                    //
+                   lmargin_width + j * (sc_maxwidth + 4) + wcslen(sc[sc_i]), //
+                   false, 0, 0, LT_LS, tmp);
+        }
       }
     }
   }
@@ -1144,7 +1153,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   return ln;
 }
 
-unsigned toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
+unsigned mantoc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   char gpath[BS_LINE];    // path to Groff document for manual page
   int glen;               // length of current line in Groff document
   wchar_t gline[BS_LINE]; // current line in Groff document
@@ -1224,6 +1233,32 @@ unsigned toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   xgzclose(gp);
 
   tocgroff(res, en);
+  *dst = res;
+  return en;
+}
+
+unsigned sctoc(toc_entry_t **dst, const wchar_t *const *sc,
+               const unsigned sc_len) {
+  unsigned i;      // iterator
+  unsigned en = 0; // current entry in TOC
+
+  unsigned res_len = BS_SHORT;                     // result buffer length
+  toc_entry_t *res = aalloc(res_len, toc_entry_t); // result buffer
+
+  if (config.layout.sections_on_top) {
+    res[en].type = TT_HEAD;
+    res[en].text = walloc(BS_LINE);
+    wcscpy(res[en].text, L"SECTIONS");
+    inc_en;
+  }
+
+  for (i = 0; i < sc_len; i++) {
+    res[en].type = TT_HEAD;
+    res[en].text = walloc(BS_LINE);
+    swprintf(res[en].text, BS_LINE, L"MANUAL PAGES IN SECTION '%ls'", sc[i]);
+    inc_en;
+  }
+
   *dst = res;
   return en;
 }
@@ -1470,6 +1505,12 @@ void populate_page() {
     page_len = 0;
   }
 
+  // Reset TOC
+  if (NULL != toc && toc_len > 0)
+    toc_free(toc, toc_len);
+  toc = NULL;
+  toc_len = 0;
+
   // Populate page according to the request type of history[history_cur]
   switch (history[history_cur].request_type) {
   case RT_INDEX:
@@ -1507,6 +1548,57 @@ void populate_page() {
     free(results);
   results = NULL;
   results_len = 0;
+}
+
+void populate_toc() {
+  // If the TOC doesn't exist yet, use mantoc() or sctoc() to generate it now
+  if (NULL == toc || 0 == toc_len) {
+    request_type_t rt =
+        history[history_cur].request_type;     // current request type
+    wchar_t *args = history[history_cur].args; // arguments for current request
+    aprowhat_t *aw;                            // temporary
+    unsigned aw_len;                           // "
+    wchar_t **sc;                              // "
+    unsigned sc_len;                           // "
+
+    switch (rt) {
+    case RT_INDEX:
+      toc_len = sctoc(&toc, (const wchar_t *const *)sc_all, sc_all_len);
+      break;
+    case RT_MAN:
+      toc_len = mantoc(&toc, args, false);
+      break;
+    case RT_MAN_LOCAL:
+      toc_len = mantoc(&toc, args, true);
+      break;
+    case RT_APROPOS:
+      aw_len = aprowhat_exec(&aw, AW_APROPOS, args);
+      if (err)
+        winddown(ES_OPER_ERROR, err_msg);
+      sc_len = aprowhat_sections(&sc, aw, aw_len);
+      toc_len = sctoc(&toc, (const wchar_t *const *)sc, sc_len);
+      if (NULL != aw && aw_len > 0)
+        aprowhat_free(aw, aw_len);
+      if (NULL != sc && sc_len > 0)
+        wafree(sc, sc_len);
+      break;
+    default:
+      aw_len = aprowhat_exec(&aw, AW_WHATIS, args);
+      if (err)
+        winddown(ES_OPER_ERROR, err_msg);
+      sc_len = aprowhat_sections(&sc, aw, aw_len);
+      toc_len = sctoc(&toc, (const wchar_t *const *)sc, sc_len);
+      if (NULL != aw && aw_len > 0)
+        aprowhat_free(aw, aw_len);
+      if (NULL != sc && sc_len > 0)
+        wafree(sc, sc_len);
+      break;
+    }
+  }
+
+  // If the TOC still doesn't exist, something must have gone wrong
+  if (0 == toc_len || NULL == toc)
+    winddown(ES_OPER_ERROR, L"Unable to generate table of contents");
 }
 
 void requests_free(request_t *reqs, unsigned reqs_len) {
@@ -1624,6 +1716,10 @@ void winddown(int ec, const wchar_t *em) {
   // Deallocate memory used by page global
   if (NULL != page && page_len > 0)
     lines_free(page, page_len);
+
+  // Deallocate memory used by the TOC
+  if (NULL != toc && toc_len > 0)
+    toc_free(toc, toc_len);
 
   // Deallocate memory used by results
   if (NULL != results && results_len > 0)

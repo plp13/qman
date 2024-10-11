@@ -230,6 +230,9 @@ extern unsigned wmargend(const wchar_t *src, const wchar_t *extras);
 // characters at the end of trgt.) Return the new length of trgt.
 extern unsigned wmargtrim(wchar_t *trgt, const wchar_t *extras);
 
+// Apply any backspace characters in trgt
+extern unsigned wbs(wchar_t *trgt);
+
 // Case-insensitive version of wcsstr()
 extern wchar_t *wcscasestr(const wchar_t *haystack, const wchar_t *needle);
 

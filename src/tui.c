@@ -90,6 +90,28 @@ mouse_t mouse_status = MS_EMPTY;
     return false;                                                              \
   }
 
+// Helper of tui_open() and tui_toc(). Search the current page for a line whose
+// text begins with search_term, and jump to said line.
+#define ls_jump(search_term)                                                   \
+  {                                                                            \
+    result_t *sr;                                                              \
+    unsigned i;                                                                \
+    const unsigned sr_len = search(&sr, search_term, page, page_len);          \
+    for (i = 0; i < sr_len; i++)                                               \
+      if (sr[i].start == wmargend(page[sr[i].line].text, NULL))                \
+        break;                                                                 \
+    if (0 == sr_len || i == sr_len) {                                          \
+      tui_error(L"Unable to jupmp to requested location");                     \
+      return false;                                                            \
+    }                                                                          \
+    page_top = MIN(sr[i].line, page_len - config.layout.main_height);          \
+    const link_loc_t fl = first_link(                                          \
+        page, page_len, page_top, page_top + config.layout.main_height - 1);   \
+    if (fl.ok)                                                                 \
+      page_flink = fl;                                                         \
+    free(sr);                                                                  \
+  }
+
 // Helper of tui_sp_open(). Print quick search results in wimm as the user
 // types.
 void aw_quick_search(wchar_t *needle) {
@@ -210,16 +232,14 @@ void draw_history(request_t *history, unsigned history_cur,
   wnoutrefresh(wimm);
 }
 
-// Helper for tui_toc(). Draw the table of contents into wimm. headers and
-// levels contain the section header texts and levels respectfully. length
-// indicates the size of the headers and levels arrays. cur is the section
-// the user is currently viewing in the main window, top is the first section
-// header to print, and focus indicates the section header to focus on.
-void draw_toc(wchar_t **headers, unsigned *levels, unsigned length,
-              unsigned cur, unsigned top, unsigned focus) {
+// Helper for tui_toc(). Draw a table of contents into wimm. toc contains the
+// table of contents entries, toc_len is the number of entries in toc, top is
+// the first entry to print. and focus the entry to focus on.
+void draw_toc(toc_entry_t *toc, unsigned toc_len, unsigned top,
+              unsigned focus) {
   const unsigned width = getmaxx(wimm);  // TOC window width
   const unsigned height = getmaxy(wimm); // TOC window height
-  const unsigned end = MIN(length - 1,
+  const unsigned end = MIN(toc_len - 1,
                            top + height - 6); // last header to print
   wchar_t *buf = walloca(width - 2);          // temporary
   unsigned i, j;                              // iterator
@@ -229,13 +249,13 @@ void draw_toc(wchar_t **headers, unsigned *levels, unsigned length,
     wchar_t glyph;
     if (i == top && i > 0)
       glyph = *config.chars.arrow_up;
-    else if (i == end && i < history_top)
+    else if (i == end && i < toc_len - 1)
       glyph = *config.chars.arrow_down;
     else
       glyph = L' ';
 
-    swprintf(buf, width - 1, L"%1ls %*ls%*ls %lc", i == cur ? L"»" : L" ",
-             2 * levels[i], L"", width - 6 - 2 * levels[i], headers[i], glyph);
+    swprintf(buf, width - 1, L"%*ls%-*ls %lc", 2 * toc[i].type, L"",
+             width - 4 - 2 * toc[i].type, toc[i].text, glyph);
     if (i == focus) {
       change_colour(wimm, config.colours.help_text_f);
     } else {
@@ -1336,22 +1356,7 @@ bool tui_open() {
     break;
   case LT_LS:
     // The link is a local search link; jump to the appropriate page location
-    {
-      result_t *sr;
-      const unsigned sr_len =
-          search(&sr, page[page_flink.line].links[page_flink.link].trgt, page,
-                 page_len);
-      if (0 == sr_len) {
-        tui_error(L"Unable to open link");
-        return false;
-      }
-      page_top = MIN(sr[0].line, page_len - config.layout.main_height);
-      const link_loc_t fl = first_link(
-          page, page_len, page_top, page_top + config.layout.main_height - 1);
-      if (fl.ok)
-        page_flink = fl;
-      free(sr);
-    }
+    ls_jump(page[page_flink.line].links[page_flink.link].trgt);
     break;
   }
 
@@ -1675,7 +1680,124 @@ bool tui_history() {
   return true;
 }
 
-bool tui_toc() { return false; }
+bool tui_toc() {
+  wchar_t help[BS_SHORT]; // help message
+  swprintf(help, BS_SHORT, L"%ls/%ls: choose   %ls: jump   %ls/%ls: abort",
+           ch2name(config.keys[PA_UP][0]), ch2name(config.keys[PA_DOWN][0]),
+           ch2name(config.keys[PA_OPEN][0]), ch2name(KEY_BREAK), ch2name('\e'));
+  int hinput;                 // keyboard/mouse input from the user
+  mouse_t hms = MS_EMPTY;     // mouse status corresponding to hinput
+  action_t haction = PA_NULL; // program action corresponding to hinput
+  unsigned height;            // TOC window height
+  unsigned top = 0;           // first TOC entry to be printed
+  int focus = 0;              // focused TOC entry
+
+  // Perform late populateion of toc and toc_len, if necessary
+  populate_toc();
+
+  // Create the TOC window, and retrieve height
+  draw_imm(true, true, L"Table of Contents", help);
+  height = getmaxy(wimm);
+
+  // Main loop
+  while (true) {
+    // Draw the TOC text in the history window
+    draw_toc(toc, toc_len, top, focus);
+    doupdate();
+
+    // Get user input
+    hinput = cgetch();
+    hms = get_mouse_status(hinput);
+    if ('\e' == hinput || KEY_BREAK == hinput || 0x03 == hinput ||
+        (BT_RIGHT == hms.button && hms.up)) {
+      // User hit ESC or CTRL-C or pressed right mouse button; abort
+      del_imm();
+      tui_error(L"Aborted");
+      tui_redraw();
+      return false;
+    }
+    haction = get_action(hinput);
+
+    // Perform the requested action
+    switch (haction) {
+    case PA_UP:
+      focus--;
+      if (-1 == focus)
+        focus = toc_len - 1;
+      break;
+    case PA_DOWN:
+      focus++;
+      if (toc_len == focus)
+        focus = 0;
+      break;
+    case PA_OPEN:
+      del_imm();
+      ls_jump(toc[focus].text);
+      return true;
+      break;
+    case PA_NULL:
+    default:
+      if (WH_UP == hms.wheel) {
+        // When mouse wheel scrolls up, select previous TOC entry
+        focus--;
+        if (-1 == focus)
+          focus = toc_len - 1;
+      } else if (WH_DOWN == hms.wheel) {
+        // When mouse wheel scrolls down, select next TOC entry
+        focus++;
+        if (toc_len == focus)
+          focus = 0;
+      } else if (BT_LEFT == hms.button && hms.up) {
+        // On left button release, focus on the TOC entry under the cursor
+        int iy = hms.y, ix = hms.x;
+        unsigned ih = getmaxy(wimm);
+        if (wmouse_trafo(wimm, &iy, &ix, false))
+          if (iy > 1 && iy < ih - 3 && history_top >= top + iy - 2) {
+            focus = top + iy - 2;
+            if (config.mouse.left_click_open) {
+              // If the left_click_open option is set, go to the appropriate
+              // TOC entry
+              del_imm();
+              ls_jump(toc[focus].text);
+              return true;
+            }
+          }
+      } else if (BT_WHEEL == hms.button && hms.up) {
+        // On mouse wheel click, go to the appropriate TOC entry
+        del_imm();
+        ls_jump(toc[focus].text);
+        return true;
+      }
+      break;
+    }
+
+    // Adjust top (in case the entire menu won't fit in the immediate window)
+    if (focus < top)
+      top = focus;
+    else if (focus > top + height - 6)
+      top = focus - height + 6;
+
+    // If terminal size has changed, regenerate page and redraw everything
+    if (termsize_changed()) {
+      del_imm();
+      init_windows();
+      populate_page();
+      if (err)
+        winddown(ES_OPER_ERROR, err_msg);
+      populate_toc();
+      termsize_adjust();
+      tui_redraw();
+      top = 0;
+      focus = 0;
+      draw_imm(true, true, L"History", help);
+      draw_toc(toc, toc_len, top, focus);
+      doupdate();
+      height = getmaxy(wimm);
+    }
+  }
+
+  return true;
+}
 
 bool tui_search(bool back) {
   wchar_t *prompt = back ? L"?" : L"/"; // search prompt
@@ -2106,7 +2228,7 @@ void tui() {
   termsize_changed();
   init_windows();
 
-  // Initialize page, page_len, page_top, page_left, and page_flink
+  // Initialize page, page_len, ge_title, page_top, page_left, and page_flink
   populate_page();
   if (err)
     winddown(ES_NOT_FOUND, err_msg);

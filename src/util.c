@@ -431,20 +431,41 @@ unsigned wmargtrim(wchar_t *trgt, const wchar_t *extras) {
   i--;
   while (i >= 0) {
     trim = false;
+
     if (iswspace(trgt[i]))
       trim = true;
     else
       for (j = 0; L'\0' != extras[j]; j++)
         if (trgt[i] == extras[j])
           trim = true;
-    if (trim)
-      trgt[i] = L'\0';
-    else
+
+    if (!trim) {
+      trgt[i + 1] = L'\0';
       return i + 1;
+    }
+
     i--;
   }
 
   return 0;
+}
+
+unsigned wbs(wchar_t *trgt) {
+  unsigned i, j; // iterators
+
+  j = 0;
+  for (i = 0; L'\0' != trgt[i]; i++) {
+    if (L'\b' == trgt[i]) {
+      if (j > 0)
+        j--;
+    } else {
+      trgt[j] = trgt[i];
+      j++;
+    }
+  }
+
+  trgt[j] = L'\0';
+  return j;
 }
 
 wchar_t *wcscasestr(const wchar_t *haystack, const wchar_t *needle) {
