@@ -234,7 +234,7 @@ bool section_header_level(line_t *line) {
   }
 }
 
-// All got_... macros are helpers of man()
+// The following are helpers of man()
 
 // true if tmpw[i] contains a 'bold' terminal escape sequence
 #define got_bold                                                               \
@@ -290,6 +290,26 @@ bool section_header_level(line_t *line) {
 #define got_esc8                                                               \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L']') &&             \
    (tmpw[i + 2] == L'8') && (tmpw[i + 3] == L';'))
+
+// The following are helpers of mantoc()
+
+// true if gline is a section header
+#define got_sh                                                                 \
+  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
+   (L'S' == gline[1] || L's' == gline[1]) &&                                   \
+   (L'H' == gline[2] || L'h' == gline[2]))
+
+// true if gline is a sub-section header
+#define got_ss                                                                 \
+  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
+   (L'S' == gline[1] || L's' == gline[1]) &&                                   \
+   (L'S' == gline[2] || L's' == gline[2]))
+
+// true if gline is a tagged paragraph
+#define got_tp                                                                 \
+  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
+   (L'T' == gline[1] || L't' == gline[1]) &&                                   \
+   (L'P' == gline[2] || L'p' == gline[2]))
 
 // Helper of toc(). Massage text member of every entry in toc (of size toc_len)
 // with the groff command, in order to remove escaped characters, etc.
@@ -1164,16 +1184,18 @@ unsigned mantoc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   toc_entry_t *res = aalloc(res_len, toc_entry_t); // result buffer
 
   // Use GNU man to figure out gpath
+  char cmdstr[BS_LINE];
   if (local_file)
-    wcstombs(gpath, args, BS_LINE);
+    snprintf(cmdstr, BS_LINE,
+             "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
+             config.misc.man_path, args);
   else {
-    char cmdstr[BS_LINE];
     snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
              config.misc.man_path, args);
-    FILE *pp = xpopen(cmdstr, "r");
-    sreadline(gpath, BS_LINE, pp);
-    xpclose(pp);
   }
+  FILE *pp = xpopen(cmdstr, "r");
+  sreadline(gpath, BS_LINE, pp);
+  xpclose(pp);
 
   // Open gpath
   gzFile gp = xgzopen(gpath, "rb");
@@ -1187,7 +1209,7 @@ unsigned mantoc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       winddown(ES_OPER_ERROR, L"Failed to read compressed manual page source");
 
     // If line can be a TOC entry, add the corresponding data to res
-    if (glen >= 3 && L'.' == gline[0] && L'S' == gline[1] && L'H' == gline[2]) {
+    if (got_sh) {
       // Section heading
       res[en].type = TT_HEAD;
       unsigned textsp = wmargend(&gline[3], L"\"");
@@ -1195,8 +1217,7 @@ unsigned mantoc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       wcscpy(res[en].text, &gline[3 + textsp]);
       wmargtrim(res[en].text, L"\"");
       inc_en;
-    } else if (glen >= 3 && L'.' == gline[0] && L'S' == gline[1] &&
-               L'S' == gline[2]) {
+    } else if (got_ss) {
       // Subsection heading
       res[en].type = TT_SUBHEAD;
       unsigned textsp = wmargend(&gline[3], L"\"");
@@ -1204,8 +1225,7 @@ unsigned mantoc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       wcscpy(res[en].text, &gline[3 + textsp]);
       wmargtrim(res[en].text, L"\"");
       inc_en;
-    } else if (glen >= 3 && L'.' == gline[0] && L'T' == gline[1] &&
-               L'P' == gline[2]) {
+    } else if (got_tp) {
       // Tagged paragraph
       xgzgets(gp, tmp, BS_LINE);
       if (!gzeof(gp)) {
@@ -1396,7 +1416,7 @@ link_loc_t last_link(const line_t *lines, unsigned lines_len, unsigned start,
 }
 
 unsigned search(result_t **dst, const wchar_t *needle, const line_t *lines,
-                unsigned lines_len) {
+                unsigned lines_len, bool cs) {
   unsigned ln;                                // current line no.
   unsigned i = 0;                             // current result no.
   const unsigned needle_len = wcslen(needle); // length of needle
@@ -1410,7 +1430,10 @@ unsigned search(result_t **dst, const wchar_t *needle, const line_t *lines,
     // Start at the beginning of the line's text
     cur_hayst = lines[ln].text;
     // Search for needle
-    hit = wcscasestr(cur_hayst, needle);
+    if (cs)
+      hit = wcscasestr(cur_hayst, needle);
+    else
+      hit = wcsstr(cur_hayst, needle);
     // While needle has been found...
     while (NULL != hit) {
       // Add the search result to res[i]
@@ -1421,7 +1444,10 @@ unsigned search(result_t **dst, const wchar_t *needle, const line_t *lines,
       cur_hayst = hit + needle_len;
       // And search for needle again (except in case of overflow)
       if (cur_hayst - lines[ln].text < lines[ln].length)
-        hit = wcscasestr(cur_hayst, needle);
+        if (cs)
+          hit = wcscasestr(cur_hayst, needle);
+        else
+          hit = wcsstr(cur_hayst, needle);
       else
         hit = NULL;
       // Increment i (and reallocate memory if necessary)

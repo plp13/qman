@@ -407,9 +407,10 @@ extern link_loc_t last_link(const line_t *lines, unsigned lines_len,
                             unsigned start, unsigned stop);
 
 // Search for needle in lines (of length lines_len). Place all results into dst
-// and return total number of results.
+// and return total number of results. cs siginifies whether search will be
+// case-sensitive.
 extern unsigned search(result_t **dst, const wchar_t *needle,
-                       const line_t *lines, unsigned lines_len);
+                       const line_t *lines, unsigned lines_len, bool cs);
 
 // Return the line number of the member of res that immediately follows line
 // number from. If no such line exists, return -1. res_len is the length of res.

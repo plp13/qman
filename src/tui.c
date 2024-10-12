@@ -96,7 +96,7 @@ mouse_t mouse_status = MS_EMPTY;
   {                                                                            \
     result_t *sr;                                                              \
     unsigned i;                                                                \
-    const unsigned sr_len = search(&sr, search_term, page, page_len);          \
+    const unsigned sr_len = search(&sr, search_term, page, page_len, false);   \
     for (i = 0; i < sr_len; i++)                                               \
       if (sr[i].start == wmargend(page[sr[i].line].text, NULL))                \
         break;                                                                 \
@@ -1844,7 +1844,7 @@ bool tui_search(bool back) {
     } else {
       // Input is not empty; populate results and results_len from input, and
       // set my_top to the location of the first match
-      results_len = search(&results, inpt, page, page_len);
+      results_len = search(&results, inpt, page, page_len, true);
       if (back) {
         const int tmp = search_prev(results, results_len, my_top);
         my_top = -1 == tmp ? my_top : tmp;
