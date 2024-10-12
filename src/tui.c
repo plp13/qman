@@ -101,7 +101,7 @@ mouse_t mouse_status = MS_EMPTY;
       if (sr[i].start == wmargend(page[sr[i].line].text, NULL))                \
         break;                                                                 \
     if (0 == sr_len || i == sr_len) {                                          \
-      tui_error(L"Unable to jupmp to requested location");                     \
+      tui_error(L"Unable to jump to requested location");                      \
       return false;                                                            \
     }                                                                          \
     page_top = MIN(sr[i].line, page_len - config.layout.main_height);          \
@@ -1732,7 +1732,8 @@ bool tui_toc() {
       break;
     case PA_OPEN:
       del_imm();
-      ls_jump(toc[focus].text);
+      for (int j = MAX(0, focus - 3); j <= focus; j++)
+        ls_jump(toc[j].text);
       return true;
       break;
     case PA_NULL:
@@ -1758,14 +1759,16 @@ bool tui_toc() {
               // If the left_click_open option is set, go to the appropriate
               // TOC entry
               del_imm();
-              ls_jump(toc[focus].text);
+              for (int j = MAX(0, focus - 3); j <= focus; j++)
+                ls_jump(toc[j].text);
               return true;
             }
           }
       } else if (BT_WHEEL == hms.button && hms.up) {
         // On mouse wheel click, go to the appropriate TOC entry
         del_imm();
-        ls_jump(toc[focus].text);
+        for (int j = MAX(0, focus - 3); j <= focus; j++)
+          ls_jump(toc[j].text);
         return true;
       }
       break;

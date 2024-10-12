@@ -102,6 +102,16 @@ typedef struct {
   ((NULL == w1 && NULL == w2) ||                                               \
    (NULL != w1 && NULL != w2 && 0 == wcscmp(w1, w2)))
 
+// Log a message, together with a timestamp, into F_LOG. Use this function like
+// you would printf(), i.e. specifying a template followed by zero or more
+// values. And only temporarily for debugging, not in production.
+#define logprintf(...)\
+{\
+char tmp[64 * BS_LINE];\
+sprintf(tmp, __VA_ARGS__);\
+loggit(tmp);\
+}
+
 //
 // Functions
 //

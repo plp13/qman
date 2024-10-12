@@ -325,23 +325,26 @@ void tocgroff(toc_entry_t *toc, unsigned toc_len) {
            config.misc.groff_path, tpath);
 
   // Prepare the environment
-  char *old_groff_no_sgr = getenv("GROFF_NO_SGR");
+  unsetenv("GROFF_SGR");
   setenv("GROFF_NO_SGR", "1", true);
 
   // Write all texts of toc into temporary file
   FILE *fp = xfopen(tpath, "w");
-  xfputs(".ll 100i\n", fp);
+  xfputs(".TH A A A A A", fp);
+  xfputs(".ll 1024m\n", fp);
   for (i = 0; i < toc_len; i++)
     if (NULL != toc[i].text) {
       wcstombs(texts, toc[i].text, BS_LINE);
       xfputs(texts, fp);
-      xfputs("\n.sp 0\n", fp);
+      xfputs("\n.br 0\n", fp);
     }
   xfclose(fp);
 
   // Massage temporary file with groff and put the results back into the texts
   // of toc
   FILE *pp = xpopen(cmdstr, "r");
+  xfgets(texts, BS_LINE, pp); // discarded
+  xfgets(texts, BS_LINE, pp); // discarded
   for (i = 0; i < toc_len; i++) {
     xfgets(texts, BS_LINE, pp);
     mbstowcs(toc[i].text, texts, BS_LINE);
@@ -351,31 +354,8 @@ void tocgroff(toc_entry_t *toc, unsigned toc_len) {
   xpclose(pp);
 
   // Tidy up and restore the environment
-  // unlink(tpath);
+  unlink(tpath);
   free(tpath);
-  if (NULL != old_groff_no_sgr)
-    setenv("GROFF_NO_SGR", old_groff_no_sgr, true);
-}
-
-// Helper of toc(). If src begins with a groff command, return the position (in
-// src) of the first non-whitespace character that follows it. Otherwise,
-// return 0.
-unsigned wgcmdend(wchar_t *src) {
-  unsigned i;
-
-  if (L'.' == src[0]) {
-    for (i = 0; L'\0' != src[i]; i++)
-      if (iswspace(src[i]))
-        break;
-
-    for (; L'\0' != src[i]; i++)
-      if (!iswspace(src[i]))
-        break;
-
-    return i;
-  }
-
-  return 0;
 }
 
 //
@@ -1232,7 +1212,6 @@ unsigned mantoc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
         glen = mbstowcs(gline, tmp, BS_LINE);
         res[en].type = TT_TAGPAR;
         unsigned textsp = wmargend(gline, NULL);
-        textsp = wgcmdend(&gline[textsp]);
         res[en].text = walloc(BS_LINE);
         wcscpy(res[en].text, &gline[textsp]);
         glen = wmargtrim(res[en].text, L"\n");
