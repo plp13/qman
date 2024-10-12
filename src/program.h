@@ -358,6 +358,12 @@ extern int aprowhat_search(const wchar_t *needle, const aprowhat_t *hayst,
 extern bool aprowhat_has(const wchar_t *needle, const aprowhat_t *hayst,
                          unsigned hayst_len);
 
+// Use man, zlib, and groff to extract the section headers of a manual page.
+// Place the result in dst, and return dst's length. args and local_file have
+// the same meanings as for man().
+extern unsigned man_sections(wchar_t ***dst, const wchar_t *args,
+                             bool local_file);
+
 // Render a page that contains an index of all manual pages in dst
 extern unsigned index_page(line_t **dst);
 
@@ -376,15 +382,16 @@ extern unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const wchar_t *args,
 // local_file signifies whether to pass the --local-file option to man.
 extern unsigned man(line_t **dst, const wchar_t *args, bool local_file);
 
-// Use man, zlib, and local logic to extract the table of contents of a manual
-// page. Place the result in dst, and return dst's length. args and local_file
-// have the same meanings as for man().
-extern unsigned mantoc(toc_entry_t **dst, const wchar_t *args, bool local_file);
+// Use man, zlib, and groff to extract the table of contents of a manual page.
+// Place the result in dst, and return dst's length. args and local_file have
+// the same meanings as for man().
+extern unsigned man_toc(toc_entry_t **dst, const wchar_t *args,
+                        bool local_file);
 
 // Create the manual page of the an apropos, whatis or index page. The sections
 // of said page must be proviced in sc (of length sc_len).
-extern unsigned sctoc(toc_entry_t **dst, const wchar_t *const *sc,
-                      const unsigned sc_len);
+extern unsigned sc_toc(toc_entry_t **dst, const wchar_t *const *sc,
+                       const unsigned sc_len);
 
 // Find the previous link in lines (of linegth lines_len), starting at location
 // start. Return said link's location.

@@ -102,15 +102,25 @@ typedef struct {
   ((NULL == w1 && NULL == w2) ||                                               \
    (NULL != w1 && NULL != w2 && 0 == wcscmp(w1, w2)))
 
+// Make wide string w lower-case
+#define wcslower(w)                                                            \
+  {                                                                            \
+    unsigned i = 0;                                                            \
+    while (L'\0' != w[i]) {                                                    \
+      w[i] = towlower(w[i]);                                                   \
+      i++;                                                                     \
+    }                                                                          \
+  }
+
 // Log a message, together with a timestamp, into F_LOG. Use this function like
 // you would printf(), i.e. specifying a template followed by zero or more
 // values. And only temporarily for debugging, not in production.
-#define logprintf(...)\
-{\
-char tmp[64 * BS_LINE];\
-sprintf(tmp, __VA_ARGS__);\
-loggit(tmp);\
-}
+#define logprintf(...)                                                         \
+  {                                                                            \
+    char tmp[64 * BS_LINE];                                                    \
+    sprintf(tmp, __VA_ARGS__);                                                 \
+    loggit(tmp);                                                               \
+  }
 
 //
 // Functions

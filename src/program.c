@@ -129,6 +129,10 @@ void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
 // signifies the link type to add.
 void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
                     const link_type_t type) {
+  // Ignore empty lines
+  if (line->length < 2)
+    return;
+
   wchar_t ltext[BS_LINE * 2]; // text of line (or text of line merged with text
                               // of line_next, if line is hyphenated)
   memset(ltext, 0, sizeof(wchar_t) * BS_LINE * 2);
@@ -291,7 +295,7 @@ bool section_header_level(line_t *line) {
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L']') &&             \
    (tmpw[i + 2] == L'8') && (tmpw[i + 3] == L';'))
 
-// The following are helpers of mantoc()
+// The following are helpers of man_toc()
 
 // true if gline is a section header
 #define got_sh                                                                 \
@@ -984,6 +988,60 @@ bool aprowhat_has(const wchar_t *needle, const aprowhat_t *hayst,
   return false;
 }
 
+unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
+  char gpath[BS_LINE];    // path to Groff document for manual page
+  int glen;               // length of current line in Groff document
+  wchar_t gline[BS_LINE]; // current line in Groff document
+  unsigned en = 0;        // current entry in TOC
+  char tmp[BS_LINE];      // temporary
+
+  unsigned res_len = BS_SHORT;                // result buffer length
+  wchar_t **res = aalloc(res_len, wchar_t *); // result buffer
+
+  // Use GNU man to figure out gpath
+  char cmdstr[BS_LINE];
+  if (local_file)
+    snprintf(cmdstr, BS_LINE,
+             "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
+             config.misc.man_path, args);
+  else {
+    snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
+             config.misc.man_path, args);
+  }
+  FILE *pp = xpopen(cmdstr, "r");
+  sreadline(gpath, BS_LINE, pp);
+  xpclose(pp);
+
+  // Open gpath
+  gzFile gp = xgzopen(gpath, "rb");
+
+  // For each line in gpath, gline...
+  xgzgets(gp, tmp, BS_LINE);
+  while (!gzeof(gp)) {
+    glen = mbstowcs(gline, tmp, BS_LINE);
+
+    if (-1 == glen)
+      winddown(ES_OPER_ERROR, L"Failed to read compressed manual page source");
+
+    // If line is a section heading, add the corresponding data to res
+    if (got_sh) {
+      // Section heading
+      unsigned textsp = wmargend(&gline[3], L"\"");
+      res[en] = walloc(BS_LINE);
+      wcscpy(res[en], &gline[3 + textsp]);
+      wmargtrim(res[en], L"\"");
+      inc_en;
+    }
+
+    xgzgets(gp, tmp, BS_LINE);
+  }
+
+  xgzclose(gp);
+
+  *dst = res;
+  return en;
+}
+
 unsigned index_page(line_t **dst) {
   wchar_t key[] = L"INDEX";
   wchar_t title[] = L"All Manual Pages";
@@ -1025,6 +1083,13 @@ unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const wchar_t *args,
 }
 
 unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
+  // Text blocks widths
+  const unsigned line_width = MAX(60, config.layout.main_width);
+  const unsigned lmargin_width = config.layout.lmargin; // left margin
+  const unsigned rmargin_width = config.layout.rmargin; // right margin
+  const unsigned text_width =
+      line_width - lmargin_width - rmargin_width; // main text area
+
   unsigned ln = 0;                 // current line number
   int len;                         // length of current line text
   unsigned i, j;                   // iterators
@@ -1067,6 +1132,58 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // For each line of man's output (read into tmps/tmpw)
   xfgets(tmps, BS_LINE, pp);
   while (!feof(pp)) {
+    if (config.layout.sections_on_top && 1 == ln) {
+      // Newline
+      line_alloc(res[ln], 0);
+
+      // Section title for sections
+      inc_ln;
+      line_alloc(res[ln], line_width);
+      wcscpy(tmpw, L"SECTIONS");
+      swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
+               lmargin_width, "",                         //
+               text_width, tmpw);
+      res[ln].section_level = 0;
+      bset(res[ln].bold, lmargin_width);
+      bset(res[ln].reg, lmargin_width + wcslen(tmpw));
+
+      // Sections
+      wchar_t **sc;                                          // sections
+      unsigned sc_len = man_sections(&sc, args, local_file); // no. of sections
+      const unsigned sc_maxwidth =
+          MIN(text_width / 2 - 4, wmaxlen((const wchar_t *const *)sc,
+                                          sc_len)); // length of longest section
+      const unsigned sc_cols =
+          text_width / (4 + sc_maxwidth); // number of columns for sections
+      const unsigned sc_lines =
+          sc_len % sc_cols > 0
+              ? 1 + sc_len / sc_cols
+              : MAX(1, sc_len / sc_cols); // number of lines for sections
+      unsigned sc_i;                      // index of current section
+
+      for (i = 0; i < sc_lines; i++) {
+        inc_ln;
+        line_alloc(res[ln], line_width + 4); // +4 for section margin
+        swprintf(res[ln].text, line_width + 1, L"%*s", lmargin_width, "");
+        for (j = 0; j < sc_cols; j++) {
+          sc_i = sc_cols * i + j;
+          if (sc_i < sc_len) {
+            swprintf(tmpw, sc_maxwidth + 5, L"%-*ls", sc_maxwidth + 4,
+                     sc[sc_i]);
+            wcslower(tmpw);
+            wcscat(res[ln].text, tmpw);
+            add_link(&res[ln],                              //
+                     lmargin_width + j * (sc_maxwidth + 4), //
+                     lmargin_width + j * (sc_maxwidth + 4) +
+                         wcslen(sc[sc_i]), //
+                     false, 0, 0, LT_LS, sc[sc_i]);
+          }
+        }
+      }
+
+      inc_ln;
+    }
+
     len = mbstowcs(tmpw, tmps, BS_LINE);
 
     if (-1 == len)
@@ -1153,7 +1270,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   return ln;
 }
 
-unsigned mantoc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
+unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   char gpath[BS_LINE];    // path to Groff document for manual page
   int glen;               // length of current line in Groff document
   wchar_t gline[BS_LINE]; // current line in Groff document
@@ -1236,8 +1353,8 @@ unsigned mantoc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   return en;
 }
 
-unsigned sctoc(toc_entry_t **dst, const wchar_t *const *sc,
-               const unsigned sc_len) {
+unsigned sc_toc(toc_entry_t **dst, const wchar_t *const *sc,
+                const unsigned sc_len) {
   unsigned i;      // iterator
   unsigned en = 0; // current entry in TOC
 
@@ -1556,7 +1673,7 @@ void populate_page() {
 }
 
 void populate_toc() {
-  // If the TOC doesn't exist yet, use mantoc() or sctoc() to generate it now
+  // If the TOC doesn't exist yet, use man_toc() or sc_toc() to generate it now
   if (NULL == toc || 0 == toc_len) {
     request_type_t rt =
         history[history_cur].request_type;     // current request type
@@ -1568,20 +1685,20 @@ void populate_toc() {
 
     switch (rt) {
     case RT_INDEX:
-      toc_len = sctoc(&toc, (const wchar_t *const *)sc_all, sc_all_len);
+      toc_len = sc_toc(&toc, (const wchar_t *const *)sc_all, sc_all_len);
       break;
     case RT_MAN:
-      toc_len = mantoc(&toc, args, false);
+      toc_len = man_toc(&toc, args, false);
       break;
     case RT_MAN_LOCAL:
-      toc_len = mantoc(&toc, args, true);
+      toc_len = man_toc(&toc, args, true);
       break;
     case RT_APROPOS:
       aw_len = aprowhat_exec(&aw, AW_APROPOS, args);
       if (err)
         winddown(ES_OPER_ERROR, err_msg);
       sc_len = aprowhat_sections(&sc, aw, aw_len);
-      toc_len = sctoc(&toc, (const wchar_t *const *)sc, sc_len);
+      toc_len = sc_toc(&toc, (const wchar_t *const *)sc, sc_len);
       if (NULL != aw && aw_len > 0)
         aprowhat_free(aw, aw_len);
       if (NULL != sc && sc_len > 0)
@@ -1592,7 +1709,7 @@ void populate_toc() {
       if (err)
         winddown(ES_OPER_ERROR, err_msg);
       sc_len = aprowhat_sections(&sc, aw, aw_len);
-      toc_len = sctoc(&toc, (const wchar_t *const *)sc, sc_len);
+      toc_len = sc_toc(&toc, (const wchar_t *const *)sc, sc_len);
       if (NULL != aw && aw_len > 0)
         aprowhat_free(aw, aw_len);
       if (NULL != sc && sc_len > 0)
