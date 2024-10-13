@@ -824,6 +824,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
        lmargin_width + hfl_width + hfc_width + hfr_width - key_len);
   bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
 
+  // Only if list of sections is enabled
   if (config.layout.sections_on_top) {
     // Newline
     inc_ln;
@@ -841,8 +842,8 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
     bset(res[ln].reg, lmargin_width + wcslen(tmp));
 
     // Sections
-    const unsigned sc_maxwidth =
-        wmaxlen(sc, sc_len); // length of longest section
+    const unsigned sc_maxwidth = MIN(
+        text_width / 2 - 4, wmaxlen(sc, sc_len)); // length of longest section
     const unsigned sc_cols =
         text_width / (4 + sc_maxwidth); // number of columns for sections
     const unsigned sc_lines =
@@ -857,12 +858,12 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
       for (j = 0; j < sc_cols; j++) {
         sc_i = sc_cols * i + j;
         if (sc_i < sc_len) {
-          swprintf(tmp, sc_maxwidth + 5, L"%-*ls", sc_maxwidth + 4, sc[sc_i]);
+          swprintf(tmp, sc_maxwidth + 5, L" %-*ls", sc_maxwidth + 3, sc[sc_i]);
           wcscat(res[ln].text, tmp);
           swprintf(tmp, BS_LINE, L"MANUAL PAGES IN SECTION '%ls'", sc[sc_i]);
-          add_link(&res[ln],                                                 //
-                   lmargin_width + j * (sc_maxwidth + 4),                    //
-                   lmargin_width + j * (sc_maxwidth + 4) + wcslen(sc[sc_i]), //
+          add_link(&res[ln], lmargin_width + j * (sc_maxwidth + 4) + 1,
+                   lmargin_width + j * (sc_maxwidth + 4) +
+                       MIN(sc_maxwidth + 3, wcslen(sc[sc_i]) + 1),
                    false, 0, 0, LT_LS, tmp);
         }
       }
@@ -1102,9 +1103,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // Set up the environment for man to create its output as we want it
   char *old_term = getenv("TERM");
   setenv("TERM", "xterm", true);
-  sprintf(tmps, "%d",
-          1 + config.layout.main_width - config.layout.lmargin -
-              config.layout.rmargin);
+  sprintf(tmps, "%d", 1 + text_width);
   setenv("MANWIDTH", tmps, true);
   sprintf(tmps, "%s %s", config.misc.hyphenate ? "" : "--nh",
           config.misc.justify ? "" : "--nj");
@@ -1132,6 +1131,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // For each line of man's output (read into tmps/tmpw)
   xfgets(tmps, BS_LINE, pp);
   while (!feof(pp)) {
+    // At line 1, insert the list of sections (if enabled)
     if (config.layout.sections_on_top && 1 == ln) {
       // Newline
       line_alloc(res[ln], 0);
@@ -1160,7 +1160,6 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
               ? 1 + sc_len / sc_cols
               : MAX(1, sc_len / sc_cols); // number of lines for sections
       unsigned sc_i;                      // index of current section
-
       for (i = 0; i < sc_lines; i++) {
         inc_ln;
         line_alloc(res[ln], line_width + 4); // +4 for section margin
@@ -1168,20 +1167,20 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
         for (j = 0; j < sc_cols; j++) {
           sc_i = sc_cols * i + j;
           if (sc_i < sc_len) {
-            swprintf(tmpw, sc_maxwidth + 5, L"%-*ls", sc_maxwidth + 4,
+            swprintf(tmpw, sc_maxwidth + 5, L" %-*ls", sc_maxwidth + 3,
                      sc[sc_i]);
             wcslower(tmpw);
             wcscat(res[ln].text, tmpw);
-            add_link(&res[ln],                              //
-                     lmargin_width + j * (sc_maxwidth + 4), //
+            add_link(&res[ln], lmargin_width + j * (sc_maxwidth + 4) + 1,
                      lmargin_width + j * (sc_maxwidth + 4) +
-                         wcslen(sc[sc_i]), //
+                         MIN(sc_maxwidth + 3, wcslen(sc[sc_i])) + 1,
                      false, 0, 0, LT_LS, sc[sc_i]);
           }
         }
       }
-
       inc_ln;
+
+      wafree(sc, sc_len);
     }
 
     len = mbstowcs(tmpw, tmps, BS_LINE);
@@ -1280,6 +1279,14 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   unsigned res_len = BS_SHORT;                     // result buffer length
   toc_entry_t *res = aalloc(res_len, toc_entry_t); // result buffer
 
+  // Section header for the list of sections (if enabled)
+  if (config.layout.sections_on_top) {
+    res[en].type = TT_HEAD;
+    res[en].text = walloc(BS_LINE);
+    wcscpy(res[en].text, L"SECTIONS");
+    inc_en;
+  }
+
   // Use GNU man to figure out gpath
   char cmdstr[BS_LINE];
   if (local_file)
@@ -1361,6 +1368,7 @@ unsigned sc_toc(toc_entry_t **dst, const wchar_t *const *sc,
   unsigned res_len = BS_SHORT;                     // result buffer length
   toc_entry_t *res = aalloc(res_len, toc_entry_t); // result buffer
 
+  // Section header for the list of sections (if enabled)
   if (config.layout.sections_on_top) {
     res[en].type = TT_HEAD;
     res[en].text = walloc(BS_LINE);
@@ -1368,6 +1376,7 @@ unsigned sc_toc(toc_entry_t **dst, const wchar_t *const *sc,
     inc_en;
   }
 
+  // All other other section headers
   for (i = 0; i < sc_len; i++) {
     res[en].type = TT_HEAD;
     res[en].text = walloc(BS_LINE);
