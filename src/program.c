@@ -315,6 +315,9 @@ bool section_header_level(line_t *line) {
    (L'T' == gline[1] || L't' == gline[1]) &&                                   \
    (L'P' == gline[2] || L'p' == gline[2]))
 
+// true if gline is a .\ command
+#define got_bs ((glen >= 2) && (L'.' == gline[0]) && (L'\\' == gline[1]))
+
 // Helper of toc(). Massage text member of every entry in toc (of size toc_len)
 // with the groff command, in order to remove escaped characters, etc.
 void tocgroff(toc_entry_t *toc, unsigned toc_len) {
@@ -1028,10 +1031,12 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
     if (got_sh) {
       // Section heading
       unsigned textsp = wmargend(&gline[3], L"\"");
-      res[en] = walloc(BS_LINE);
-      wcscpy(res[en], &gline[3 + textsp]);
-      wmargtrim(res[en], L"\"");
-      inc_en;
+      if (textsp > 0) {
+        res[en] = walloc(BS_LINE);
+        wcscpy(res[en], &gline[3 + textsp]);
+        wmargtrim(res[en], L"\"");
+        inc_en;
+      }
     }
 
     xgzgets(gp, tmp, BS_LINE);
@@ -1276,7 +1281,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   unsigned en = 0;        // current entry in TOC
   char tmp[BS_LINE];      // temporary
 
-  unsigned res_len = BS_SHORT;                     // result buffer length
+  unsigned res_len = BS_LINE;                      // result buffer length
   toc_entry_t *res = aalloc(res_len, toc_entry_t); // result buffer
 
   // Section header for the list of sections (if enabled)
@@ -1317,25 +1322,32 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       // Section heading
       res[en].type = TT_HEAD;
       unsigned textsp = wmargend(&gline[3], L"\"");
-      res[en].text = walloc(BS_LINE);
-      wcscpy(res[en].text, &gline[3 + textsp]);
-      wmargtrim(res[en].text, L"\"");
-      inc_en;
+      if (textsp > 0) {
+        res[en].text = walloc(BS_LINE);
+        wcscpy(res[en].text, &gline[3 + textsp]);
+        wmargtrim(res[en].text, L"\"");
+        inc_en;
+      }
     } else if (got_ss) {
       // Subsection heading
       res[en].type = TT_SUBHEAD;
       unsigned textsp = wmargend(&gline[3], L"\"");
-      res[en].text = walloc(BS_LINE);
-      wcscpy(res[en].text, &gline[3 + textsp]);
-      wmargtrim(res[en].text, L"\"");
-      inc_en;
+      if (textsp > 0) {
+        res[en].text = walloc(BS_LINE);
+        wcscpy(res[en].text, &gline[3 + textsp]);
+        wmargtrim(res[en].text, L"\"");
+        inc_en;
+      }
     } else if (got_tp) {
       // Tagged paragraph
       xgzgets(gp, tmp, BS_LINE);
       if (!gzeof(gp)) {
         glen = mbstowcs(gline, tmp, BS_LINE);
-        res[en].type = TT_TAGPAR;
+        if (got_bs)
+          // edge case
+          continue;
         unsigned textsp = wmargend(gline, NULL);
+        res[en].type = TT_TAGPAR;
         res[en].text = walloc(BS_LINE);
         wcscpy(res[en].text, &gline[textsp]);
         glen = wmargtrim(res[en].text, L"\n");

@@ -1649,6 +1649,16 @@ bool tui_history() {
       if (history_top + 1 == focus)
         focus = 0;
       break;
+    case PA_PGUP:
+      focus -= MAX(1, height - 6);
+      if (focus < 0)
+          focus = history_top;
+      break;
+    case PA_PGDN:
+      focus += MAX(1, height - 6);
+      if (focus > history_top)
+          focus = 0;
+      break;
     case PA_OPEN:
       del_imm();
       if (history_jump(focus))
@@ -1775,6 +1785,16 @@ bool tui_toc() {
       focus++;
       if (toc_len == focus)
         focus = 0;
+      break;
+    case PA_PGUP:
+      focus -= MAX(1, height - 6);
+      if (focus < 0)
+          focus = toc_len - 1;
+      break;
+    case PA_PGDN:
+      focus += MAX(1, height - 6);
+      if (focus >= toc_len)
+          focus = 0;
       break;
     case PA_OPEN:
       del_imm();
