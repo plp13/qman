@@ -1652,12 +1652,12 @@ bool tui_history() {
     case PA_PGUP:
       focus -= MAX(1, height - 6);
       if (focus < 0)
-          focus = history_top;
+        focus = history_top;
       break;
     case PA_PGDN:
       focus += MAX(1, height - 6);
       if (focus > history_top)
-          focus = 0;
+        focus = 0;
       break;
     case PA_OPEN:
       del_imm();
@@ -1789,12 +1789,12 @@ bool tui_toc() {
     case PA_PGUP:
       focus -= MAX(1, height - 6);
       if (focus < 0)
-          focus = toc_len - 1;
+        focus = toc_len - 1;
       break;
     case PA_PGDN:
       focus += MAX(1, height - 6);
       if (focus >= toc_len)
-          focus = 0;
+        focus = 0;
       break;
     case PA_OPEN:
       del_imm();
@@ -2025,7 +2025,7 @@ bool tui_help() {
   mouse_t hms = MS_EMPTY;     // mouse status corresponding to hinput
   action_t haction = PA_NULL; // program action corresponding to hinput
   unsigned top = 1;           // first action to be printed
-  unsigned focus = 1;         // focused action
+  int focus = 1;              // focused action
   unsigned height;            // help window height
 
   // For each action...
@@ -2085,6 +2085,16 @@ bool tui_help() {
     case PA_DOWN:
       focus++;
       if (PA_QUIT + 1 == focus)
+        focus = 1;
+      break;
+    case PA_PGUP:
+      focus -= MAX(1, height - 6);
+      if (focus < 1)
+        focus = PA_QUIT;
+      break;
+    case PA_PGDN:
+      focus += MAX(1, height - 6);
+      if (focus > PA_QUIT)
         focus = 1;
       break;
     case PA_OPEN:
