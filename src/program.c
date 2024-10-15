@@ -315,9 +315,6 @@ bool section_header_level(line_t *line) {
    (L'T' == gline[1] || L't' == gline[1]) &&                                   \
    (L'P' == gline[2] || L'p' == gline[2]))
 
-// true if gline is a .\ command
-#define got_bs ((glen >= 2) && (L'.' == gline[0]) && (L'\\' == gline[1]))
-
 // Helper of toc(). Massage text member of every entry in toc (of size toc_len)
 // with the groff command, in order to remove escaped characters, etc.
 void tocgroff(toc_entry_t *toc, unsigned toc_len) {
@@ -1280,6 +1277,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   wchar_t gline[BS_LINE]; // current line in Groff document
   unsigned en = 0;        // current entry in TOC
   char tmp[BS_LINE];      // temporary
+  unsigned textsp; // real beginning of gline's text (ignoring whitespace)
 
   unsigned res_len = BS_LINE;                      // result buffer length
   toc_entry_t *res = aalloc(res_len, toc_entry_t); // result buffer
@@ -1321,7 +1319,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
     if (got_sh) {
       // Section heading
       res[en].type = TT_HEAD;
-      unsigned textsp = wmargend(&gline[3], L"\"");
+      textsp = wmargend(&gline[3], L"\"");
       if (textsp > 0) {
         res[en].text = walloc(BS_LINE);
         wcscpy(res[en].text, &gline[3 + textsp]);
@@ -1331,7 +1329,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
     } else if (got_ss) {
       // Subsection heading
       res[en].type = TT_SUBHEAD;
-      unsigned textsp = wmargend(&gline[3], L"\"");
+      textsp = wmargend(&gline[3], L"\"");
       if (textsp > 0) {
         res[en].text = walloc(BS_LINE);
         wcscpy(res[en].text, &gline[3 + textsp]);
@@ -1343,20 +1341,32 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       xgzgets(gp, tmp, BS_LINE);
       if (!gzeof(gp)) {
         glen = mbstowcs(gline, tmp, BS_LINE);
-        if (got_bs)
-          // edge case
-          continue;
-        unsigned textsp = wmargend(gline, NULL);
+        textsp = wmargend(gline, NULL);
+        {
+          // Edge case: the tag line contains only a comment
+          while (glen > textsp + 2 && gline[textsp] == L'.' &&
+                 gline[textsp + 1] == L'\\' &&
+                 (gline[textsp + 2] == L'\"' || gline[textsp + 2] == L'#')) {
+            xgzgets(gp, tmp, BS_LINE);
+            if (gzeof(gp))
+              break;
+            glen = mbstowcs(gline, tmp, BS_LINE);
+            textsp = wmargend(gline, NULL);
+          }
+        }
         res[en].type = TT_TAGPAR;
         res[en].text = walloc(BS_LINE);
         wcscpy(res[en].text, &gline[textsp]);
         glen = wmargtrim(res[en].text, L"\n");
-        if (glen >= 1 && L'\\' == res[en].text[glen - 1])
-          res[en].text[glen - 1] = L'\0';
-        if (glen >= 2 && L'\\' == res[en].text[glen - 2] &&
-            L'c' == res[en].text[glen - 1]) {
-          res[en].text[glen - 2] = L'\0';
-          res[en].text[glen - 1] = L'\0';
+        {
+          // Edge case: there's a line escape at the end of the tag line
+          if (glen >= 1 && L'\\' == res[en].text[glen - 1])
+            res[en].text[glen - 1] = L'\0';
+          if (glen >= 2 && L'\\' == res[en].text[glen - 2] &&
+              L'c' == res[en].text[glen - 1]) {
+            res[en].text[glen - 2] = L'\0';
+            res[en].text[glen - 1] = L'\0';
+          }
         }
         inc_en;
       }
