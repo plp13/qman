@@ -90,26 +90,72 @@ mouse_t mouse_status = MS_EMPTY;
     return false;                                                              \
   }
 
+// Helper of ls_jump(), i.e. of tui_open() and tui_toc(). Return the line number
+// that best matches local searh target trgt.
+int ls_discover(wchar_t *trgt) {
+  wchar_t **trgt_words = walloca(BS_SHORT); // words in trgt
+  unsigned trgt_words_len;                  // no. of words in trgt
+  wchar_t **cand_words = walloca(BS_SHORT); // words in current candidate line
+  unsigned cand_words_len;       // no. of words in current candidate line
+  unsigned ln;                   // current line number
+  unsigned line_nos[BS_LINE];    // candidate line numbers
+  unsigned line_scores[BS_LINE]; // candidate line scores
+  unsigned max_score = 0;        // maximum score
+  unsigned max_no = -1;          // line number with maximum score
+  unsigned i, j;
+
+  trgt_words_len = wsplit(&trgt_words, BS_SHORT, trgt, L".,?!/:;");
+  if (0 == trgt_words_len)
+    return -1;
+
+  // Record candidate lines and their scores
+  j = 0;
+  for (ln = 0; ln < page_len && j < BS_LINE; ln++) {
+    wchar_t text[BS_LINE]; // current line text
+    wcscpy(text, page[ln].text);
+    if (wcsstr(text, trgt_words[0]) == &text[wmargend(text, NULL)]) {
+      // In order for a line to be a candidate, it must begin with the first
+      // word in trgt
+      line_nos[j] = ln;
+      line_scores[j] = 0;
+      cand_words_len = wsplit(&cand_words, BS_SHORT, text, L".,?!/:;");
+      for (i = 0; i < MIN(trgt_words_len, cand_words_len); i++)
+        if (0 == wcscmp(cand_words[i], trgt_words[i])) {
+          line_scores[j]++;
+        }
+      if (trgt_words_len == cand_words_len)
+        line_scores[j]++;
+      j++;
+    }
+  }
+
+  // Return the candidate line with the highest score
+  for (i = 0; i < j; i++)
+    if (line_scores[i] >= max_score) {
+      max_score = line_scores[i];
+      max_no = line_nos[i];
+    }
+
+  return max_no;
+}
+
 // Helper of tui_open() and tui_toc(). Search the current page for a line whose
 // text begins with search_term, and jump to said line.
-#define ls_jump(search_term)                                                   \
+#define ls_jump(trgt)                                                          \
   {                                                                            \
-    result_t *sr;                                                              \
-    unsigned i;                                                                \
-    const unsigned sr_len = search(&sr, search_term, page, page_len, false);   \
-    for (i = 0; i < sr_len; i++)                                               \
-      if (sr[i].start == wmargend(page[sr[i].line].text, NULL))                \
-        break;                                                                 \
-    if (0 == sr_len || i == sr_len) {                                          \
+    wchar_t trgt_clone[BS_LINE];                                               \
+    wcscpy(trgt_clone, trgt);                                                  \
+    int best = ls_discover(trgt_clone);                                        \
+    if (best < 0) {                                                            \
       tui_error(L"Unable to jump to requested location");                      \
       return false;                                                            \
+    } else {                                                                   \
+      page_top = MIN(best, page_len - config.layout.main_height);              \
+      const link_loc_t fl = first_link(                                        \
+          page, page_len, page_top, page_top + config.layout.main_height - 1); \
+      if (fl.ok)                                                               \
+        page_flink = fl;                                                       \
     }                                                                          \
-    page_top = MIN(sr[i].line, page_len - config.layout.main_height);          \
-    const link_loc_t fl = first_link(                                          \
-        page, page_len, page_top, page_top + config.layout.main_height - 1);   \
-    if (fl.ok)                                                                 \
-      page_flink = fl;                                                         \
-    free(sr);                                                                  \
   }
 
 // Helper of tui_sp_open(). Print quick search results in wimm as the user
@@ -1732,8 +1778,7 @@ bool tui_toc() {
       break;
     case PA_OPEN:
       del_imm();
-      for (int j = MAX(0, focus - 3); j <= focus; j++)
-        ls_jump(toc[j].text);
+      ls_jump(toc[focus].text);
       return true;
       break;
     case PA_NULL:
@@ -1759,16 +1804,14 @@ bool tui_toc() {
               // If the left_click_open option is set, go to the appropriate
               // TOC entry
               del_imm();
-              for (int j = MAX(0, focus - 3); j <= focus; j++)
-                ls_jump(toc[j].text);
+              ls_jump(toc[focus].text);
               return true;
             }
           }
       } else if (BT_WHEEL == hms.button && hms.up) {
         // On mouse wheel click, go to the appropriate TOC entry
         del_imm();
-        for (int j = MAX(0, focus - 3); j <= focus; j++)
-          ls_jump(toc[j].text);
+        ls_jump(toc[focus].text);
         return true;
       }
       break;

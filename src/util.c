@@ -399,6 +399,41 @@ unsigned wmaxlen(const wchar_t *const *src, unsigned src_len) {
   return maxlen;
 }
 
+unsigned wsplit(wchar_t ***dst, unsigned dst_len, wchar_t *src,
+                const wchar_t *extras) {
+  wchar_t **res = *dst; // results
+  unsigned res_cnt = 0; // number of results
+  bool ws = true;       // whether current character is whitespace
+  bool pws;             // whether previous character is whitespace
+  unsigned i, j = 0;    // iterators
+
+  if (NULL == extras)
+    extras = L"";
+
+  for (i = 0; L'\0' != src[i]; i++) {
+    pws = ws;
+
+    ws = false;
+    if (iswspace(src[i]))
+      ws = true;
+    for (j = 0; L'\0' != extras[j]; j++)
+      if (src[i] == extras[j])
+        ws = true;
+
+    if (!ws) {
+      if (i == 0 || pws) {
+        if (res_cnt < dst_len) {
+          res[res_cnt] = &src[i];
+          res_cnt++;
+        }
+      }
+    } else
+      src[i] = L'\0';
+  }
+
+  return res_cnt;
+}
+
 unsigned wmargend(const wchar_t *src, const wchar_t *extras) {
   unsigned i, j; // iterators
 

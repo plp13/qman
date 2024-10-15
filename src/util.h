@@ -241,6 +241,14 @@ extern void wsort(wchar_t **trgt, unsigned trgt_len, bool rev);
 // length of src.
 extern unsigned wmaxlen(const wchar_t *const *src, unsigned src_len);
 
+// In the following functions, extras is ignored if NULL
+
+// Split src into a list of words, and place said list in dst (of maximum length
+// dst_len). Words can be separated by either whitespace or any of the
+// characters in extras. Return the number of words. This function modifies src.
+extern unsigned wsplit(wchar_t ***dst, unsigned dst_len, wchar_t *src,
+                       const wchar_t *extras);
+
 // Return the position of the first character in src that is not whitespace, and
 // not one of the characters in extras
 extern unsigned wmargend(const wchar_t *src, const wchar_t *extras);
