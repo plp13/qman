@@ -317,14 +317,11 @@ bool section_header_level(line_t *line) {
 
 // true if a tag line is a comment
 #define got_comment                                                            \
-  ((glen > textsp + 2) && (gline[textsp] == L'.') &&                           \
-   (gline[textsp + 1] == L'\\') &&                                             \
-   ((gline[textsp + 2] == L'\"' || gline[textsp + 2] == L'#')))
+  ((glen > 2) && (gline[0] == L'.') && (gline[1] == L'\\') &&                  \
+   ((gline[2] == L'\"' || gline[2] == L'#')))
 
 // true if a tag line is a control line
-#define got_ctrl                                                               \
-  ((glen > textsp + 1) && (gline[textsp] == L'.') &&                           \
-   (gline[textsp + 1] == L'.'))
+#define got_ctrl ((glen > 1) && (gline[0] == L'.') && (gline[1] == L'.'))
 
 // Helper of toc(). Massage text member of every entry in toc (of size toc_len)
 // with the groff command, in order to remove escaped characters, etc.
@@ -1356,7 +1353,6 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       xgzgets(gp, tmp, BS_LINE);
       if (!gzeof(gp)) {
         glen = mbstowcs(gline, tmp, BS_LINE);
-        textsp = wmargend(gline, NULL);
         {
           // Edge case: the tag line is a control line; ignore it
           if (got_ctrl)
@@ -1364,14 +1360,14 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
         }
         {
           // Edge case: the tag line contains only a comment; skip to next line
-          while (got_comment) {
+          while (got_comment || got_tp) {
             xgzgets(gp, tmp, BS_LINE);
             if (gzeof(gp))
               break;
             glen = mbstowcs(gline, tmp, BS_LINE);
-            textsp = wmargend(gline, NULL);
           }
         }
+        textsp = wmargend(gline, NULL);
         res[en].type = TT_TAGPAR;
         res[en].text = walloc(BS_LINE);
         wcscpy(res[en].text, &gline[textsp]);
