@@ -403,8 +403,8 @@ unsigned wsplit(wchar_t ***dst, unsigned dst_len, wchar_t *src,
                 const wchar_t *extras) {
   wchar_t **res = *dst; // results
   unsigned res_cnt = 0; // number of results
-  bool ws = true;       // whether current character is whitespace
-  bool pws;             // whether previous character is whitespace
+  bool ws = true;       // whether current character is whitespace or in extras
+  bool pws;             // whether previous character is whitespace or in extras
   unsigned i, j = 0;    // iterators
 
   if (NULL == extras)
@@ -435,19 +435,23 @@ unsigned wsplit(wchar_t ***dst, unsigned dst_len, wchar_t *src,
 }
 
 unsigned wmargend(const wchar_t *src, const wchar_t *extras) {
+  bool ws;       // whether current character is whitespace or in extras
   unsigned i, j; // iterators
 
   if (NULL == extras)
     extras = L"";
 
-  for (i = 0; L'\0' != src[i]; i++)
-    if (!iswspace(src[i])) {
-      for (j = 0; L'\0' != extras[j]; j++)
-        if (src[i] == extras[j])
-          break;
-      if (L'\0' == extras[j])
-        return i;
-    }
+  for (i = 0; L'\0' != src[i]; i++) {
+    ws = false;
+    if (iswspace(src[i]))
+      ws = true;
+    for (j = 0; L'\0' != extras[j]; j++)
+      if (src[i] == extras[j])
+        ws = true;
+
+    if (!ws)
+      return i;
+  }
 
   return 0;
 }

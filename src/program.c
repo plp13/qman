@@ -315,6 +315,17 @@ bool section_header_level(line_t *line) {
    (L'T' == gline[1] || L't' == gline[1]) &&                                   \
    (L'P' == gline[2] || L'p' == gline[2]))
 
+// true if a tag line is a comment
+#define got_comment                                                            \
+  ((glen > textsp + 2) && (gline[textsp] == L'.') &&                           \
+   (gline[textsp + 1] == L'\\') &&                                             \
+   ((gline[textsp + 2] == L'\"' || gline[textsp + 2] == L'#')))
+
+// true if a tag line is a control line
+#define got_ctrl                                                               \
+  ((glen > textsp + 1) && (gline[textsp] == L'.') &&                           \
+   (gline[textsp + 1] == L'.'))
+
 // Helper of toc(). Massage text member of every entry in toc (of size toc_len)
 // with the groff command, in order to remove escaped characters, etc.
 void tocgroff(toc_entry_t *toc, unsigned toc_len) {
@@ -837,7 +848,6 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
     swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
              lmargin_width, "",                         //
              text_width, tmp);
-    res[ln].section_level = 0;
     bset(res[ln].bold, lmargin_width);
     bset(res[ln].reg, lmargin_width + wcslen(tmp));
 
@@ -883,7 +893,6 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
     swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
              lmargin_width, "",                         //
              text_width, tmp);
-    res[ln].section_level = 0;
     bset(res[ln].bold, lmargin_width);
     bset(res[ln].reg, lmargin_width + wcslen(tmp));
 
@@ -1130,8 +1139,16 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 
   section_header_level(NULL);
 
-  // For each line of man's output (read into tmps/tmpw)
+  // Discard any empty lines on top, and read the first non-empty line into
+  // tmps/tmpw
   xfgets(tmps, BS_LINE, pp);
+  len = mbstowcs(tmpw, tmps, BS_LINE);
+  while (0 == len || L'\n' == tmpw[wmargend(tmpw, L"\n")]) {
+    xfgets(tmps, BS_LINE, pp);
+    len = mbstowcs(tmpw, tmps, BS_LINE);
+  }
+
+  // For each line of man's output (read into tmps/tmpw)...
   while (!feof(pp)) {
     // At line 1, insert the list of sections (if enabled)
     if (config.layout.sections_on_top && 1 == ln) {
@@ -1145,7 +1162,6 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
       swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
                lmargin_width, "",                         //
                text_width, tmpw);
-      res[ln].section_level = 0;
       bset(res[ln].bold, lmargin_width);
       bset(res[ln].reg, lmargin_width + wcslen(tmpw));
 
@@ -1183,9 +1199,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
       inc_ln;
 
       wafree(sc, sc_len);
+      len = mbstowcs(tmpw, tmps, BS_LINE);
     }
-
-    len = mbstowcs(tmpw, tmps, BS_LINE);
 
     if (-1 == len)
       winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
@@ -1236,9 +1251,9 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     res[ln].text[j] = L'\0';
     res[ln].length = j + 1;
 
-    res[ln].section_level = section_header_level(&res[ln]);
-
+    // Read next line of man output into tmps/tmpw
     xfgets(tmps, BS_LINE, pp);
+    len = mbstowcs(tmpw, tmps, BS_LINE);
 
     inc_ln;
   }
@@ -1343,10 +1358,13 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
         glen = mbstowcs(gline, tmp, BS_LINE);
         textsp = wmargend(gline, NULL);
         {
-          // Edge case: the tag line contains only a comment
-          while (glen > textsp + 2 && gline[textsp] == L'.' &&
-                 gline[textsp + 1] == L'\\' &&
-                 (gline[textsp + 2] == L'\"' || gline[textsp + 2] == L'#')) {
+          // Edge case: the tag line is a control line; ignore it
+          if (got_ctrl)
+            continue;
+        }
+        {
+          // Edge case: the tag line contains only a comment; skip to next line
+          while (got_comment) {
             xgzgets(gp, tmp, BS_LINE);
             if (gzeof(gp))
               break;
@@ -1359,7 +1377,8 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
         wcscpy(res[en].text, &gline[textsp]);
         glen = wmargtrim(res[en].text, L"\n");
         {
-          // Edge case: there's a line escape at the end of the tag line
+          // Edge case: there's a line escape at the end of the tag line; remove
+          // it
           if (glen >= 1 && L'\\' == res[en].text[glen - 1])
             res[en].text[glen - 1] = L'\0';
           if (glen >= 2 && L'\\' == res[en].text[glen - 2] &&

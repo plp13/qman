@@ -123,8 +123,9 @@ int ls_discover(wchar_t *trgt) {
         if (0 == wcscmp(cand_words[i], trgt_words[i])) {
           line_scores[j]++;
         }
-      if (trgt_words_len == cand_words_len)
-        line_scores[j]++;
+      // Not sure if this improves things; disabling for now
+      // if (trgt_words_len == cand_words_len)
+      //   line_scores[j]++;
       j++;
     }
   }
