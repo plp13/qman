@@ -96,13 +96,14 @@ int ls_discover(wchar_t *trgt) {
   wchar_t **trgt_words = walloca(BS_SHORT); // words in trgt
   unsigned trgt_words_len;                  // no. of words in trgt
   wchar_t **cand_words = walloca(BS_SHORT); // words in current candidate line
-  unsigned cand_words_len;       // no. of words in current candidate line
-  unsigned ln;                   // current line number
-  unsigned line_nos[BS_LINE];    // candidate line numbers
-  unsigned line_scores[BS_LINE]; // candidate line scores
-  unsigned max_score = 0;        // maximum score
-  unsigned max_no = -1;          // line number with maximum score
-  unsigned i, j;
+  unsigned cand_words_len;         // no. of words in current candidate line
+  unsigned ln;                     // current line number
+  unsigned line_nos[BS_LINE];      // candidate line numbers
+  unsigned line_scores[BS_LINE];   // candidate line scores
+  unsigned line_margends[BS_LINE]; // candidate line left margin endpoints
+  unsigned max_no = 0;             // line number with maximum score
+  unsigned max_score = 0;          // maximum score
+  unsigned i, j, max_i = 0;        // iterators & friends
 
   trgt_words_len = wsplit(&trgt_words, BS_SHORT, trgt, L".,?!/:;");
   if (0 == trgt_words_len)
@@ -126,16 +127,19 @@ int ls_discover(wchar_t *trgt) {
       // Not sure if this improves things; disabling for now
       // if (trgt_words_len == cand_words_len)
       //   line_scores[j]++;
+      line_margends[j] = wmargend(page[ln].text, NULL);
       j++;
     }
   }
 
   // Return the candidate line with the highest score
   for (i = 0; i < j; i++)
-    if (line_scores[i] >= max_score) {
-      max_score = line_scores[i];
-      max_no = line_nos[i];
-    }
+    if (line_scores[i] >= max_score)
+      if (0 == max_score || line_margends[i] < line_margends[max_i]) {
+        max_no = line_nos[i];
+        max_score = line_scores[i];
+        max_i = i;
+      }
 
   return max_no;
 }
@@ -1819,7 +1823,7 @@ bool tui_toc() {
         int iy = hms.y, ix = hms.x;
         unsigned ih = getmaxy(wimm);
         if (wmouse_trafo(wimm, &iy, &ix, false))
-          if (iy > 1 && iy < ih - 3 && history_top >= top + iy - 2) {
+          if (iy > 1 && iy < ih - 3 && toc_len > top + iy - 2) {
             focus = top + iy - 2;
             if (config.mouse.left_click_open) {
               // If the left_click_open option is set, go to the appropriate
