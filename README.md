@@ -81,9 +81,11 @@ Qman is written in plain C, and thus requires a compiler such as `gcc` or
 `zlib`. It uses the `meson` build system. Its manual page is written in
 Markdown, and is compiled using `pandoc`.
 
-CAUTION: `pandoc` is written in Haskell and requires installing a large number
-of dependencies. These are only necessary for compiling Qman's manual page, and
-can be removed after building. 
+> **:warning: Warning**
+>
+> CAUTION: `pandoc` is written in Haskell and requires installing a large number
+> of dependencies. These are only necessary for compiling Qman's manual page,
+> and can be removed after building.
 
 The program is a front-end to GNU `man`, and therefore requires `man` and
 `groff` to be installed. In order for it to make sense, a Unix manual pages
@@ -105,9 +107,11 @@ operating systems and distros:
   $ pipx install cogapp
 ```
 
-Note that, by default, `pipx` will install the `cog` executable in
-`~/.local/bin`. You will have to add this directory to your path before
-proceeding with `meson setup`.
+> :**point_right: Note**
+>
+> By default, `pipx` will install the `cog` executable in `~/.local/bin`. You
+> will have to add this directory to your path before proceeding with
+> `meson setup`.
 
 ### Debian 11
 ```
@@ -126,7 +130,9 @@ proceeding with `meson setup`.
   # pip install cogapp
 ```
 
-These steps should also work with Red Hat Enterprise Linux 9 and AlmaLinux 9.
+> :**point_right: Note**
+>
+> These steps should also work with Red Hat Enterprise Linux 9 and AlmaLinux 9.
 
 ### Rocky Linux 8
 ```
@@ -138,7 +144,9 @@ These steps should also work with Red Hat Enterprise Linux 9 and AlmaLinux 9.
   # pip3 install cogapp
 ```
 
-These steps should also work with Red Hat Enterprise Linux 8 and AlmaLinux 8.
+> :**point_right: Note**
+>
+> These steps should also work with Red Hat Enterprise Linux 9 and AlmaLinux 9.
 
 ### Ubuntu 24.04
 ```
@@ -163,8 +171,10 @@ $ meson compile
 $ sudo meson install
 ```
 
-Note that, if using an older version of `meson`, you may need to substitute the
-aforementioned `meson compile` command with `ninja`.
+> :**point_right: Note**
+>
+> If using an older version of `meson`, you may need to substitute the
+> aforementioned `meson compile` command with `ninja`.
 
 ### Packages
 For Arch Linux users, there is a an
@@ -178,12 +188,12 @@ RTFM:
 $ qman qman
 ```
 
-*What is the location of the configuration file?*
+> :question: What is the location of the configuration file?
 
 `~/.config/qman.conf` (user-specific) or `/etc/xdg/qman.conf` (system-wide).
 
-*Calling `qman` without any parameters fails with message `Apropos '': nothing
-appropriate`*
+> :question: Calling `qman` without any parameters fails with message
+> `Apropos '': nothing appropriate`
 
 Your system does not have a manual page index cache. This can be fixed by
 running (as root):
@@ -192,15 +202,15 @@ running (as root):
 # mandb
 ```
 
-*I have enabled mouse support by adding `enable=true` to the `[mouse]` section
-of my configuration file, but now I'm unable to copy text to the clipboard using
-the mouse, and/or my mouse behaves erratically*
+> :question: I have enabled mouse support by adding `enable=true` to the
+> `[mouse]` section of my configuration file, but now I'm unable to copy text to
+> the clipboard using the mouse, and/or my mouse behaves erratically
 
 Mouse support is experimental, and depends on features that are not fully
 implemented by all terminals. See Qman's manual page for more information.
 
-*Trying to open an HTTP or e-mail link causes the program to terminate (or does
-nothing)*
+> :question: Trying to open an HTTP or e-mail link causes the program to
+> terminate (or does nothing)
 
 By default, Qman uses `xdg-open` to open such links. On desktop Linux systems,
 this is sufficient to open them using the default browser / email client. On
@@ -209,7 +219,7 @@ other systems, you may need to specify alternative programs with the
 configuration file. To avoid opening such links altogether, set both options to
 a command that does nothing, e.g. `/usr/bin/false`.
 
-*Qman does not look as pretty on my system as in the screenshots*
+> :question: Qman does not look as pretty on my system as in the screenshots
 
 That look can be achieved by using one of the supplied
 [modernity.conf](https://github.com/plp13/qman/blob/main/config/modernity.conf)
