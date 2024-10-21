@@ -83,9 +83,9 @@ Markdown, and is compiled using `pandoc`.
 
 > **:warning: Warning**
 >
-> CAUTION: `pandoc` is written in Haskell and requires installing a large number
-> of dependencies. These are only necessary for compiling Qman's manual page,
-> and can be removed after building.
+> `pandoc` is written in Haskell and requires installing a large number of
+> dependencies. These are only necessary for compiling Qman's manual page, and
+> can be removed after building.
 
 The program is a front-end to GNU `man`, and therefore requires `man` and
 `groff` to be installed. In order for it to make sense, a Unix manual pages
