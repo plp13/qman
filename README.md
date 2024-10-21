@@ -107,7 +107,7 @@ operating systems and distros:
   $ pipx install cogapp
 ```
 
-> :**:bulb: Note**
+> **:bulb: Note**
 >
 > By default, `pipx` will install the `cog` executable in `~/.local/bin`. You
 > will have to add this directory to your path before proceeding with
@@ -130,7 +130,7 @@ operating systems and distros:
   # pip install cogapp
 ```
 
-> :**:bulb: Note**
+> **:bulb: Note**
 >
 > These steps should also work with Red Hat Enterprise Linux 9 and AlmaLinux 9.
 
@@ -144,7 +144,7 @@ operating systems and distros:
   # pip3 install cogapp
 ```
 
-> :**:bulb: Note**
+> **:bulb: Note**
 >
 > These steps should also work with Red Hat Enterprise Linux 9 and AlmaLinux 9.
 
@@ -171,7 +171,7 @@ $ meson compile
 $ sudo meson install
 ```
 
-> :**:bulb: Note**
+> **:bulb: Note**
 >
 > If using an older version of `meson`, you may need to substitute the
 > aforementioned `meson compile` command with `ninja`.
