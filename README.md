@@ -61,14 +61,14 @@ and should be reported using the [issues](https://github.com/plp13/qman/issues)
 page.
 
 ## Downloading
-Clone out the [main](https://github.com/plp13/qman/tree/main) branch, which
-contains Qman's latest stable version:
+Clone the [main](https://github.com/plp13/qman/tree/main) branch, which contains
+Qman's latest stable version:
 
 ```
 $ git clone -b main https://github.com/plp13/qman qman
 ```
 
-If you wish to contribute to the program's development, clone out the
+If you wish to contribute to the program's development, clone the
 [devel](https://github.com/plp13/qman/tree/devel) branch.
 
 ```
