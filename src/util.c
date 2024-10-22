@@ -61,6 +61,30 @@ int xpclose(FILE *stream) {
   return status;
 }
 
+gzFile xgzopen(const char *path, const char *mode) {
+  gzFile gzfp = gzopen(path, mode);
+
+  if (NULL == gzfp) {
+    static wchar_t errmsg[BS_SHORT];
+    serror(errmsg, L"Unable to gzopen()");
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+
+  return gzfp;
+}
+
+int xgzclose(gzFile file) {
+  const int status = gzclose(file);
+
+  if (Z_OK != status) {
+    static wchar_t errmsg[BS_SHORT];
+    serror(errmsg, L"Unable to gzclose()");
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+
+  return status;
+}
+
 FILE *xfopen(const char *pathname, const char *mode) {
   FILE *const file = fopen(pathname, mode);
 
@@ -97,6 +121,31 @@ FILE *xtmpfile() {
   return file;
 }
 
+char *xgzgets(gzFile file, char *buf, int len) {
+  char *res;
+
+  while (true) {
+    res = gzgets(file, buf, len);
+
+    if (NULL == res && !gzeof(file)) {
+      // There has been an error
+      if (EINTR == errno) {
+        // Sometimes ncurses rudely interrupts gzgets(). If that's the case, try
+        // calling gzgets() again
+        gzclearerr(file);
+      } else {
+        // Otherwise, fail gracefully
+        static wchar_t errmsg[BS_SHORT];
+        serror(errmsg, L"Unable to gzgets()");
+        winddown(ES_OPER_ERROR, errmsg);
+      }
+    } else {
+      // No error; return the result
+      return res;
+    }
+  }
+}
+
 char *xfgets(char *s, int size, FILE *stream) {
   char *res;
 
@@ -120,6 +169,18 @@ char *xfgets(char *s, int size, FILE *stream) {
       return res;
     }
   }
+}
+
+int xfputs(const char *s, FILE *stream) {
+  int res = fputs(s, stream);
+
+  if (EOF == res) {
+    static wchar_t errmsg[BS_SHORT];
+    serror(errmsg, L"Unable to fputs()");
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+
+  return res;
 }
 
 size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
@@ -338,12 +399,112 @@ unsigned wmaxlen(const wchar_t *const *src, unsigned src_len) {
   return maxlen;
 }
 
-unsigned wmargend(const wchar_t *src) {
-  for (unsigned i = 0; i < wcslen(src); i++)
-    if (!iswspace(src[i]))
+unsigned wsplit(wchar_t ***dst, unsigned dst_len, wchar_t *src,
+                const wchar_t *extras) {
+  wchar_t **res = *dst; // results
+  unsigned res_cnt = 0; // number of results
+  bool ws = true;       // whether current character is whitespace or in extras
+  bool pws;             // whether previous character is whitespace or in extras
+  unsigned i, j = 0;    // iterators
+
+  if (NULL == extras)
+    extras = L"";
+
+  for (i = 0; L'\0' != src[i]; i++) {
+    pws = ws;
+
+    ws = false;
+    if (iswspace(src[i]))
+      ws = true;
+    for (j = 0; L'\0' != extras[j]; j++)
+      if (src[i] == extras[j])
+        ws = true;
+
+    if (!ws) {
+      if (i == 0 || pws) {
+        if (res_cnt < dst_len) {
+          res[res_cnt] = &src[i];
+          res_cnt++;
+        }
+      }
+    } else
+      src[i] = L'\0';
+  }
+
+  return res_cnt;
+}
+
+unsigned wmargend(const wchar_t *src, const wchar_t *extras) {
+  bool ws;       // whether current character is whitespace or in extras
+  unsigned i, j; // iterators
+
+  if (NULL == extras)
+    extras = L"";
+
+  for (i = 0; L'\0' != src[i]; i++) {
+    ws = false;
+    if (iswspace(src[i]))
+      ws = true;
+    for (j = 0; L'\0' != extras[j]; j++)
+      if (src[i] == extras[j])
+        ws = true;
+
+    if (!ws)
       return i;
+  }
 
   return 0;
+}
+
+unsigned wmargtrim(wchar_t *trgt, const wchar_t *extras) {
+  int i;      // iterator
+  unsigned j; // iterator
+  bool trim;  // true if we'll be trimming trgt[i]
+
+  if (NULL == extras)
+    extras = L"";
+
+  for (i = 0; L'\0' != trgt[i]; i++)
+    ;
+
+  i--;
+  while (i >= 0) {
+    trim = false;
+
+    if (iswspace(trgt[i]))
+      trim = true;
+    else
+      for (j = 0; L'\0' != extras[j]; j++)
+        if (trgt[i] == extras[j])
+          trim = true;
+
+    if (!trim) {
+      trgt[i + 1] = L'\0';
+      return i + 1;
+    }
+
+    i--;
+  }
+
+  return 0;
+}
+
+unsigned wbs(wchar_t *trgt) {
+  unsigned i, j; // iterators
+
+  j = 0;
+  for (i = 0; L'\0' != trgt[i]; i++) {
+    if (L'\b' == trgt[i]) {
+      if (j > 0)
+        j--;
+    } else {
+      trgt[j] = trgt[i];
+      j++;
+    }
+  }
+
+  trgt[j] = L'\0';
+  return j;
 }
 
 wchar_t *wcscasestr(const wchar_t *haystack, const wchar_t *needle) {

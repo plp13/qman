@@ -102,6 +102,26 @@ typedef struct {
   ((NULL == w1 && NULL == w2) ||                                               \
    (NULL != w1 && NULL != w2 && 0 == wcscmp(w1, w2)))
 
+// Make wide string w lower-case
+#define wcslower(w)                                                            \
+  {                                                                            \
+    unsigned i = 0;                                                            \
+    while (L'\0' != w[i]) {                                                    \
+      w[i] = towlower(w[i]);                                                   \
+      i++;                                                                     \
+    }                                                                          \
+  }
+
+// Log a message, together with a timestamp, into F_LOG. Use this function like
+// you would printf(), i.e. specifying a template followed by zero or more
+// values. And only temporarily for debugging, not in production.
+#define logprintf(...)                                                         \
+  {                                                                            \
+    char ___[64 * BS_LINE];                                                    \
+    sprintf(___, __VA_ARGS__);                                                 \
+    loggit(___);                                                               \
+  }
+
 //
 // Functions
 //
@@ -127,6 +147,12 @@ extern FILE *xpopen(const char *command, const char *type);
 // Safely call pclose()
 extern int xpclose(FILE *stream);
 
+// Safely call gzopen()
+extern gzFile xgzopen(const char *path, const char *mode);
+
+// Safely call gzclose()
+extern int xgzclose(gzFile file);
+
 // Safely call fopen()
 extern FILE *xfopen(const char *pathname, const char *mode);
 
@@ -136,8 +162,14 @@ extern int xfclose(FILE *stream);
 // Safely call tmpfile()
 extern FILE *xtmpfile();
 
+// Safely call gzgets()
+extern char *xgzgets(gzFile file, char *buf, int len);
+
 // Safely call fgets()
 extern char *xfgets(char *s, int size, FILE *stream);
+
+// Safely call fputs()
+extern int xfputs(const char *s, FILE *stream);
 
 // Safely call fwrite()
 extern size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
@@ -209,8 +241,25 @@ extern void wsort(wchar_t **trgt, unsigned trgt_len, bool rev);
 // length of src.
 extern unsigned wmaxlen(const wchar_t *const *src, unsigned src_len);
 
-// Return the position of the first character in src that is not whitespace
-extern unsigned wmargend(const wchar_t *src);
+// In the following functions, extras is ignored if NULL
+
+// Split src into a list of words, and place said list in dst (of maximum length
+// dst_len). Words can be separated by either whitespace or any of the
+// characters in extras. Return the number of words. This function modifies src.
+extern unsigned wsplit(wchar_t ***dst, unsigned dst_len, wchar_t *src,
+                       const wchar_t *extras);
+
+// Return the position of the first character in src that is not whitespace, and
+// not one of the characters in extras
+extern unsigned wmargend(const wchar_t *src, const wchar_t *extras);
+
+// Trim all characters at the end of trgt that are either whitespace or one of
+// the charactes in extras. (Trimming is done by inserting 0 or more NULL
+// characters at the end of trgt.) Return the new length of trgt.
+extern unsigned wmargtrim(wchar_t *trgt, const wchar_t *extras);
+
+// Apply any backspace characters in trgt
+extern unsigned wbs(wchar_t *trgt);
 
 // Case-insensitive version of wcsstr()
 extern wchar_t *wcscasestr(const wchar_t *haystack, const wchar_t *needle);

@@ -330,6 +330,9 @@ extern bool tui_fwrd();
 // Handler for PA_HISTORY
 extern bool tui_history();
 
+// Handler for PA_TOC
+extern bool tui_toc();
+
 // Handler for PA_SEARCH (whenever back is set to true) or PA_SEARCH_BACK
 // (whenever back is set to false)
 extern bool tui_search(bool back);

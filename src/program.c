@@ -59,6 +59,10 @@ unsigned page_top = 0;
 
 unsigned page_left = 0;
 
+toc_entry_t *toc = NULL;
+
+unsigned toc_len = 0;
+
 bool err = false;
 
 wchar_t err_msg[BS_LINE];
@@ -80,8 +84,17 @@ full_regex_t re_man, re_http, re_email;
 #define inc_ln                                                                 \
   ln++;                                                                        \
   if (ln == res_len) {                                                         \
-    res_len += 1024;                                                           \
+    res_len += BS_LINE;                                                        \
     res = xreallocarray(res, res_len, sizeof(line_t));                         \
+  }
+
+// Helper of toc(). Increase en, and reallocate res in memory, if en has
+// exceeded its size
+#define inc_en                                                                 \
+  en++;                                                                        \
+  if (en == res_len) {                                                         \
+    res_len += BS_SHORT;                                                       \
+    res = xreallocarray(res, res_len, sizeof(toc_entry_t));                    \
   }
 
 // Helper of search(). Increase i, and reallocate res in memory, if i has
@@ -89,7 +102,7 @@ full_regex_t re_man, re_http, re_email;
 #define inc_i                                                                  \
   i++;                                                                         \
   if (i == res_len) {                                                          \
-    res_len += 1024;                                                           \
+    res_len += BS_LINE;                                                        \
     res = xreallocarray(res, res_len, sizeof(result_t));                       \
   }
 
@@ -116,6 +129,10 @@ void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
 // signifies the link type to add.
 void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
                     const link_type_t type) {
+  // Ignore empty lines
+  if (line->length < 2)
+    return;
+
   wchar_t ltext[BS_LINE * 2]; // text of line (or text of line merged with text
                               // of line_next, if line is hyphenated)
   memset(ltext, 0, sizeof(wchar_t) * BS_LINE * 2);
@@ -128,8 +145,10 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
   // Prepare ltext
   wcsncpy(ltext, line->text, line->length - 1);
   if (lhyph) {
-    unsigned lnme = wmargend(line_next->text); // left margin end of line_next
-    wcsncpy(&ltext[line->length - 2], &line_next->text[lnme], line_next->length - lnme);
+    unsigned lnme =
+        wmargend(line_next->text, NULL); // left margin end of line_next
+    wcsncpy(&ltext[line->length - 2], &line_next->text[lnme],
+            line_next->length - lnme);
   }
 
   // While a link has been found...
@@ -143,9 +162,9 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
         loff + lrng.end >= line->length) {
       // Link is broken by a hyphen
 
-      const unsigned lnme =
-          wmargend(line_next->text); // position where actual text (without
-                                     // margin) of line_next starts
+      const unsigned lnme = wmargend(
+          line_next->text, NULL); // position where actual text (without
+                                  // margin) of line_next starts
       const unsigned lstart = loff + lrng.beg; // starting pos. in line
       const unsigned lend = line->length - 2;  // ending pos. in line
       const unsigned nlstart = lnme;           // starting pos in next line
@@ -183,7 +202,43 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
   }
 }
 
-// All got_... macros are helpers of man()
+// Helper of man(). If line is a section header, return its level. Otherwise,
+// return -1. This function must initially be called with a NULL argument, every
+// time man() is invoked.
+bool section_header_level(line_t *line) {
+  static unsigned lnme_set[] = {
+      0, 0, 0, 0,
+      0, 0, 0, 0}; // unique and (hopefully) ordered lnme values for all section
+                   // headers encountered so far
+  unsigned i;      // iterator
+
+  // Line is NULL; re-initialize lnme_set and return -1
+  if (NULL == line) {
+    for (i = 0; i < 8; i++)
+      lnme_set[i] = 0;
+
+    return -1;
+  }
+
+  unsigned lnme = wmargend(
+      line->text, NULL); // position in line's text where margin whitespace ends
+
+  if (bget(line->bold, lnme) && bget(line->reg, line->length - 1)) {
+    // Line is a section header; return the level that corresponds to its lnme
+    for (i = 0; i < 8; i++) {
+      if (0 == lnme_set[i])
+        lnme_set[i] = lnme;
+      if (lnme == lnme_set[i])
+        return i;
+    }
+    return 7;
+  } else {
+    // Not a section header
+    return -1;
+  }
+}
+
+// The following are helpers of man()
 
 // true if tmpw[i] contains a 'bold' terminal escape sequence
 #define got_bold                                                               \
@@ -239,6 +294,81 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
 #define got_esc8                                                               \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L']') &&             \
    (tmpw[i + 2] == L'8') && (tmpw[i + 3] == L';'))
+
+// The following are helpers of man_toc()
+
+// true if gline is a section header
+#define got_sh                                                                 \
+  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
+   (L'S' == gline[1] || L's' == gline[1]) &&                                   \
+   (L'H' == gline[2] || L'h' == gline[2]))
+
+// true if gline is a sub-section header
+#define got_ss                                                                 \
+  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
+   (L'S' == gline[1] || L's' == gline[1]) &&                                   \
+   (L'S' == gline[2] || L's' == gline[2]))
+
+// true if gline is a tagged paragraph
+#define got_tp                                                                 \
+  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
+   (L'T' == gline[1] || L't' == gline[1]) &&                                   \
+   (L'P' == gline[2] || L'p' == gline[2]))
+
+// true if a tag line is a comment
+#define got_comment                                                            \
+  ((glen > 2) && (gline[0] == L'.') && (gline[1] == L'\\') &&                  \
+   ((gline[2] == L'\"' || gline[2] == L'#')))
+
+// true if a tag line is a control line
+#define got_ctrl ((glen > 1) && (gline[0] == L'.') && (gline[1] == L'.'))
+
+// Helper of toc(). Massage text member of every entry in toc (of size toc_len)
+// with the groff command, in order to remove escaped characters, etc.
+void tocgroff(toc_entry_t *toc, unsigned toc_len) {
+  char *tpath;               // temporary file path
+  char cmdstr[BS_LINE] = ""; // groff 'massage' command
+  char texts[BS_LINE];       // 8-bit version of current toc text
+  unsigned i;                // iterator
+
+  // Prepare tpath and cmdstr
+  tpath = tempnam(NULL, "qman");
+  snprintf(cmdstr, BS_LINE, "%s -man -Tutf8 %s 2>>/dev/null",
+           config.misc.groff_path, tpath);
+
+  // Prepare the environment
+  unsetenv("GROFF_SGR");
+  setenv("GROFF_NO_SGR", "1", true);
+
+  // Write all texts of toc into temporary file
+  FILE *fp = xfopen(tpath, "w");
+  xfputs(".TH A A A A A", fp);
+  xfputs(".ll 1024m\n", fp);
+  for (i = 0; i < toc_len; i++)
+    if (NULL != toc[i].text) {
+      wcstombs(texts, toc[i].text, BS_LINE);
+      xfputs(texts, fp);
+      xfputs("\n.br 0\n", fp);
+    }
+  xfclose(fp);
+
+  // Massage temporary file with groff and put the results back into the texts
+  // of toc
+  FILE *pp = xpopen(cmdstr, "r");
+  xfgets(texts, BS_LINE, pp); // discarded
+  xfgets(texts, BS_LINE, pp); // discarded
+  for (i = 0; i < toc_len; i++) {
+    xfgets(texts, BS_LINE, pp);
+    mbstowcs(toc[i].text, texts, BS_LINE);
+    wbs(toc[i].text);
+    wmargtrim(toc[i].text, L"\n");
+  }
+  xpclose(pp);
+
+  // Tidy up and restore the environment
+  unlink(tpath);
+  free(tpath);
+}
 
 //
 // Functions
@@ -555,11 +685,13 @@ void history_reset() {
 unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
                        const wchar_t *args) {
   // Prepare apropos/whatis command
-  char cmdstr[BS_SHORT];
+  char cmdstr[BS_LINE];
   if (AW_WHATIS == cmd)
-    sprintf(cmdstr, "%s -l %ls 2>>/dev/null", config.misc.whatis_path, args);
+    snprintf(cmdstr, BS_LINE, "%s -l %ls 2>>/dev/null", config.misc.whatis_path,
+             args);
   else
-    sprintf(cmdstr, "%s -l %ls 2>>/dev/null", config.misc.apropos_path, args);
+    snprintf(cmdstr, BS_LINE, "%s -l %ls 2>>/dev/null",
+             config.misc.apropos_path, args);
 
   // Execute apropos, and enter its result into a temporary file. lines
   // becomes the total number of lines copied.
@@ -647,10 +779,11 @@ unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *aw,
   return res_i;
 }
 
-unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
-                         const wchar_t *const *sc, unsigned sc_len,
-                         const wchar_t *key, const wchar_t *title,
-                         const wchar_t *ver, const wchar_t *date) {
+unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
+                         const unsigned aw_len, const wchar_t *const *sc,
+                         const unsigned sc_len, const wchar_t *key,
+                         const wchar_t *title, const wchar_t *ver,
+                         const wchar_t *date) {
 
   // Text blocks widths
   const unsigned line_width = MAX(60, config.layout.main_width);
@@ -670,7 +803,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
   wchar_t tmp[BS_LINE]; // temporary
   memset(tmp, 0, sizeof(wchar_t) * BS_LINE);
 
-  unsigned res_len = 1024;               // result buffer length
+  unsigned res_len = BS_LINE;            // result buffer length
   line_t *res = aalloc(res_len, line_t); // result buffer
 
   // Header
@@ -699,43 +832,47 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
        lmargin_width + hfl_width + hfc_width + hfr_width - key_len);
   bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
 
-  // Newline
-  inc_ln;
-  line_alloc(res[ln], 0);
-
-  // Section title for sections
-  inc_ln;
-  line_alloc(res[ln], line_width);
-  wcscpy(tmp, L"SECTIONS");
-  swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
-           lmargin_width, "",                         //
-           text_width, tmp);
-  bset(res[ln].bold, lmargin_width);
-  bset(res[ln].reg, lmargin_width + wcslen(tmp));
-
-  // Sections
-  const unsigned sc_maxwidth = wmaxlen(sc, sc_len); // length of longest section
-  const unsigned sc_cols =
-      text_width / (4 + sc_maxwidth); // number of columns for sections
-  const unsigned sc_lines =
-      sc_len % sc_cols > 0
-          ? 1 + sc_len / sc_cols
-          : MAX(1, sc_len / sc_cols); // number of lines for sections
-  unsigned sc_i;                      // index of current section
-  for (i = 0; i < sc_lines; i++) {
+  // Only if list of sections is enabled
+  if (config.layout.sections_on_top) {
+    // Newline
     inc_ln;
-    line_alloc(res[ln], line_width + 4); // +4 for section margin
-    swprintf(res[ln].text, line_width + 1, L"%*s", lmargin_width, "");
-    for (j = 0; j < sc_cols; j++) {
-      sc_i = sc_cols * i + j;
-      if (sc_i < sc_len) {
-        swprintf(tmp, sc_maxwidth + 5, L"%-*ls", sc_maxwidth + 4, sc[sc_i]);
-        wcscat(res[ln].text, tmp);
-        swprintf(tmp, BS_LINE, L"MANUAL PAGES IN SECTION '%ls'", sc[sc_i]);
-        add_link(&res[ln],                                                 //
-                 lmargin_width + j * (sc_maxwidth + 4),                    //
-                 lmargin_width + j * (sc_maxwidth + 4) + wcslen(sc[sc_i]), //
-                 false, 0, 0, LT_LS, tmp);
+    line_alloc(res[ln], 0);
+
+    // Section title for sections
+    inc_ln;
+    line_alloc(res[ln], line_width);
+    wcscpy(tmp, L"SECTIONS");
+    swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
+             lmargin_width, "",                         //
+             text_width, tmp);
+    bset(res[ln].bold, lmargin_width);
+    bset(res[ln].reg, lmargin_width + wcslen(tmp));
+
+    // Sections
+    const unsigned sc_maxwidth = MIN(
+        text_width / 2 - 4, wmaxlen(sc, sc_len)); // length of longest section
+    const unsigned sc_cols =
+        text_width / (4 + sc_maxwidth); // number of columns for sections
+    const unsigned sc_lines =
+        sc_len % sc_cols > 0
+            ? 1 + sc_len / sc_cols
+            : MAX(1, sc_len / sc_cols); // number of lines for sections
+    unsigned sc_i;                      // index of current section
+    for (i = 0; i < sc_lines; i++) {
+      inc_ln;
+      line_alloc(res[ln], line_width + 4); // +4 for section margin
+      swprintf(res[ln].text, line_width + 1, L"%*s", lmargin_width, "");
+      for (j = 0; j < sc_cols; j++) {
+        sc_i = sc_cols * i + j;
+        if (sc_i < sc_len) {
+          swprintf(tmp, sc_maxwidth + 5, L" %-*ls", sc_maxwidth + 3, sc[sc_i]);
+          wcscat(res[ln].text, tmp);
+          swprintf(tmp, BS_LINE, L"MANUAL PAGES IN SECTION '%ls'", sc[sc_i]);
+          add_link(&res[ln], lmargin_width + j * (sc_maxwidth + 4) + 1,
+                   lmargin_width + j * (sc_maxwidth + 4) +
+                       MIN(sc_maxwidth + 3, wcslen(sc[sc_i]) + 1),
+                   false, 0, 0, LT_LS, tmp);
+        }
       }
     }
   }
@@ -745,6 +882,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
     // Newline
     inc_ln;
     line_alloc(res[ln], 0);
+
     // Section title
     inc_ln;
     line_alloc(res[ln], line_width);
@@ -754,6 +892,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw, unsigned aw_len,
              text_width, tmp);
     bset(res[ln].bold, lmargin_width);
     bset(res[ln].reg, lmargin_width + wcslen(tmp));
+
     // For each manual page...
     for (j = 0; j < aw_len; j++) {
       // If manual page is in current section...
@@ -856,6 +995,62 @@ bool aprowhat_has(const wchar_t *needle, const aprowhat_t *hayst,
   return false;
 }
 
+unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
+  char gpath[BS_LINE];    // path to Groff document for manual page
+  int glen;               // length of current line in Groff document
+  wchar_t gline[BS_LINE]; // current line in Groff document
+  unsigned en = 0;        // current entry in TOC
+  char tmp[BS_LINE];      // temporary
+
+  unsigned res_len = BS_SHORT;                // result buffer length
+  wchar_t **res = aalloc(res_len, wchar_t *); // result buffer
+
+  // Use GNU man to figure out gpath
+  char cmdstr[BS_LINE];
+  if (local_file)
+    snprintf(cmdstr, BS_LINE,
+             "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
+             config.misc.man_path, args);
+  else {
+    snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
+             config.misc.man_path, args);
+  }
+  FILE *pp = xpopen(cmdstr, "r");
+  sreadline(gpath, BS_LINE, pp);
+  xpclose(pp);
+
+  // Open gpath
+  gzFile gp = xgzopen(gpath, "rb");
+
+  // For each line in gpath, gline...
+  xgzgets(gp, tmp, BS_LINE);
+  while (!gzeof(gp)) {
+    glen = mbstowcs(gline, tmp, BS_LINE);
+
+    if (-1 == glen)
+      winddown(ES_OPER_ERROR, L"Failed to read compressed manual page source");
+
+    // If line is a section heading, add the corresponding data to res
+    if (got_sh) {
+      // Section heading
+      unsigned textsp = wmargend(&gline[3], L"\"");
+      if (textsp > 0) {
+        res[en] = walloc(BS_LINE);
+        wcscpy(res[en], &gline[3 + textsp]);
+        wmargtrim(res[en], L"\"");
+        inc_en;
+      }
+    }
+
+    xgzgets(gp, tmp, BS_LINE);
+  }
+
+  xgzclose(gp);
+
+  *dst = res;
+  return en;
+}
+
 unsigned index_page(line_t **dst) {
   wchar_t key[] = L"INDEX";
   wchar_t title[] = L"All Manual Pages";
@@ -897,21 +1092,26 @@ unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const wchar_t *args,
 }
 
 unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
+  // Text blocks widths
+  const unsigned line_width = MAX(60, config.layout.main_width);
+  const unsigned lmargin_width = config.layout.lmargin; // left margin
+  const unsigned rmargin_width = config.layout.rmargin; // right margin
+  const unsigned text_width =
+      line_width - lmargin_width - rmargin_width; // main text area
+
   unsigned ln = 0;                 // current line number
   int len;                         // length of current line text
   unsigned i, j;                   // iterators
   wchar_t *tmpw = walloc(BS_LINE); // temporary
   char *tmps = salloc(BS_LINE);    // temporary
 
-  unsigned res_len = 1024;               // result buffer length
+  unsigned res_len = BS_LINE;            // result buffer length
   line_t *res = aalloc(res_len, line_t); // result buffer
 
   // Set up the environment for man to create its output as we want it
   char *old_term = getenv("TERM");
   setenv("TERM", "xterm", true);
-  sprintf(tmps, "%d",
-          1 + config.layout.main_width - config.layout.lmargin -
-              config.layout.rmargin);
+  sprintf(tmps, "%d", 1 + text_width);
   setenv("MANWIDTH", tmps, true);
   sprintf(tmps, "%s %s", config.misc.hyphenate ? "" : "--nh",
           config.misc.justify ? "" : "--nj");
@@ -922,21 +1122,82 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   unsetenv("GROFF_NO_SGR");
 
   // Prepare man command
-  char cmdstr[BS_SHORT];
+  char cmdstr[BS_LINE];
   if (local_file)
-    sprintf(cmdstr, "%s --warnings='!all' --local-file %ls 2>>/dev/null",
-            config.misc.man_path, args);
+    snprintf(cmdstr, BS_LINE,
+             "%s --warnings='!all' --local-file %ls 2>>/dev/null",
+             config.misc.man_path, args);
   else
-    sprintf(cmdstr, "%s --warnings='!all' %ls 2>>/dev/null",
-            config.misc.man_path, args);
+    snprintf(cmdstr, BS_LINE, "%s --warnings='!all' %ls 2>>/dev/null",
+             config.misc.man_path, args);
 
   // Execute man
   FILE *pp = xpopen(cmdstr, "r");
 
-  // For each line of man's output (read into tmps/tmpw)
+  section_header_level(NULL);
+
+  // Discard any empty lines on top, and read the first non-empty line into
+  // tmps/tmpw
   xfgets(tmps, BS_LINE, pp);
-  while (!feof(pp)) {
+  len = mbstowcs(tmpw, tmps, BS_LINE);
+  while (0 == len || L'\n' == tmpw[wmargend(tmpw, L"\n")]) {
+    xfgets(tmps, BS_LINE, pp);
     len = mbstowcs(tmpw, tmps, BS_LINE);
+  }
+
+  // For each line of man's output (read into tmps/tmpw)...
+  while (!feof(pp)) {
+    // At line 1, insert the list of sections (if enabled)
+    if (config.layout.sections_on_top && 1 == ln) {
+      // Newline
+      line_alloc(res[ln], 0);
+
+      // Section title for sections
+      inc_ln;
+      line_alloc(res[ln], line_width);
+      wcscpy(tmpw, L"SECTIONS");
+      swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
+               lmargin_width, "",                         //
+               text_width, tmpw);
+      bset(res[ln].bold, lmargin_width);
+      bset(res[ln].reg, lmargin_width + wcslen(tmpw));
+
+      // Sections
+      wchar_t **sc;                                          // sections
+      unsigned sc_len = man_sections(&sc, args, local_file); // no. of sections
+      const unsigned sc_maxwidth =
+          MIN(text_width / 2 - 4, wmaxlen((const wchar_t *const *)sc,
+                                          sc_len)); // length of longest section
+      const unsigned sc_cols =
+          text_width / (4 + sc_maxwidth); // number of columns for sections
+      const unsigned sc_lines =
+          sc_len % sc_cols > 0
+              ? 1 + sc_len / sc_cols
+              : MAX(1, sc_len / sc_cols); // number of lines for sections
+      unsigned sc_i;                      // index of current section
+      for (i = 0; i < sc_lines; i++) {
+        inc_ln;
+        line_alloc(res[ln], line_width + 4); // +4 for section margin
+        swprintf(res[ln].text, line_width + 1, L"%*s", lmargin_width, "");
+        for (j = 0; j < sc_cols; j++) {
+          sc_i = sc_cols * i + j;
+          if (sc_i < sc_len) {
+            swprintf(tmpw, sc_maxwidth + 5, L" %-*ls", sc_maxwidth + 3,
+                     sc[sc_i]);
+            wcslower(tmpw);
+            wcscat(res[ln].text, tmpw);
+            add_link(&res[ln], lmargin_width + j * (sc_maxwidth + 4) + 1,
+                     lmargin_width + j * (sc_maxwidth + 4) +
+                         MIN(sc_maxwidth + 3, wcslen(sc[sc_i])) + 1,
+                     false, 0, 0, LT_LS, sc[sc_i]);
+          }
+        }
+      }
+      inc_ln;
+
+      wafree(sc, sc_len);
+      len = mbstowcs(tmpw, tmps, BS_LINE);
+    }
 
     if (-1 == len)
       winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
@@ -987,13 +1248,16 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     res[ln].text[j] = L'\0';
     res[ln].length = j + 1;
 
+    // Read next line of man output into tmps/tmpw
     xfgets(tmps, BS_LINE, pp);
+    len = mbstowcs(tmpw, tmps, BS_LINE);
 
     inc_ln;
   }
 
   // Restore the environment
-  setenv("TERM", old_term, true);
+  if (NULL != old_term)
+    setenv("TERM", old_term, true);
 
   xpclose(pp);
   free(tmpw);
@@ -1017,6 +1281,148 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 
   *dst = res;
   return ln;
+}
+
+unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
+  char gpath[BS_LINE];    // path to Groff document for manual page
+  int glen;               // length of current line in Groff document
+  wchar_t gline[BS_LINE]; // current line in Groff document
+  unsigned en = 0;        // current entry in TOC
+  char tmp[BS_LINE];      // temporary
+  unsigned textsp; // real beginning of gline's text (ignoring whitespace)
+
+  unsigned res_len = BS_LINE;                      // result buffer length
+  toc_entry_t *res = aalloc(res_len, toc_entry_t); // result buffer
+
+  // Section header for the list of sections (if enabled)
+  if (config.layout.sections_on_top) {
+    res[en].type = TT_HEAD;
+    res[en].text = walloc(BS_LINE);
+    wcscpy(res[en].text, L"SECTIONS");
+    inc_en;
+  }
+
+  // Use GNU man to figure out gpath
+  char cmdstr[BS_LINE];
+  if (local_file)
+    snprintf(cmdstr, BS_LINE,
+             "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
+             config.misc.man_path, args);
+  else {
+    snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
+             config.misc.man_path, args);
+  }
+  FILE *pp = xpopen(cmdstr, "r");
+  sreadline(gpath, BS_LINE, pp);
+  xpclose(pp);
+
+  // Open gpath
+  gzFile gp = xgzopen(gpath, "rb");
+
+  // For each line in gpath, gline...
+  xgzgets(gp, tmp, BS_LINE);
+  while (!gzeof(gp)) {
+    glen = mbstowcs(gline, tmp, BS_LINE);
+
+    if (-1 == glen)
+      winddown(ES_OPER_ERROR, L"Failed to read compressed manual page source");
+
+    // If line can be a TOC entry, add the corresponding data to res
+    if (got_sh) {
+      // Section heading
+      res[en].type = TT_HEAD;
+      textsp = wmargend(&gline[3], L"\"");
+      if (textsp > 0) {
+        res[en].text = walloc(BS_LINE);
+        wcscpy(res[en].text, &gline[3 + textsp]);
+        wmargtrim(res[en].text, L"\"");
+        inc_en;
+      }
+    } else if (got_ss) {
+      // Subsection heading
+      res[en].type = TT_SUBHEAD;
+      textsp = wmargend(&gline[3], L"\"");
+      if (textsp > 0) {
+        res[en].text = walloc(BS_LINE);
+        wcscpy(res[en].text, &gline[3 + textsp]);
+        wmargtrim(res[en].text, L"\"");
+        inc_en;
+      }
+    } else if (got_tp) {
+      // Tagged paragraph
+      xgzgets(gp, tmp, BS_LINE);
+      if (!gzeof(gp)) {
+        glen = mbstowcs(gline, tmp, BS_LINE);
+        {
+          // Edge case: the tag line is a control line; ignore it
+          if (got_ctrl)
+            continue;
+        }
+        {
+          // Edge case: the tag line contains only a comment; skip to next line
+          while (got_comment || got_tp) {
+            xgzgets(gp, tmp, BS_LINE);
+            if (gzeof(gp))
+              break;
+            glen = mbstowcs(gline, tmp, BS_LINE);
+          }
+        }
+        textsp = wmargend(gline, NULL);
+        res[en].type = TT_TAGPAR;
+        res[en].text = walloc(BS_LINE);
+        wcscpy(res[en].text, &gline[textsp]);
+        glen = wmargtrim(res[en].text, L"\n");
+        {
+          // Edge case: there's a line escape at the end of the tag line; remove
+          // it
+          if (glen >= 1 && L'\\' == res[en].text[glen - 1])
+            res[en].text[glen - 1] = L'\0';
+          if (glen >= 2 && L'\\' == res[en].text[glen - 2] &&
+              L'c' == res[en].text[glen - 1]) {
+            res[en].text[glen - 2] = L'\0';
+            res[en].text[glen - 1] = L'\0';
+          }
+        }
+        inc_en;
+      }
+    }
+
+    xgzgets(gp, tmp, BS_LINE);
+  }
+
+  xgzclose(gp);
+
+  tocgroff(res, en);
+  *dst = res;
+  return en;
+}
+
+unsigned sc_toc(toc_entry_t **dst, const wchar_t *const *sc,
+                const unsigned sc_len) {
+  unsigned i;      // iterator
+  unsigned en = 0; // current entry in TOC
+
+  unsigned res_len = BS_SHORT;                     // result buffer length
+  toc_entry_t *res = aalloc(res_len, toc_entry_t); // result buffer
+
+  // Section header for the list of sections (if enabled)
+  if (config.layout.sections_on_top) {
+    res[en].type = TT_HEAD;
+    res[en].text = walloc(BS_LINE);
+    wcscpy(res[en].text, L"SECTIONS");
+    inc_en;
+  }
+
+  // All other other section headers
+  for (i = 0; i < sc_len; i++) {
+    res[en].type = TT_HEAD;
+    res[en].text = walloc(BS_LINE);
+    swprintf(res[en].text, BS_LINE, L"MANUAL PAGES IN SECTION '%ls'", sc[i]);
+    inc_en;
+  }
+
+  *dst = res;
+  return en;
 }
 
 link_loc_t prev_link(const line_t *lines, unsigned lines_len,
@@ -1152,13 +1558,13 @@ link_loc_t last_link(const line_t *lines, unsigned lines_len, unsigned start,
 }
 
 unsigned search(result_t **dst, const wchar_t *needle, const line_t *lines,
-                unsigned lines_len) {
+                unsigned lines_len, bool cs) {
   unsigned ln;                                // current line no.
   unsigned i = 0;                             // current result no.
   const unsigned needle_len = wcslen(needle); // length of needle
-  wchar_t *cur_hayst;      // current haystuck (i.e. text of current line)
-  wchar_t *hit = NULL;     // current return value of wcscasestr()
-  unsigned res_len = 1024; // result buffer length
+  wchar_t *cur_hayst;         // current haystuck (i.e. text of current line)
+  wchar_t *hit = NULL;        // current return value of wcscasestr()
+  unsigned res_len = BS_LINE; // result buffer length
   result_t *res = aalloc(res_len, result_t); // result buffer
 
   // For each line...
@@ -1166,7 +1572,10 @@ unsigned search(result_t **dst, const wchar_t *needle, const line_t *lines,
     // Start at the beginning of the line's text
     cur_hayst = lines[ln].text;
     // Search for needle
-    hit = wcscasestr(cur_hayst, needle);
+    if (cs)
+      hit = wcscasestr(cur_hayst, needle);
+    else
+      hit = wcsstr(cur_hayst, needle);
     // While needle has been found...
     while (NULL != hit) {
       // Add the search result to res[i]
@@ -1177,7 +1586,10 @@ unsigned search(result_t **dst, const wchar_t *needle, const line_t *lines,
       cur_hayst = hit + needle_len;
       // And search for needle again (except in case of overflow)
       if (cur_hayst - lines[ln].text < lines[ln].length)
-        hit = wcscasestr(cur_hayst, needle);
+        if (cs)
+          hit = wcscasestr(cur_hayst, needle);
+        else
+          hit = wcsstr(cur_hayst, needle);
       else
         hit = NULL;
       // Increment i (and reallocate memory if necessary)
@@ -1261,6 +1673,12 @@ void populate_page() {
     page_len = 0;
   }
 
+  // Reset TOC
+  if (NULL != toc && toc_len > 0)
+    toc_free(toc, toc_len);
+  toc = NULL;
+  toc_len = 0;
+
   // Populate page according to the request type of history[history_cur]
   switch (history[history_cur].request_type) {
   case RT_INDEX:
@@ -1300,6 +1718,57 @@ void populate_page() {
   results_len = 0;
 }
 
+void populate_toc() {
+  // If the TOC doesn't exist yet, use man_toc() or sc_toc() to generate it now
+  if (NULL == toc || 0 == toc_len) {
+    request_type_t rt =
+        history[history_cur].request_type;     // current request type
+    wchar_t *args = history[history_cur].args; // arguments for current request
+    aprowhat_t *aw;                            // temporary
+    unsigned aw_len;                           // "
+    wchar_t **sc;                              // "
+    unsigned sc_len;                           // "
+
+    switch (rt) {
+    case RT_INDEX:
+      toc_len = sc_toc(&toc, (const wchar_t *const *)sc_all, sc_all_len);
+      break;
+    case RT_MAN:
+      toc_len = man_toc(&toc, args, false);
+      break;
+    case RT_MAN_LOCAL:
+      toc_len = man_toc(&toc, args, true);
+      break;
+    case RT_APROPOS:
+      aw_len = aprowhat_exec(&aw, AW_APROPOS, args);
+      if (err)
+        winddown(ES_OPER_ERROR, err_msg);
+      sc_len = aprowhat_sections(&sc, aw, aw_len);
+      toc_len = sc_toc(&toc, (const wchar_t *const *)sc, sc_len);
+      if (NULL != aw && aw_len > 0)
+        aprowhat_free(aw, aw_len);
+      if (NULL != sc && sc_len > 0)
+        wafree(sc, sc_len);
+      break;
+    default:
+      aw_len = aprowhat_exec(&aw, AW_WHATIS, args);
+      if (err)
+        winddown(ES_OPER_ERROR, err_msg);
+      sc_len = aprowhat_sections(&sc, aw, aw_len);
+      toc_len = sc_toc(&toc, (const wchar_t *const *)sc, sc_len);
+      if (NULL != aw && aw_len > 0)
+        aprowhat_free(aw, aw_len);
+      if (NULL != sc && sc_len > 0)
+        wafree(sc, sc_len);
+      break;
+    }
+  }
+
+  // If the TOC still doesn't exist, something must have gone wrong
+  if (0 == toc_len || NULL == toc)
+    winddown(ES_OPER_ERROR, L"Unable to generate table of contents");
+}
+
 void requests_free(request_t *reqs, unsigned reqs_len) {
   unsigned i;
 
@@ -1331,6 +1800,17 @@ void lines_free(line_t *lines, unsigned lines_len) {
   }
 
   free(lines);
+}
+
+void toc_free(toc_entry_t *toc, unsigned toc_len) {
+  unsigned i;
+
+  for (i = 0; i < toc_len; i++) {
+    if (NULL != toc[i].text)
+      free(toc[i].text);
+  }
+
+  free(toc);
 }
 
 void winddown(int ec, const wchar_t *em) {
@@ -1379,6 +1859,8 @@ void winddown(int ec, const wchar_t *em) {
     free(config.misc.config_path);
   if (NULL != config.misc.man_path)
     free(config.misc.man_path);
+  if (NULL != config.misc.groff_path)
+    free(config.misc.groff_path);
   if (NULL != config.misc.whatis_path)
     free(config.misc.whatis_path);
   if (NULL != config.misc.apropos_path)
@@ -1402,6 +1884,10 @@ void winddown(int ec, const wchar_t *em) {
   // Deallocate memory used by page global
   if (NULL != page && page_len > 0)
     lines_free(page, page_len);
+
+  // Deallocate memory used by the TOC
+  if (NULL != toc && toc_len > 0)
+    toc_free(toc, toc_len);
 
   // Deallocate memory used by results
   if (NULL != results && results_len > 0)

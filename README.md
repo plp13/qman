@@ -1,6 +1,8 @@
 # Qman
 A more modern manual page viewer for our terminals
 
+Version 1.0.0
+
 ## Screenshots
 
 Index page:
@@ -11,6 +13,9 @@ Opening a manual page:
 
 Viewing a manual page:
 ![Viewing a Manual Page](/screenshots/qman_man.png)
+
+Using the table of contents:
+![Searching incrementally](/screenshots/qman_toc.png)
 
 Searching incrementally:
 ![Searching incrementally](/screenshots/qman_search.png)
@@ -27,18 +32,19 @@ downright useful. However, the standard way of accessing them from the
 command-line hasn't changed since the early days.
 
 Qman aims to change that. It's a modern, full-featured manual page viewer
-featuring hyperlinks, web browser like navigation, incremental search, on-line
-help, and more. It also strives to be fast and tiny, so that it can be used
-everywhere. For this reason, it's been written in plain C and has only minimal
-dependencies.
+featuring hyperlinks, web browser like navigation, a table of contents for each
+page, incremental search, on-line help, and more. It also strives to be fast and
+tiny, so that it can be used everywhere. For this reason, it's been written in
+plain C and has only minimal dependencies.
 
-## Features already implemented
+## Features
 - Index page that displays all manual pages available on the system, sorted
   alphabetically and organised by section
-- Apropos and whatis pages
+- Pages for apropos and whatis results
 - Hyperlinks to other manual pages
 - Hyperlinks for URLs and email addresses (handled with xdg-open by default)
 - In-page hyperlinks
+- A table of contents for each manual page
 - Incremental search for manual pages
 - Incremental free page text search
 - Command-line options similar to those of `man` (most importantly, `-k` and
@@ -50,22 +56,51 @@ dependencies.
 - Fully configurable using an INI-style config file
 - Manual page
 
-All basic functionality has now been completed. However, the program should
-still be considered as beta quality. Please try it out and report any
-[issues](https://github.com/plp13/qman/issues).
+## Project status 
+All basic functionality has been completed. The software has been in use for
+over a year now, and should considered stable. Bugs may still arise, of course,
+and should be reported using the [issues](https://github.com/plp13/qman/issues)
+page.
+
+## Downloading
+Clone the [main](https://github.com/plp13/qman/tree/main) branch, which contains
+Qman's latest stable version:
+
+```
+$ git clone -b main https://github.com/plp13/qman qman
+```
+
+If you wish to contribute to the program's development, clone the
+[devel](https://github.com/plp13/qman/tree/devel) branch.
+
+```
+$ git clone -b devel https://github.com/plp13/qman qman
+```
 
 ## Dependencies
 Qman is written in plain C, and thus requires a compiler such as `gcc` or
-`clang`. Its only library dependencies are `glibc`, `ncurses`, and `hinit`. It
-uses the `meson` build system. Its manual page is written in Markdown, and is
-compiled using `pandoc`.
+`clang`. Its only library dependencies are `glibc`, `ncurses`, `hinit`, and
+`zlib`. It uses the `meson` build system. Its manual page is written in
+Markdown, and is compiled using `pandoc`.
 
+<<<<<<< HEAD
 CAUTION: `pandoc` is written in Haskell and requires installing a large number
 of dependencies. These are only necessary for compiling Qman's manual page, and
 can be removed after building. 
 
 In order for the program to make sense, a Unix manual pages database must also
 be installed.
+=======
+> **:warning: Warning**
+>
+> `pandoc` is written in Haskell and requires installing a large number of
+> dependencies. These are only necessary for compiling Qman's manual page, and
+> can be removed after building.
+
+The program is a front-end to GNU `man`, and therefore requires `man` and
+`groff` to be installed. In order for it to make sense, a Unix manual pages
+database must also be present.
+>>>>>>> devel
 
 The following commands should install all necessary dependencies for different
 operating systems and distros:
@@ -83,9 +118,11 @@ operating systems and distros:
   $ pipx install cogapp
 ```
 
-Note that, by default, `pipx` will install the `cog` executable in
-`~/.local/bin`. You will have to add this directory to your path before
-proceeding with `meson setup`.
+> **:bulb: Note**
+>
+> By default, `pipx` will install the `cog` executable in `~/.local/bin`. You
+> will have to add this directory to your path before proceeding with
+> `meson setup`.
 
 ### Debian 11
 ```
@@ -104,7 +141,9 @@ proceeding with `meson setup`.
   # pip install cogapp
 ```
 
-These steps should also work with Red Hat Enterprise Linux 9 and AlmaLinux 9.
+> **:bulb: Note**
+>
+> These steps should also work with Red Hat Enterprise Linux 9 and AlmaLinux 9.
 
 ### Rocky Linux 8
 ```
@@ -116,7 +155,9 @@ These steps should also work with Red Hat Enterprise Linux 9 and AlmaLinux 9.
   # pip3 install cogapp
 ```
 
-These steps should also work with Red Hat Enterprise Linux 8 and AlmaLinux 8.
+> **:bulb: Note**
+>
+> These steps should also work with Red Hat Enterprise Linux 9 and AlmaLinux 9.
 
 ### Ubuntu 24.04
 ```
@@ -132,8 +173,7 @@ These steps should also work with Red Hat Enterprise Linux 8 and AlmaLinux 8.
 ```
 
 ## Building and installing
-Make sure all of the above dependencies are installed on your system, and do the
-following:
+Make sure all of the above dependencies are installed, and do the following:
 
 ```
 $ meson setup build/ src/
@@ -142,8 +182,10 @@ $ meson compile
 $ sudo meson install
 ```
 
-Note that, if using an older version of `meson`, you may need to substitute the
-aforementioned `meson compile` command with `ninja`.
+> **:bulb: Note**
+>
+> If using an older version of `meson`, you may need to substitute the
+> aforementioned `meson compile` command with `ninja`.
 
 ### Packages
 For Arch Linux users, there is a an
@@ -157,38 +199,38 @@ RTFM:
 $ qman qman
 ```
 
-*What is the location of the configuration file?*
+> :question: What is the location of the configuration file?
 
 `~/.config/qman.conf` (user-specific) or `/etc/xdg/qman.conf` (system-wide).
 
-*Calling `qman` without any parameters fails with message `Apropos '': nothing
-appropriate`*
+> :question: Calling `qman` without any parameters fails with message
+> `Apropos '': nothing appropriate`
 
-Your system does not have a manual page indexi cache. This can be fixed by
+Your system does not have a manual page index cache. This can be fixed by
 running (as root):
 
 ```
 # mandb
 ```
 
-*I have enabled mouse support by adding `enable=true` to the `[mouse]` section
-of my configuration file, but now I'm unable to copy text to the clipboard using
-the mouse, and/or my mouse behaves erratically*
+> :question: I have enabled mouse support by adding `enable=true` to the
+> `[mouse]` section of my configuration file, but now I'm unable to copy text to
+> the clipboard using the mouse, and/or my mouse behaves erratically
 
 Mouse support is experimental, and depends on features that are not fully
-implemented by all terminals. See the manual page for more information.
+implemented by all terminals. See Qman's manual page for more information.
 
-*Trying to open an HTTP or e-mail causes the program to terminate (or does
-nothing)*
+> :question: Trying to open an HTTP or e-mail link causes the program to
+> terminate (or does nothing)
 
 By default, Qman uses `xdg-open` to open such links. On desktop Linux systems,
-this is sufficient to open them using the default browser / email client. On all
-other systems, you must specify alternative programs with the `browser_path` and
-`mailer_path` options in the `misc` section of `qman`'s configuration file.
-To avoid opening such links altogether, set both options to a command that does
-nothing, e.g. `/usr/bin/false`.
+this is sufficient to open them using the default browser / email client. On
+other systems, you may need to specify alternative programs with the
+`browser_path` and `mailer_path` options in the `misc` section of Qman's
+configuration file. To avoid opening such links altogether, set both options to
+a command that does nothing, e.g. `/usr/bin/false`.
 
-*Qman does not look as pretty on my system as in the screenshots*
+> :question: Qman does not look as pretty on my system as in the screenshots
 
 That look can be achieved by using one of the supplied
 [modernity.conf](https://github.com/plp13/qman/blob/main/config/modernity.conf)

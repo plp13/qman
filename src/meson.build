@@ -1,7 +1,7 @@
 # Project declaration
 project('qman', 'c',
   license: 'BSD-2-Clause',
-  version: 'nightly'
+  version: '1.0.0'
 )
 
 # Configuration subsystem sources (generated from config_def.py using cog)
@@ -30,6 +30,7 @@ src = [
   'qman.c'
 ]
 deps = [
+  dependency('zlib'),
   dependency('ncursesw'),
   dependency('inih')
 ]

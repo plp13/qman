@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman nightly
+footer: Qman 1.0.0
 date: December 15, 2023
 ---
 
@@ -43,12 +43,14 @@ also to be fast and tiny, so that it can be used everywhere.
 **Qman**'s reactions to user input are similar to what one would expect from a
 pager such as **less(1)**, and from an ncurses-based browser such as
 **links(1)**. Manual, apropos, and whatis pages are adorned with links to other
-manual pages, HTTP locations, e-mail addresses, or in-page locations. These
-links can be selected and opened.
+pages, HTTP locations, e-mail addresses, or (sub)sections within the current
+page. These links can be selected and opened.
 
 The program provides a scrollbar, a status line, incremental search facilities
 for locating manual pages, and facilities for searching through the text of the
-page currently being displayed. On-line help is also available.
+page currently being displayed. A table of contents is generated for each page,
+allowing for easy navigation to its sections, sub-sections, and paragraphs.
+Navigation history and on-line help are also available.
 
 The table below summarizes the program's actions and their default associated
 keyboard mappings:
@@ -73,6 +75,7 @@ keyboard mappings:
 | BACK            | Go back one step in history           | BACKSPACE, '['     |
 | FWRD            | Go forward one step in history        | ']'                |
 | HISTORY         | Show history menu                     | 's', 'S'           |
+| TOC             | Show table of contents                | 't', 'T'           |
 | SEARCH          | (Free text) search forward            | '/'                |
 | SEARCH_BACK     | (Free text) search backward           | '?'                |
 | SEARCH_NEXT     | Go to next search result              | 'n'                |
@@ -95,7 +98,7 @@ When mouse input is enabled:
 - The scroll wheel can be used as an alternative way for scrolling, invoking the
   UP and DOWN program actions
 - Pressing and dragging the left mouse button over page text causes it to be
-  selected and copied to the clipboard (see **NOTE 1 & 2**)
+  selected and copied to the clipboard (see **NOTES 1 & 2**)
 - Pressing and dragging the left mouse button over the scrollbar allows for
   scrolling through the page (see **NOTE 2**)
 - Clicking the left mouse button on a link causes the link under the cursor to
@@ -265,7 +268,7 @@ this section. This behavior can be overridden in the **[tcap]** section.
 **Section [keys]**
 : Options in this section specify which keys are mapped to each program action.
 
-The section contains 23 configuration options, each corresponding to one of the
+The section contains 25 configuration options, each corresponding to one of the
 program actions described in the **USER INTERFACE** section of this manual page.
 Their value is a tuple of up to 8 key definitions, separated by whitespace:
 
@@ -304,6 +307,7 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 | Option   | Type         | Def. value | Description                           |
 |----------|--------------|------------|---------------------------------------|
 | sbar     | boolean      | true       | Indicates whether the scrollbar will be displayed |
+| sections_on_top | boolean | true     | Indicates whether to show a list of (links to the page's) sections at the top of each page |
 | beep     | boolean      | true       | Indicates whether to beep the terminal on error |
 | lmargin  | unsigned int | 2          | Size of margin between the left side of the screen, and the page text |
 | rmargin  | unsigned int | 2          | Size of margin between the page text and the scroll bar and/or the right side of the screen |
@@ -333,6 +337,7 @@ any of the options in this section, except when discovering or reporting bugs.
 | Option       | Type         | Def. value | Description                       |
 |--------------|--------------|------------|-----------------------------------|
 | man_path     | string       | /usr/bin/man | Path to the **man(1)** command  |
+| groff_path   | string       | /usr/bin/groff | Path to the **groff(1)** command |
 | whatis_path  | string       | /usr/bin/whatis | Path to the **whatis(1)** command |
 | apropos_path | string       | /usr/bin/apropos | Path to the **apropos(1)** command |
 | browser_path | string       | /usr/bin/xdg-open | Path to the command that will be used to open HTTP links (i.e. your web browser) |
@@ -341,14 +346,15 @@ any of the options in this section, except when discovering or reporting bugs.
 | reset_after_email| boolean  | true       | Re-initialize curses after opening an e-mail link |
 | history_size | unsigned int | 256k       | Maximum number of history entries |
 | hyphenate    | boolean      | true       | Whether to hyphenate long words in manual pages |
-| justify      | boolean      | true       | Whether to justify manual pages text         |
+| justify      | boolean      | true       | Whether to justify manual pages text |
 
 When using a horizontally narrow terminal, setting _hyphenate_ to 'true' and/or
 _justify_ to 'false' can improve the program's output.
 
-Option _reset_after_http_ should be set to 'false' when using a GUI web browser
-for handling http(s) links. Similarly, _reset_after_email_ should be set to
-false' when using a GUI email client for e-mail links.
+To avoid an annoying screen redraw, option _reset_after_http_ should be set to
+'false' when using a GUI web browser for handling http(s) links. Similarly,
+_reset_after_email_ should be set to 'false' when using a GUI email client for
+e-mail links.
 
 # ENVIRONMENT
 Users should take care setting their **TERM** environment variable to match
@@ -368,6 +374,8 @@ it to the default value of 80.
 | 3     | A child process returned a non-zero exit status                      |
 | 4     | Configuration file error                                             |
 | 16    | No manual page(s) found matching the user's request                  |
+
+The above are identical to the exit values of **man(1)**.
 
 # SEE ALSO
 **man(1)**, **apropos(1)**, **whatis(1)**, **pinfo(1)**

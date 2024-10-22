@@ -100,6 +100,19 @@ typedef struct {
   bitarr_t uline;  // underlined
 } line_t;
 
+// A table of contents entry type
+typedef enum {
+  TT_HEAD = 0,    // section heading
+  TT_SUBHEAD = 1, // section subheading
+  TT_TAGPAR = 2   // tagged paragraph
+} toc_type_t;
+
+// A table of contents entry
+typedef struct toc_entry_t {
+  toc_type_t type; // type
+  wchar_t *text;   // text
+} toc_entry_t;
+
 // A search result
 typedef struct {
   unsigned line;  // line number
@@ -175,6 +188,12 @@ extern unsigned page_top;
 // Column where the portion of page displayed to the user begins
 extern unsigned page_left;
 
+// Table of contents for current page
+extern toc_entry_t *toc;
+
+// Number of entries in toc
+extern unsigned toc_len;
+
 // True if last man/apropos/whatis command didn't produce any result
 extern bool err;
 
@@ -190,10 +209,10 @@ extern unsigned results_len;
 // Marked text
 extern mark_t mark;
 
-// Regular expressions for links to a...
-extern full_regex_t re_man, // manual page
-    re_url,                 // http(s) URL
-    re_email;               // email address
+// Regular expressions for a link to...
+extern full_regex_t re_man, // a manual page
+    re_url,                 // an http(s) URL
+    re_email;               // an email address
 
 //
 // Macros
@@ -319,8 +338,8 @@ extern unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *buf,
 // text. Return the number of lines. key, title, ver, and date are used for the
 // header and footer.
 extern unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
-                                unsigned aw_len, const wchar_t *const *sc,
-                                unsigned sc_len, const wchar_t *key,
+                                const unsigned aw_len, const wchar_t *const *sc,
+                                const unsigned sc_len, const wchar_t *key,
                                 const wchar_t *title, const wchar_t *ver,
                                 const wchar_t *date);
 
@@ -334,6 +353,12 @@ extern int aprowhat_search(const wchar_t *needle, const aprowhat_t *hayst,
 // ident is case-insensitive equal to needle
 extern bool aprowhat_has(const wchar_t *needle, const aprowhat_t *hayst,
                          unsigned hayst_len);
+
+// Use man, zlib, and groff to extract the section headers of a manual page.
+// Place the result in dst, and return dst's length. args and local_file have
+// the same meanings as for man().
+extern unsigned man_sections(wchar_t ***dst, const wchar_t *args,
+                             bool local_file);
 
 // Render a page that contains an index of all manual pages in dst
 extern unsigned index_page(line_t **dst);
@@ -352,6 +377,17 @@ extern unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const wchar_t *args,
 // of lines in said output. args specifies the arguments for the man command.
 // local_file signifies whether to pass the --local-file option to man.
 extern unsigned man(line_t **dst, const wchar_t *args, bool local_file);
+
+// Use man, zlib, and groff to extract the table of contents of a manual page.
+// Place the result in dst, and return dst's length. args and local_file have
+// the same meanings as for man().
+extern unsigned man_toc(toc_entry_t **dst, const wchar_t *args,
+                        bool local_file);
+
+// Create the manual page of the an apropos, whatis or index page. The sections
+// of said page must be proviced in sc (of length sc_len).
+extern unsigned sc_toc(toc_entry_t **dst, const wchar_t *const *sc,
+                       const unsigned sc_len);
 
 // Find the previous link in lines (of linegth lines_len), starting at location
 // start. Return said link's location.
@@ -374,9 +410,10 @@ extern link_loc_t last_link(const line_t *lines, unsigned lines_len,
                             unsigned start, unsigned stop);
 
 // Search for needle in lines (of length lines_len). Place all results into dst
-// and return total number of results.
+// and return total number of results. cs siginifies whether search will be
+// case-sensitive.
 extern unsigned search(result_t **dst, const wchar_t *needle,
-                       const line_t *lines, unsigned lines_len);
+                       const line_t *lines, unsigned lines_len, bool cs);
 
 // Return the line number of the member of res that immediately follows line
 // number from. If no such line exists, return -1. res_len is the length of res.
@@ -392,9 +429,15 @@ extern int search_prev(result_t *res, unsigned res_len, unsigned from);
 extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines,
                          unsigned lines_len);
 
+// Note: for efficiency, we only populate toc and toc_len when the user requests
+// a table of contents
+
 // Populate page, page_title, and page_len, based on the contents of
-// history[history_cur].
+// history[history_cur]. Reset results, results_len, toc and toc_len.
 extern void populate_page();
+
+// Populate toc and toc_len
+extern void populate_toc();
 
 // Free the memory occupied by reqs (of length reqs_len)
 extern void requests_free(request_t *reqs, unsigned reqs_len);
@@ -404,6 +447,9 @@ extern void aprowhat_free(aprowhat_t *res, unsigned res_len);
 
 // Free the memory occupied by lines (of length lines_len)
 extern void lines_free(line_t *lines, unsigned lines_len);
+
+// Free the memory occupied by toc (of length toc_len)
+extern void toc_free(toc_entry_t *toc, unsigned toc_len);
 
 // Exit the program gracefully, with exit code ec. If em is not NULL, echo it
 // on stdout before exiting.

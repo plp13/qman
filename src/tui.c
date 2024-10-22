@@ -90,6 +90,84 @@ mouse_t mouse_status = MS_EMPTY;
     return false;                                                              \
   }
 
+// Helper of ls_jump(), i.e. of tui_open() and tui_toc(). Return the line number
+// that best matches local searh target trgt.
+int ls_discover(wchar_t *trgt) {
+  wchar_t **trgt_words = walloca(BS_SHORT); // words in trgt
+  unsigned trgt_words_len;                  // no. of words in trgt
+  wchar_t **cand_words = walloca(BS_SHORT); // words in current candidate line
+  unsigned cand_words_len;       // no. of words in current candidate line
+  unsigned ln;                   // current line number
+  unsigned line_nos[BS_LINE];    // candidate line numbers
+  unsigned line_scores[BS_LINE]; // candidate line scores
+  unsigned max_no = 0;           // line number with maximum score
+  unsigned max_score = 0;        // maximum score
+  unsigned i, j;                 // iterators
+
+  trgt_words_len = wsplit(&trgt_words, BS_SHORT, trgt, NULL);
+  if (0 == trgt_words_len)
+    return -1;
+
+  // Record candidate lines and their scores
+  j = 0;
+  for (ln = 0; ln < page_len && j < BS_LINE; ln++) {
+    wchar_t text[BS_LINE]; // current line text
+    wcscpy(text, page[ln].text);
+    if (wcsstr(text, trgt_words[0]) == &text[wmargend(text, NULL)]) {
+      // In order for a line to be a candidate, it must begin with the first
+      // word in trgt
+      line_nos[j] = ln;
+      line_scores[j] = 0;
+      // Candidate line score is calculated as the number of its words that
+      // match the words in trgt
+      cand_words_len = wsplit(&cand_words, BS_SHORT, text, NULL);
+      for (i = 0; i < MIN(trgt_words_len, cand_words_len); i++)
+        if (0 == wcscmp(cand_words[i], trgt_words[i]))
+          line_scores[j]++;
+      // Candidates that got full marks, and either (a) don't include any
+      // additional words or (b) are less indended than the following line, get
+      // an extra point
+      if (line_scores[j] == trgt_words_len) {
+        if (cand_words_len == trgt_words_len)
+          line_scores[j]++;
+        else if (ln < page_len - 1) {
+          if (wmargend(page[ln + 1].text, NULL) > wmargend(text, NULL))
+            line_scores[j]++;
+        }
+      }
+      j++;
+    }
+  }
+
+  // Return the candidate line with the highest score
+  for (i = 0; i < j; i++)
+    if (line_scores[i] > max_score) {
+      max_no = line_nos[i];
+      max_score = line_scores[i];
+    }
+
+  return max_no;
+}
+
+// Helper of tui_open() and tui_toc(). Search the current page for a line whose
+// text begins with search_term, and jump to said line.
+#define ls_jump(trgt)                                                          \
+  {                                                                            \
+    wchar_t trgt_clone[BS_LINE];                                               \
+    wcscpy(trgt_clone, trgt);                                                  \
+    int best = ls_discover(trgt_clone);                                        \
+    if (best < 0) {                                                            \
+      tui_error(L"Unable to jump to requested location");                      \
+      return false;                                                            \
+    } else {                                                                   \
+      page_top = MIN(best, page_len - config.layout.main_height);              \
+      const link_loc_t fl = first_link(                                        \
+          page, page_len, page_top, page_top + config.layout.main_height - 1); \
+      if (fl.ok)                                                               \
+        page_flink = fl;                                                       \
+    }                                                                          \
+  }
+
 // Helper of tui_sp_open(). Print quick search results in wimm as the user
 // types.
 void aw_quick_search(wchar_t *needle) {
@@ -142,7 +220,7 @@ void draw_help(const wchar_t *const *keys_names, unsigned keys_names_max,
   const unsigned end = MIN(PA_QUIT,
                            top + height - 6); // last action to print help for
   wchar_t *buf = walloca(width - 2);          // temporary
-  unsigned i, j;                              // iterator
+  unsigned i, j;                              // iterators
 
   j = 2;
   for (i = top; i <= end; i++) {
@@ -176,12 +254,12 @@ void draw_help(const wchar_t *const *keys_names, unsigned keys_names_max,
 // entry to print, and focus indicates the entry to focus on.
 void draw_history(request_t *history, unsigned history_cur,
                   unsigned history_top, unsigned top, unsigned focus) {
-  const unsigned width = getmaxx(wimm);  // help window width
-  const unsigned height = getmaxy(wimm); // help window height
+  const unsigned width = getmaxx(wimm);  // history window width
+  const unsigned height = getmaxy(wimm); // history window height
   const unsigned end = MIN(history_top,
                            top + height - 6); // last entry to print
   wchar_t *buf = walloca(width - 2);          // temporary
-  unsigned i, j;                              // iterator
+  unsigned i, j;                              // iterators
 
   j = 2;
   for (i = top; i <= end; i++) {
@@ -197,6 +275,43 @@ void draw_history(request_t *history, unsigned history_cur,
              i == history_cur ? L"»" : L" ",
              request_type_str(history[i].request_type), width - 15,
              NULL == history[i].args ? L"" : history[i].args, glyph);
+    if (i == focus) {
+      change_colour(wimm, config.colours.help_text_f);
+    } else {
+      change_colour(wimm, config.colours.help_text);
+    }
+    mvwaddnwstr(wimm, j, 1, buf, width - 1);
+    j++;
+  }
+
+  wmove(wimm, height - 2, width - 2);
+  wnoutrefresh(wimm);
+}
+
+// Helper for tui_toc(). Draw a table of contents into wimm. toc contains the
+// table of contents entries, toc_len is the number of entries in toc, top is
+// the first entry to print. and focus the entry to focus on.
+void draw_toc(toc_entry_t *toc, unsigned toc_len, unsigned top,
+              unsigned focus) {
+  const unsigned width = getmaxx(wimm);  // TOC window width
+  const unsigned height = getmaxy(wimm); // TOC window height
+  const unsigned end = MIN(toc_len - 1,
+                           top + height - 6); // last header to print
+  wchar_t *buf = walloca(width - 2);          // temporary
+  unsigned i, j;                              // iterator
+
+  j = 2;
+  for (i = top; i <= end; i++) {
+    wchar_t glyph;
+    if (i == top && i > 0)
+      glyph = *config.chars.arrow_up;
+    else if (i == end && i < toc_len - 1)
+      glyph = *config.chars.arrow_down;
+    else
+      glyph = L' ';
+
+    swprintf(buf, width - 1, L"%*ls%-*ls %lc", 2 * toc[i].type, L"",
+             width - 4 - 2 * toc[i].type, toc[i].text, glyph);
     if (i == focus) {
       change_colour(wimm, config.colours.help_text_f);
     } else {
@@ -1297,22 +1412,7 @@ bool tui_open() {
     break;
   case LT_LS:
     // The link is a local search link; jump to the appropriate page location
-    {
-      result_t *sr;
-      const unsigned sr_len =
-          search(&sr, page[page_flink.line].links[page_flink.link].trgt, page,
-                 page_len);
-      if (0 == sr_len) {
-        tui_error(L"Unable to open link");
-        return false;
-      }
-      page_top = MIN(sr[0].line, page_len - config.layout.main_height);
-      const link_loc_t fl = first_link(
-          page, page_len, page_top, page_top + config.layout.main_height - 1);
-      if (fl.ok)
-        page_flink = fl;
-      free(sr);
-    }
+    ls_jump(page[page_flink.line].links[page_flink.link].trgt);
     break;
   }
 
@@ -1530,7 +1630,7 @@ bool tui_history() {
 
   // Main loop
   while (true) {
-    // Draw the help text in the help window
+    // Draw the history text in the history window
     draw_history(history, history_cur, history_top, top, focus);
     doupdate();
 
@@ -1557,6 +1657,16 @@ bool tui_history() {
     case PA_DOWN:
       focus++;
       if (history_top + 1 == focus)
+        focus = 0;
+      break;
+    case PA_PGUP:
+      focus -= MAX(1, height - 6);
+      if (focus < 0)
+        focus = history_top;
+      break;
+    case PA_PGDN:
+      focus += MAX(1, height - 6);
+      if (focus > history_top)
         focus = 0;
       break;
     case PA_OPEN:
@@ -1636,6 +1746,135 @@ bool tui_history() {
   return true;
 }
 
+bool tui_toc() {
+  wchar_t help[BS_SHORT]; // help message
+  swprintf(help, BS_SHORT, L"%ls/%ls: choose   %ls: jump   %ls/%ls: abort",
+           ch2name(config.keys[PA_UP][0]), ch2name(config.keys[PA_DOWN][0]),
+           ch2name(config.keys[PA_OPEN][0]), ch2name(KEY_BREAK), ch2name('\e'));
+  int hinput;                 // keyboard/mouse input from the user
+  mouse_t hms = MS_EMPTY;     // mouse status corresponding to hinput
+  action_t haction = PA_NULL; // program action corresponding to hinput
+  unsigned height;            // TOC window height
+  unsigned top = 0;           // first TOC entry to be printed
+  int focus = 0;              // focused TOC entry
+
+  // Perform late populateion of toc and toc_len, if necessary
+  populate_toc();
+
+  // Create the TOC window, and retrieve height
+  draw_imm(true, true, L"Table of Contents", help);
+  height = getmaxy(wimm);
+
+  // Main loop
+  while (true) {
+    // Draw the TOC text in the history window
+    draw_toc(toc, toc_len, top, focus);
+    doupdate();
+
+    // Get user input
+    hinput = cgetch();
+    hms = get_mouse_status(hinput);
+    if ('\e' == hinput || KEY_BREAK == hinput || 0x03 == hinput ||
+        (BT_RIGHT == hms.button && hms.up)) {
+      // User hit ESC or CTRL-C or pressed right mouse button; abort
+      del_imm();
+      tui_error(L"Aborted");
+      tui_redraw();
+      return false;
+    }
+    haction = get_action(hinput);
+
+    // Perform the requested action
+    switch (haction) {
+    case PA_UP:
+      focus--;
+      if (-1 == focus)
+        focus = toc_len - 1;
+      break;
+    case PA_DOWN:
+      focus++;
+      if (toc_len == focus)
+        focus = 0;
+      break;
+    case PA_PGUP:
+      focus -= MAX(1, height - 6);
+      if (focus < 0)
+        focus = toc_len - 1;
+      break;
+    case PA_PGDN:
+      focus += MAX(1, height - 6);
+      if (focus >= toc_len)
+        focus = 0;
+      break;
+    case PA_OPEN:
+      del_imm();
+      ls_jump(toc[focus].text);
+      return true;
+      break;
+    case PA_NULL:
+    default:
+      if (WH_UP == hms.wheel) {
+        // When mouse wheel scrolls up, select previous TOC entry
+        focus--;
+        if (-1 == focus)
+          focus = toc_len - 1;
+      } else if (WH_DOWN == hms.wheel) {
+        // When mouse wheel scrolls down, select next TOC entry
+        focus++;
+        if (toc_len == focus)
+          focus = 0;
+      } else if (BT_LEFT == hms.button && hms.up) {
+        // On left button release, focus on the TOC entry under the cursor
+        int iy = hms.y, ix = hms.x;
+        unsigned ih = getmaxy(wimm);
+        if (wmouse_trafo(wimm, &iy, &ix, false))
+          if (iy > 1 && iy < ih - 3 && toc_len > top + iy - 2) {
+            focus = top + iy - 2;
+            if (config.mouse.left_click_open) {
+              // If the left_click_open option is set, go to the appropriate
+              // TOC entry
+              del_imm();
+              ls_jump(toc[focus].text);
+              return true;
+            }
+          }
+      } else if (BT_WHEEL == hms.button && hms.up) {
+        // On mouse wheel click, go to the appropriate TOC entry
+        del_imm();
+        ls_jump(toc[focus].text);
+        return true;
+      }
+      break;
+    }
+
+    // Adjust top (in case the entire menu won't fit in the immediate window)
+    if (focus < top)
+      top = focus;
+    else if (focus > top + height - 6)
+      top = focus - height + 6;
+
+    // If terminal size has changed, regenerate page and redraw everything
+    if (termsize_changed()) {
+      del_imm();
+      init_windows();
+      populate_page();
+      if (err)
+        winddown(ES_OPER_ERROR, err_msg);
+      populate_toc();
+      termsize_adjust();
+      tui_redraw();
+      top = 0;
+      focus = 0;
+      draw_imm(true, true, L"History", help);
+      draw_toc(toc, toc_len, top, focus);
+      doupdate();
+      height = getmaxy(wimm);
+    }
+  }
+
+  return true;
+}
+
 bool tui_search(bool back) {
   wchar_t *prompt = back ? L"?" : L"/"; // search prompt
   wchar_t help[BS_SHORT];               // help message
@@ -1681,7 +1920,7 @@ bool tui_search(bool back) {
     } else {
       // Input is not empty; populate results and results_len from input, and
       // set my_top to the location of the first match
-      results_len = search(&results, inpt, page, page_len);
+      results_len = search(&results, inpt, page, page_len, true);
       if (back) {
         const int tmp = search_prev(results, results_len, my_top);
         my_top = -1 == tmp ? my_top : tmp;
@@ -1796,7 +2035,7 @@ bool tui_help() {
   mouse_t hms = MS_EMPTY;     // mouse status corresponding to hinput
   action_t haction = PA_NULL; // program action corresponding to hinput
   unsigned top = 1;           // first action to be printed
-  unsigned focus = 1;         // focused action
+  int focus = 1;              // focused action
   unsigned height;            // help window height
 
   // For each action...
@@ -1856,6 +2095,16 @@ bool tui_help() {
     case PA_DOWN:
       focus++;
       if (PA_QUIT + 1 == focus)
+        focus = 1;
+      break;
+    case PA_PGUP:
+      focus -= MAX(1, height - 6);
+      if (focus < 1)
+        focus = PA_QUIT;
+      break;
+    case PA_PGDN:
+      focus += MAX(1, height - 6);
+      if (focus > PA_QUIT)
         focus = 1;
       break;
     case PA_OPEN:
@@ -2065,7 +2314,7 @@ void tui() {
   termsize_changed();
   init_windows();
 
-  // Initialize page, page_len, page_top, page_left, and page_flink
+  // Initialize page, page_len, ge_title, page_top, page_left, and page_flink
   populate_page();
   if (err)
     winddown(ES_NOT_FOUND, err_msg);
@@ -2154,6 +2403,9 @@ void tui() {
       break;
     case PA_HISTORY:
       redraw = tui_history();
+      break;
+    case PA_TOC:
+      redraw = tui_toc();
       break;
     case PA_SEARCH:
       redraw = tui_search(false);
