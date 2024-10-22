@@ -83,14 +83,6 @@ Qman is written in plain C, and thus requires a compiler such as `gcc` or
 `zlib`. It uses the `meson` build system. Its manual page is written in
 Markdown, and is compiled using `pandoc`.
 
-<<<<<<< HEAD
-CAUTION: `pandoc` is written in Haskell and requires installing a large number
-of dependencies. These are only necessary for compiling Qman's manual page, and
-can be removed after building. 
-
-In order for the program to make sense, a Unix manual pages database must also
-be installed.
-=======
 > **:warning: Warning**
 >
 > `pandoc` is written in Haskell and requires installing a large number of
@@ -100,7 +92,6 @@ be installed.
 The program is a front-end to GNU `man`, and therefore requires `man` and
 `groff` to be installed. In order for it to make sense, a Unix manual pages
 database must also be present.
->>>>>>> devel
 
 The following commands should install all necessary dependencies for different
 operating systems and distros:
