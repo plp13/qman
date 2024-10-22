@@ -117,9 +117,9 @@ typedef struct {
 // values. And only temporarily for debugging, not in production.
 #define logprintf(...)                                                         \
   {                                                                            \
-    char tmp[64 * BS_LINE];                                                    \
-    sprintf(tmp, __VA_ARGS__);                                                 \
-    loggit(tmp);                                                               \
+    char ___[64 * BS_LINE];                                                    \
+    sprintf(___, __VA_ARGS__);                                                 \
+    loggit(___);                                                               \
   }
 
 //

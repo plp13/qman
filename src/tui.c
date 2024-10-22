@@ -96,16 +96,15 @@ int ls_discover(wchar_t *trgt) {
   wchar_t **trgt_words = walloca(BS_SHORT); // words in trgt
   unsigned trgt_words_len;                  // no. of words in trgt
   wchar_t **cand_words = walloca(BS_SHORT); // words in current candidate line
-  unsigned cand_words_len;         // no. of words in current candidate line
-  unsigned ln;                     // current line number
-  unsigned line_nos[BS_LINE];      // candidate line numbers
-  unsigned line_scores[BS_LINE];   // candidate line scores
-  unsigned line_margends[BS_LINE]; // candidate line left margin endpoints
-  unsigned max_no = 0;             // line number with maximum score
-  unsigned max_score = 0;          // maximum score
-  unsigned i, j, max_i = 0;        // iterators & friends
+  unsigned cand_words_len;       // no. of words in current candidate line
+  unsigned ln;                   // current line number
+  unsigned line_nos[BS_LINE];    // candidate line numbers
+  unsigned line_scores[BS_LINE]; // candidate line scores
+  unsigned max_no = 0;           // line number with maximum score
+  unsigned max_score = 0;        // maximum score
+  unsigned i, j;                 // iterators
 
-  trgt_words_len = wsplit(&trgt_words, BS_SHORT, trgt, L".,?!/:;");
+  trgt_words_len = wsplit(&trgt_words, BS_SHORT, trgt, NULL);
   if (0 == trgt_words_len)
     return -1;
 
@@ -119,27 +118,33 @@ int ls_discover(wchar_t *trgt) {
       // word in trgt
       line_nos[j] = ln;
       line_scores[j] = 0;
-      cand_words_len = wsplit(&cand_words, BS_SHORT, text, L".,?!/:;");
+      // Candidate line score is calculated as the number of its words that
+      // match the words in trgt
+      cand_words_len = wsplit(&cand_words, BS_SHORT, text, NULL);
       for (i = 0; i < MIN(trgt_words_len, cand_words_len); i++)
-        if (0 == wcscmp(cand_words[i], trgt_words[i])) {
+        if (0 == wcscmp(cand_words[i], trgt_words[i]))
           line_scores[j]++;
+      // Candidates that got full marks, and either (a) don't include any
+      // additional words or (b) are less indended than the following line, get
+      // an extra point
+      if (line_scores[j] == trgt_words_len) {
+        if (cand_words_len == trgt_words_len)
+          line_scores[j]++;
+        else if (ln < page_len - 1) {
+          if (wmargend(page[ln + 1].text, NULL) > wmargend(text, NULL))
+            line_scores[j]++;
         }
-      // Not sure if this improves things; disabling for now
-      // if (trgt_words_len == cand_words_len)
-      //   line_scores[j]++;
-      line_margends[j] = wmargend(page[ln].text, NULL);
+      }
       j++;
     }
   }
 
   // Return the candidate line with the highest score
   for (i = 0; i < j; i++)
-    if (line_scores[i] >= max_score)
-      if (0 == max_score || line_margends[i] < line_margends[max_i]) {
-        max_no = line_nos[i];
-        max_score = line_scores[i];
-        max_i = i;
-      }
+    if (line_scores[i] > max_score) {
+      max_no = line_nos[i];
+      max_score = line_scores[i];
+    }
 
   return max_no;
 }
