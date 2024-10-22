@@ -315,6 +315,12 @@ bool section_header_level(line_t *line) {
    (L'T' == gline[1] || L't' == gline[1]) &&                                   \
    (L'P' == gline[2] || L'p' == gline[2]))
 
+// true if gline is a command to output delayed text
+#define got_pd                                                                 \
+  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
+   (L'P' == gline[1] || L'p' == gline[1]) &&                                   \
+   (L'D' == gline[2] || L'd' == gline[2]))
+
 // true if a tag line is a comment
 #define got_comment                                                            \
   ((glen > 2) && (gline[0] == L'.') && (gline[1] == L'\\') &&                  \
@@ -1359,8 +1365,9 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
             continue;
         }
         {
-          // Edge case: the tag line contains only a comment; skip to next line
-          while (got_comment || got_tp) {
+          // Edge case: the tag line contains only a comment or a line that must
+          // otherwise be skipped; skip to next line
+          while (got_comment || got_tp || got_pd) {
             xgzgets(gp, tmp, BS_LINE);
             if (gzeof(gp))
               break;
