@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.0.1
+Version 1.0.2
 
 ## Screenshots
 

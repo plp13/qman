@@ -402,7 +402,10 @@ void init() {
 
   // initialize regular expressions
   fr_init(&re_man, "[a-zA-Z0-9\\.:@_-]+\\([a-zA-Z0-9]+\\)", L")");
-  fr_init(&re_http, "https?:\\/\\/[a-zA-Z0-9\\.\\/\\?\\+:@_#%=~-]+", L"http");
+  fr_init(&re_http,
+          "https?:\\/\\/[a-zA-Z0-9\\.\\/\\?\\+:@_#&%=~-]*[a-zA-Z0-9\\/"
+          "\\?\\+:@_#&%=~-]",
+          L"http");
   fr_init(
       &re_email,
       "[a-zA-Z0-9\\.\\$\\*\\+\\?\\^\\|!#%&'/=_`{}~-][a-zA-Z0-9\\.\\$\\*\\+\\/"
