@@ -329,8 +329,8 @@ bool section_header_level(line_t *line) {
 // true if a tag line is a control line
 #define got_ctrl ((glen > 1) && (gline[0] == L'.') && (gline[1] == L'.'))
 
-// Helper of toc(). Massage text member of every entry in toc (of size toc_len)
-// with the groff command, in order to remove escaped characters, etc.
+// Helper of man_toc(). Massage text member of every entry in toc (of size
+// toc_len) with the groff command, in order to remove escaped characters, etc.
 void tocgroff(toc_entry_t *toc, unsigned toc_len) {
   char *tpath;               // temporary file path
   char cmdstr[BS_LINE] = ""; // groff 'massage' command
@@ -376,6 +376,54 @@ void tocgroff(toc_entry_t *toc, unsigned toc_len) {
   free(tpath);
 }
 
+// Helper of man_sections(). Massage every entry in sections (of size
+// sections_len) with the groff command, in order to remove escaped characters,
+// etc.
+void secgroff(wchar_t **sections, unsigned sections_len) {
+  char *tpath;               // temporary file path
+  char cmdstr[BS_LINE] = ""; // groff 'massage' command
+  char texts[BS_LINE];       // 8-bit version of current toc text
+  unsigned i;                // iterator
+
+  // Prepare tpath and cmdstr
+  tpath = tempnam(NULL, "qman");
+  snprintf(cmdstr, BS_LINE, "%s -man -Tutf8 %s 2>>/dev/null",
+           config.misc.groff_path, tpath);
+
+  // Prepare the environment
+  unsetenv("GROFF_SGR");
+  setenv("GROFF_NO_SGR", "1", true);
+
+  // Write all sections into temporary file
+  FILE *fp = xfopen(tpath, "w");
+  xfputs(".TH A A A A A", fp);
+  xfputs(".ll 1024m\n", fp);
+  for (i = 0; i < sections_len; i++)
+    if (NULL != sections[i]) {
+      wcstombs(texts, sections[i], BS_LINE);
+      xfputs(texts, fp);
+      xfputs("\n.br 0\n", fp);
+    }
+  xfclose(fp);
+
+  // Massage temporary file with groff and put the results back into the texts
+  // of toc
+  FILE *pp = xpopen(cmdstr, "r");
+  xfgets(texts, BS_LINE, pp); // discarded
+  xfgets(texts, BS_LINE, pp); // discarded
+  for (i = 0; i < sections_len; i++) {
+    xfgets(texts, BS_LINE, pp);
+    mbstowcs(sections[i], texts, BS_LINE);
+    wbs(sections[i]);
+    wmargtrim(sections[i], L"\n");
+  }
+  xpclose(pp);
+
+  // Tidy up and restore the environment
+  unlink(tpath);
+  free(tpath);
+}
+
 //
 // Functions
 //
@@ -410,7 +458,7 @@ void init() {
       &re_email,
       "[a-zA-Z0-9\\.\\$\\*\\+\\?\\^\\|!#%&'/=_`{}~-][a-zA-Z0-9\\.\\$\\*\\+\\/"
       "\\?\\^\\|\\.!#%&'=_`{}~-]*@[a-zA-Z0-9-][a-zA-Z0-9-]+\\.[a-zA-Z0-9-][a-"
-      "zA-Z0-9\\.-]+",
+      "zA-Z0-9\\.-]+[a-zA-Z0-9-]",
       L"@");
 }
 
@@ -1056,6 +1104,7 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
 
   xgzclose(gp);
 
+  secgroff(res, en);
   *dst = res;
   return en;
 }
