@@ -771,7 +771,8 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
 
   // For each line returned by apropos/whatis...
   for (i = 0; i < lines; i++) {
-    sreadline(line, BS_LINE, fp);
+    if (-1 == sreadline(line, BS_LINE, fp))
+      winddown(ES_OPER_ERROR, L"Malformed temporary apropos/whatis file");
 
     // Extract page, section, and descr, together with their lengths
     strcpy(page, strtok(line, " ("));
@@ -1073,7 +1074,8 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
              config.misc.man_path, args);
   }
   FILE *pp = xpopen(cmdstr, "r");
-  sreadline(gpath, BS_LINE, pp);
+  if (-1 == sreadline(gpath, BS_LINE, pp))
+    winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
   xpclose(pp);
 
   // Open gpath
@@ -1371,7 +1373,8 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
              config.misc.man_path, args);
   }
   FILE *pp = xpopen(cmdstr, "r");
-  sreadline(gpath, BS_LINE, pp);
+  if (-1 == sreadline(gpath, BS_LINE, pp))
+    winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
   xpclose(pp);
 
   // Open gpath
