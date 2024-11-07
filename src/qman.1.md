@@ -324,6 +324,7 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 | rgb      | ternary      | auto       | True if terminal can re-define colors, false if not, auto to auto-detect |
 | unicode  | ternary      | auto       | True if terminal supports Unicode, false if not, auto to auto-detect |
 | clipboard| ternary      | auto       | True if terminal supports clipboard operations (OSC 52), false if not, auto to auto-detect |
+| escdelay | int          | 60         | Number of miliseconds to wait after receving ESC from the keyboard before interpreting it as the escape key. Users with historical terminals or very unreliable network connections may want to increase this. |
 
 Beware that **Qman** uses these capabilities to decide whether to either honor
 or ignore various configuration options specified elsewhere, particularly in

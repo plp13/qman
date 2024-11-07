@@ -49,7 +49,8 @@ config_def = {
         "colours": (("int", -1, 256), ("-1",), True, "Number of colors supported by the terminal (set to -1 to auto-configure)"),
         "rgb": (("trit",), ("auto",), True, "Terminal colors can be re-defined"),
         "unicode": (("trit",), ("auto",), True, "Terminal supports Unicode"),
-        "clipboard": (("trit",), ("auto",), True, "Terminal supports clipboard operations (OSC 52)")
+        "clipboard": (("trit",), ("auto",), True, "Terminal supports clipboard operations (OSC 52)"),
+        "escdelay": (("int", 1, 10000), ("60",), True, "Terminal escape delay")
     },
     "chars": {
         "sbar_top": (("wstring",), ("┬",), True, "Scrollbar top end"),
