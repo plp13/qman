@@ -385,6 +385,8 @@ void init_tui_tcap() {
   case t_auto:
     tcap.clipboard = 0 == strcmp(tcap.term, "xterm-kitty");
   }
+
+  tcap.escdelay = config.tcap.escdelay;
 }
 
 void init_tui_colours() {

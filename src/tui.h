@@ -18,6 +18,7 @@ typedef struct {
   bool rgb;       // true if terminal colors can be re-defined
   bool unicode;   // true if the terminal supports Unicode
   bool clipboard; // true if the terminal supports clipboard operations (OSC 52)
+  unsigned escdelay; // terminal escape delay
 } tcap_t;
 
 // A mouse button
@@ -53,10 +54,8 @@ typedef struct {
 // Constants
 //
 
-#define MS_EMPTY                                                               \
-  {                                                                            \
-    BT_NONE, false, false, false, -1, -1, WH_NONE, -1, -1                      \
-  } // empty mouse status (used for initialization)
+// empty mouse status (used for initialization)
+#define MS_EMPTY {BT_NONE, false, false, false, -1, -1, WH_NONE, -1, -1}
 
 //
 // Global variables
