@@ -95,7 +95,7 @@ config_def = {
         "imm_title": (("colour",), ("yellow", "red", "true"), True, "Pop-up dialogs title"),
         "sp_input": (("colour",), ("white", "black", "false"), True, "Pop-up input dialog prompt"),
         "sp_text": (("colour",), ("cyan", "black", "false"), True, "Pop-up input dialog progressive help text"),
-        "sp_text_f": (("colour",), ("black", "cyan", "false"), True, "Pop-up input dialog progressive help text (focused)"),
+        "sp_text_f": (("colour",), ("white", "black", "false"), True, "Pop-up input dialog progressive help text (focused)"),
         "help_text": (("colour",), ("cyan", "black", "false"), True, "Help dialog entries text"),
         "help_text_f": (("colour",), ("black", "cyan", "false"), True, "Help dialog entries text (focused)"),
         "trans_mode_name": (("int", 0, 65535), ("0",), False, "Color pair for mode to name transition character"),

@@ -169,15 +169,24 @@ int ls_discover(wchar_t *trgt) {
   }
 
 // Helper of tui_sp_open(). Print quick search results in wimm as the user
-// types.
-void aw_quick_search(wchar_t *needle) {
+// types. If the user has selected a result, return its ident (source is
+// aw_all). Otherwise return NULL. The string typed so far is provided in
+// needle. last contains the last typed character, as returned by
+// get_str_next().
+wchar_t *aw_quick_search(wchar_t *needle, int last) {
   // Search aw_all for needle and store the results in res;
   unsigned lines =
       config.layout.imm_height_long - 7; // maximum no. of lines to display
+  static int focus = -1;                 // focused line
+  unsigned needle_len = wcslen(needle);  // length of needle
+  static unsigned last_needle_len = 0;   // length of last needle encountered
   unsigned *res =
       aalloca(lines, unsigned); // search results as positions in aw_all
   unsigned pos = 0;             // current position in aw_all
   unsigned ln = 0;              // current line
+  wchar_t *ret = NULL;
+
+  // Search aw_all for needle
   pos = aprowhat_search(needle, aw_all, aw_all_len, pos);
   while (-1 != pos && ln < lines) {
     res[ln] = pos;
@@ -185,6 +194,22 @@ void aw_quick_search(wchar_t *needle) {
     ln++;
   }
   lines = ln; // lines becomes exact no. of lines to display
+
+  // Update focus
+  if (0 == needle_len || last_needle_len != needle_len) {
+    focus = -1;
+    last_needle_len = needle_len;
+  } else {
+    if (-KEY_DOWN == last || -0x09 == last) {
+      focus++;
+      if (focus >= lines)
+        focus = 0;
+    } else if (-KEY_UP == last) {
+      focus--;
+      if (focus < 0)
+        focus = lines - 1;
+    }
+  }
 
   // Display the search results
   const unsigned width =
@@ -195,7 +220,17 @@ void aw_quick_search(wchar_t *needle) {
     ident_len = MAX(ident_len, wcslen(aw_all[res[ln]].ident));
   const unsigned descr_len =
       width - ident_len - 5; // space left for descr column
+  swprintf(tmp, width - 3, L"%-*ls", width - 4, L"");
+  mvwaddnwstr(wimm, 2, 2 + needle_len, tmp, width - 4 - needle_len);
   for (ln = 0; ln < lines; ln++) {
+    change_colour(wimm, config.colours.sp_text);
+    if (focus == ln) {
+      swprintf(tmp, width - 3, L"%-*ls", width - 4,
+               &aw_all[res[ln]].ident[needle_len]);
+      mvwaddnwstr(wimm, 2, 2 + needle_len, tmp, width - 4 - needle_len);
+      change_colour(wimm, config.colours.sp_text_f);
+      ret = aw_all[res[ln]].ident;
+    }
     swprintf(tmp, width - 3, L"%-*ls %-*ls", ident_len, aw_all[res[ln]].ident,
              descr_len, aw_all[res[ln]].descr);
     mvwaddnwstr(wimm, ln + 4, 2, tmp, width - 4);
@@ -206,6 +241,7 @@ void aw_quick_search(wchar_t *needle) {
   }
 
   wnoutrefresh(wimm);
+  return ret;
 }
 
 // Helper of tui_help(). Draw the help menu into wimm. keys_names contains the
@@ -1497,9 +1533,12 @@ bool tui_open_whatis() {
 bool tui_sp_open(request_type_t rt) {
   wchar_t inpt[BS_SHORT - 2] = L""; // string typed by user
   wchar_t trgt[BS_SHORT]; // final string that specifies the page to be opened
+  wchar_t *awqsr;         // quick search result returned from aw_quick_search()
   wchar_t help[BS_SHORT]; // help message
-  swprintf(help, BS_SHORT, L"%ls: query string   %ls/%ls: abort",
-           ch2name(KEY_ENTER), ch2name(KEY_BREAK), ch2name('\e'));
+  swprintf(help, BS_SHORT,
+           L"%ls: query string   %ls/%ls/%ls: select   %ls/%ls: abort",
+           ch2name(KEY_ENTER), ch2name(KEY_UP), ch2name(0x09),
+           ch2name(KEY_DOWN), ch2name(KEY_BREAK), ch2name('\e'));
   int got_inpt; // current return value of get_str_next()
 
   // Draw immediate window and title bar
@@ -1512,8 +1551,7 @@ bool tui_sp_open(request_type_t rt) {
   doupdate();
 
   // Get input (and show quick search results as the user types)
-  change_colour(wimm, config.colours.sp_text);
-  aw_quick_search(inpt);
+  awqsr = aw_quick_search(inpt, 0);
   doupdate();
   change_colour(wimm, config.colours.sp_input);
   got_inpt = get_str_next(wimm, 2, 2, inpt,
@@ -1536,12 +1574,9 @@ bool tui_sp_open(request_type_t rt) {
         draw_imm(true, true, L"Whatis what?", help);
       change_colour(wimm, config.colours.sp_input);
       mvwaddnwstr(wimm, 2, 2, inpt, wcslen(inpt));
-      aw_quick_search(inpt);
-      doupdate();
     }
 
-    change_colour(wimm, config.colours.sp_text);
-    aw_quick_search(inpt);
+    awqsr = aw_quick_search(inpt, got_inpt);
     doupdate();
     change_colour(wimm, config.colours.sp_input);
     got_inpt = get_str_next(wimm, 2, 2, NULL, 0);
@@ -1550,7 +1585,10 @@ bool tui_sp_open(request_type_t rt) {
 
   if (got_inpt > 0) {
     // Input succeeded; show requested page
-    swprintf(trgt, BS_SHORT, L"'%ls'", inpt);
+    if (NULL == awqsr)
+      swprintf(trgt, BS_SHORT, L"'%ls'", inpt);
+    else
+      swprintf(trgt, BS_SHORT, L"'%ls'", awqsr);
     history_push(rt, trgt);
     populate_page();
     if (err) {
