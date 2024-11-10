@@ -169,11 +169,11 @@ int ls_discover(wchar_t *trgt) {
   }
 
 // Helper of tui_sp_open(). Print quick search results in wimm as the user
-// types. If the user has selected a result, return its ident (source is
-// aw_all). Otherwise return NULL. The string typed so far is provided in
-// needle. last contains the last typed character, as returned by
-// get_str_next().
-wchar_t *aw_quick_search(wchar_t *needle, int last) {
+// types. If the user has selected a result, return its ident (if qident is
+// true) or page (if quident is false). Otherwise return NULL. The string typed
+// so far is provided in needle. last contains the last typed character, as
+// returned by get_str_next().
+wchar_t *aw_quick_search(wchar_t *needle, int last, bool qident) {
   // Search aw_all for needle and store the results in res;
   unsigned lines =
       config.layout.imm_height_long - 7; // maximum no. of lines to display
@@ -225,11 +225,17 @@ wchar_t *aw_quick_search(wchar_t *needle, int last) {
   for (ln = 0; ln < lines; ln++) {
     change_colour(wimm, config.colours.sp_text);
     if (focus == ln) {
-      swprintf(tmp, width - 3, L"%-*ls", width - 4,
-               &aw_all[res[ln]].ident[needle_len]);
+      if (qident) {
+        ret = aw_all[res[ln]].ident;
+        swprintf(tmp, width - 3, L"%-*ls", width - 4,
+                 &aw_all[res[ln]].ident[needle_len]);
+      } else {
+        ret = aw_all[res[ln]].page;
+        swprintf(tmp, width - 3, L"%-*ls", width - 4,
+                 &aw_all[res[ln]].page[needle_len]);
+      }
       mvwaddnwstr(wimm, 2, 2 + needle_len, tmp, width - 4 - needle_len);
       change_colour(wimm, config.colours.sp_text_f);
-      ret = aw_all[res[ln]].ident;
     }
     swprintf(tmp, width - 3, L"%-*ls %-*ls", ident_len, aw_all[res[ln]].ident,
              descr_len, aw_all[res[ln]].descr);
@@ -1551,7 +1557,7 @@ bool tui_sp_open(request_type_t rt) {
   doupdate();
 
   // Get input (and show quick search results as the user types)
-  awqsr = aw_quick_search(inpt, 0);
+  awqsr = aw_quick_search(inpt, 0, RT_MAN == rt);
   doupdate();
   change_colour(wimm, config.colours.sp_input);
   got_inpt = get_str_next(wimm, 2, 2, inpt,
@@ -1576,7 +1582,7 @@ bool tui_sp_open(request_type_t rt) {
       mvwaddnwstr(wimm, 2, 2, inpt, wcslen(inpt));
     }
 
-    awqsr = aw_quick_search(inpt, got_inpt);
+    awqsr = aw_quick_search(inpt, got_inpt, RT_MAN == rt);
     doupdate();
     change_colour(wimm, config.colours.sp_input);
     got_inpt = get_str_next(wimm, 2, 2, NULL, 0);
