@@ -313,9 +313,9 @@ void draw_history(request_t *history, unsigned history_cur,
     else
       glyph = L' ';
 
-    swprintf(buf, width - 1, L"%1ls %-7ls  %-*ls %lc",
+    swprintf(buf, width - 1, L"%1ls %-7ls  %-*.*ls %lc",
              i == history_cur ? L"»" : L" ",
-             request_type_str(history[i].request_type), width - 15,
+             request_type_str(history[i].request_type), width - 15, width - 15,
              NULL == history[i].args ? L"" : history[i].args, glyph);
     if (i == focus) {
       change_colour(wimm, config.colours.help_text_f);
@@ -352,8 +352,9 @@ void draw_toc(toc_entry_t *toc, unsigned toc_len, unsigned top,
     else
       glyph = L' ';
 
-    swprintf(buf, width - 1, L"%*ls%-*ls %lc", 2 * toc[i].type, L"",
-             width - 4 - 2 * toc[i].type, toc[i].text, glyph);
+    swprintf(buf, width - 1, L"%*ls%-*.*ls %lc", 2 * toc[i].type, L"",
+             width - 4 - 2 * toc[i].type, width - 4 - 2 * toc[i].type,
+             toc[i].text, glyph);
     if (i == focus) {
       change_colour(wimm, config.colours.help_text_f);
     } else {

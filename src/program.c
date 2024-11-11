@@ -339,7 +339,7 @@ void tocgroff(toc_entry_t *toc, unsigned toc_len) {
 
   // Prepare tpath and cmdstr
   tpath = tempnam(NULL, "qman");
-  snprintf(cmdstr, BS_LINE, "%s -man -Tutf8 %s 2>>/dev/null",
+  snprintf(cmdstr, BS_LINE, "%s -man -rLL=1024m -Tutf8 %s 2>>/dev/null",
            config.misc.groff_path, tpath);
 
   // Prepare the environment
@@ -361,6 +361,7 @@ void tocgroff(toc_entry_t *toc, unsigned toc_len) {
   // Massage temporary file with groff and put the results back into the texts
   // of toc
   FILE *pp = xpopen(cmdstr, "r");
+  xfgets(texts, BS_LINE, pp); // discarded
   xfgets(texts, BS_LINE, pp); // discarded
   xfgets(texts, BS_LINE, pp); // discarded
   for (i = 0; i < toc_len; i++) {
@@ -387,7 +388,7 @@ void secgroff(wchar_t **sections, unsigned sections_len) {
 
   // Prepare tpath and cmdstr
   tpath = tempnam(NULL, "qman");
-  snprintf(cmdstr, BS_LINE, "%s -man -Tutf8 %s 2>>/dev/null",
+  snprintf(cmdstr, BS_LINE, "%s -man -rLL=1024m -Tutf8 %s 2>>/dev/null",
            config.misc.groff_path, tpath);
 
   // Prepare the environment
@@ -409,6 +410,7 @@ void secgroff(wchar_t **sections, unsigned sections_len) {
   // Massage temporary file with groff and put the results back into the texts
   // of toc
   FILE *pp = xpopen(cmdstr, "r");
+  xfgets(texts, BS_LINE, pp); // discarded
   xfgets(texts, BS_LINE, pp); // discarded
   xfgets(texts, BS_LINE, pp); // discarded
   for (i = 0; i < sections_len; i++) {
