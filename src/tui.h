@@ -57,6 +57,12 @@ typedef struct {
 // empty mouse status (used for initialization)
 #define MS_EMPTY {BT_NONE, false, false, false, -1, -1, WH_NONE, -1, -1}
 
+// Possible return values of get_str_next()
+#define _GSN (1 << 24)
+#define GSN_WH_DOWN (_GSN)
+#define GSN_WH_UP (_GSN + 1)
+#define GSN_BT_LEFT (_GSN + 2)
+
 //
 // Global variables
 //
@@ -241,7 +247,10 @@ extern bool get_str(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
 // - -KEY_END, if the user hit END
 // - -0x09 (TAB in ASCII), if the user hit TAB
 // - -KEY_BACKSPACE, if the user hit BACKSPACE
-// - -chr, if the user typed any text character chr
+// - -GSN_WHEEL_UP, if the user scrolled the mouse wheel up
+// - -GSN_WHEEL_DOWN, if the user scrolled the mouse wheel down
+// - -GSN_BT_LEFT, if the user clicked the left mouse button
+// - -chr, if the user typed any text character
 extern int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
                         unsigned trgt_len);
 

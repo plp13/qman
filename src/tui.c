@@ -169,10 +169,10 @@ int ls_discover(wchar_t *trgt) {
   }
 
 // Helper of tui_sp_open(). Print quick search results in wimm as the user
-// types. If the user has selected a result, return its ident (if qident is
-// true) or page (if quident is false). Otherwise return NULL. The string typed
-// so far is provided in needle. last contains the last typed character, as
-// returned by get_str_next().
+// types. If the user has selected a result using arrow keys or the mouse,
+// highlight it and return its ident (if qident is true) or page (if quident is
+// false). Otherwise return NULL. The string typed so far is provided in needle.
+// last contains the last return value get_str_next().
 wchar_t *aw_quick_search(wchar_t *needle, int last, bool qident) {
   // Search aw_all for needle and store the results in res;
   unsigned lines =
@@ -195,19 +195,27 @@ wchar_t *aw_quick_search(wchar_t *needle, int last, bool qident) {
   }
   lines = ln; // lines becomes exact no. of lines to display
 
-  // Update focus
+  // Update focus, if the user has used the arrow keys or mouse to highlight a
+  // line
   if (0 == needle_len || last_needle_len != needle_len) {
     focus = -1;
     last_needle_len = needle_len;
   } else {
-    if (-KEY_DOWN == last || -0x09 == last) {
+    if (-KEY_DOWN == last || -0x09 == last || -GSN_WH_UP == last) {
       focus++;
       if (focus >= lines)
         focus = 0;
-    } else if (-KEY_UP == last) {
+    } else if (-KEY_UP == last || -GSN_WH_DOWN == last) {
       focus--;
       if (focus < 0)
         focus = lines - 1;
+    } else if (-GSN_BT_LEFT == last) {
+      mouse_t lms = get_mouse_status(KEY_MOUSE);
+      int iy = lms.y, ix = lms.x;
+      unsigned ih = getmaxy(wimm);
+      if (wmouse_trafo(wimm, &iy, &ix, false))
+        if (iy > 3 && iy < ih - 3)
+          focus = iy - 4;
     }
   }
 
@@ -969,17 +977,26 @@ int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
   curs_set(0);
   ms = get_mouse_status(chr);
 
-  if (BT_RIGHT == ms.button && ms.up) {
+  if (WH_UP == ms.wheel) {
+    // User scrolled mouse wheel up; return -GSN_WH_DOWN
+    return -GSN_WH_DOWN;
+  } else if (WH_DOWN == ms.wheel) {
+    // User scrolled mouse wheel down; return -GSN_WH_UP
+    return -GSN_WH_UP;
+  } else if (BT_RIGHT == ms.button && ms.up) {
     // User pressed right mouse button; act as if she hit ESC or CTRL-C
     res[0] = L'\0';
     wnoutrefresh(w);
     return 0;
-  } else if (BT_LEFT == ms.button && ms.up && config.mouse.left_click_open) {
-    // User clicked the left mouse button; act if she hit ENTER (but only if the
-    // left_click_open config option is true)
-    res[pos] = L'\0';
-    wnoutrefresh(w);
-    return pos;
+  } else if (BT_LEFT == ms.button && ms.up) {
+    // User clicked the left mouse button; act if she hit ENTER if the
+    // left_click_open config option is true, otherwise return -GSN_BT_LEFT
+    if (config.mouse.left_click_open) {
+      res[pos] = L'\0';
+      wnoutrefresh(w);
+      return pos;
+    } else
+      return -GSN_BT_LEFT;
   } else if (BT_WHEEL == ms.button && ms.up) {
     // User pressed the wheel button; act as if she hit ENTER
     res[pos] = L'\0';
