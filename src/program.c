@@ -1350,6 +1350,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   int glen;               // length of current line in Groff document
   wchar_t gline[BS_LINE]; // current line in Groff document
   unsigned en = 0;        // current entry in TOC
+  bool sh_seen = false;   // whether a section header has been seen
   char tmp[BS_LINE];      // temporary
   unsigned textsp; // real beginning of gline's text (ignoring whitespace)
 
@@ -1400,8 +1401,9 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
         wcscpy(res[en].text, &gline[3 + textsp]);
         wmargtrim(res[en].text, L"\"");
         inc_en;
+        sh_seen = true;
       }
-    } else if (got_ss) {
+    } else if (got_ss && sh_seen) {
       // Subsection heading
       res[en].type = TT_SUBHEAD;
       textsp = wmargend(&gline[3], L"\"");
@@ -1411,7 +1413,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
         wmargtrim(res[en].text, L"\"");
         inc_en;
       }
-    } else if (got_tp) {
+    } else if (got_tp && sh_seen) {
       // Tagged paragraph
       xgzgets(gp, tmp, BS_LINE);
       if (!gzeof(gp)) {
