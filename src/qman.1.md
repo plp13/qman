@@ -245,6 +245,10 @@ section.
 | sp_text_f         | pop-up input dialog progressive search text (focused)    |
 | help_text         | help dialog entries text                                 |
 | help_text_f       | help dialog entries text (focused)                       |
+| history_text      | history dialog entries text                              |
+| history_text_f    | history dialog entries text (focused)                    |
+| toc_text          | table of contents dialog entries text                    |
+| toc_text_f        | table of contents dialog entries text (focused)          |
 
 Each color is defined using three words separated by whitespace:
 

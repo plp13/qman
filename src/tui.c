@@ -326,9 +326,9 @@ void draw_history(request_t *history, unsigned history_cur,
              request_type_str(history[i].request_type), width - 15, width - 15,
              NULL == history[i].args ? L"" : history[i].args, glyph);
     if (i == focus) {
-      change_colour(wimm, config.colours.help_text_f);
+      change_colour(wimm, config.colours.history_text_f);
     } else {
-      change_colour(wimm, config.colours.help_text);
+      change_colour(wimm, config.colours.history_text);
     }
     mvwaddnwstr(wimm, j, 1, buf, width - 1);
     j++;
@@ -364,9 +364,9 @@ void draw_toc(toc_entry_t *toc, unsigned toc_len, unsigned top,
              width - 4 - 2 * toc[i].type, width - 4 - 2 * toc[i].type,
              toc[i].text, glyph);
     if (i == focus) {
-      change_colour(wimm, config.colours.help_text_f);
+      change_colour(wimm, config.colours.toc_text_f);
     } else {
-      change_colour(wimm, config.colours.help_text);
+      change_colour(wimm, config.colours.toc_text);
     }
     mvwaddnwstr(wimm, j, 1, buf, width - 1);
     j++;
@@ -472,6 +472,10 @@ void init_tui_colours() {
     init_colour(config.colours.sp_text_f);
     init_colour(config.colours.help_text);
     init_colour(config.colours.help_text_f);
+    init_colour(config.colours.history_text);
+    init_colour(config.colours.history_text_f);
+    init_colour(config.colours.toc_text);
+    init_colour(config.colours.toc_text_f);
     // Color pairs used for transitions
     init_pair(config.colours.trans_mode_name, config.colours.stat_indic_mode.bg,
               config.colours.stat_indic_name.bg);
@@ -892,7 +896,7 @@ void draw_stat(const wchar_t *mode, const wchar_t *name, unsigned lines_len,
   wnoutrefresh(wstat);
 }
 
-void draw_imm(bool is_long, bool is_wide, const wchar_t *title,
+void draw_imm(bool is_long, bool is_wide, colour_t colour, const wchar_t *title,
               const wchar_t *help) {
   unsigned height, width, y, x;
 
@@ -919,7 +923,7 @@ void draw_imm(bool is_long, bool is_wide, const wchar_t *title,
 
   keypad(wimm, true);
   werase(wimm);
-  wbkgd(wimm, COLOR_PAIR(config.colours.help_text.pair));
+  wbkgd(wimm, COLOR_PAIR(colour.pair));
 
   change_colour(wimm, config.colours.imm_border);
   draw_box(wimm, 0, 0, height - 1, width - 1);
@@ -927,7 +931,7 @@ void draw_imm(bool is_long, bool is_wide, const wchar_t *title,
   wchar_t *tmp = walloca(width - 2);
   swprintf(tmp, width - 1, L" %-*ls", width - 2, title);
   mvwaddnwstr(wimm, 1, 1, tmp, width - 2);
-  change_colour(wimm, config.colours.help_text);
+  change_colour(wimm, colour);
   mvwaddnwstr(wimm, height - 2, 2, help, width - 4);
 
   wnoutrefresh(wimm);
@@ -1567,11 +1571,11 @@ bool tui_sp_open(request_type_t rt) {
 
   // Draw immediate window and title bar
   if (RT_MAN == rt)
-    draw_imm(true, true, L"Manual page to open?", help);
+    draw_imm(true, true, config.colours.sp_text, L"Manual page to open?", help);
   else if (RT_APROPOS == rt)
-    draw_imm(true, true, L"Apropos what?", help);
+    draw_imm(true, true, config.colours.sp_text, L"Apropos what?", help);
   else if (RT_WHATIS == rt)
-    draw_imm(true, true, L"Whatis what?", help);
+    draw_imm(true, true, config.colours.sp_text, L"Whatis what?", help);
   doupdate();
 
   // Get input (and show quick search results as the user types)
@@ -1591,11 +1595,12 @@ bool tui_sp_open(request_type_t rt) {
       termsize_adjust();
       tui_redraw();
       if (RT_MAN == rt)
-        draw_imm(true, true, L"Manual page to open?", help);
+        draw_imm(true, true, config.colours.sp_text, L"Manual page to open?",
+                 help);
       else if (RT_APROPOS == rt)
-        draw_imm(true, true, L"Apropos what?", help);
+        draw_imm(true, true, config.colours.sp_text, L"Apropos what?", help);
       else if (RT_WHATIS == rt)
-        draw_imm(true, true, L"Whatis what?", help);
+        draw_imm(true, true, config.colours.sp_text, L"Whatis what?", help);
       change_colour(wimm, config.colours.sp_input);
       mvwaddnwstr(wimm, 2, 2, inpt, wcslen(inpt));
     }
@@ -1686,7 +1691,7 @@ bool tui_history() {
   int focus = history_cur;    // focused history entry
 
   // Create the history window, retrieve height, and calculate top
-  draw_imm(true, false, L"History", help);
+  draw_imm(true, false, config.colours.history_text, L"History", help);
   height = getmaxy(wimm);
   if (focus > height - 6)
     top = focus - height + 6;
@@ -1801,7 +1806,7 @@ bool tui_history() {
       tui_redraw();
       top = 0;
       focus = 0;
-      draw_imm(true, false, L"History", help);
+      draw_imm(true, false, config.colours.history_text, L"History", help);
       draw_history(history, history_cur, history_top, top, focus);
       doupdate();
       height = getmaxy(wimm);
@@ -1827,7 +1832,7 @@ bool tui_toc() {
   populate_toc();
 
   // Create the TOC window, and retrieve height
-  draw_imm(true, true, L"Table of Contents", help);
+  draw_imm(true, true, config.colours.toc_text, L"Table of Contents", help);
   height = getmaxy(wimm);
 
   // Main loop
@@ -1930,7 +1935,7 @@ bool tui_toc() {
       tui_redraw();
       top = 0;
       focus = 0;
-      draw_imm(true, true, L"History", help);
+      draw_imm(true, true, config.colours.toc_text, L"Table of Contents", help);
       draw_toc(toc, toc_len, top, focus);
       doupdate();
       height = getmaxy(wimm);
@@ -2128,7 +2133,8 @@ bool tui_help() {
   }
 
   // Create the help window, and retrieve its height
-  draw_imm(true, true, L"Program Actions and Keyboard Help", help);
+  draw_imm(true, true, config.colours.help_text,
+           L"Program Actions and Keyboard Help", help);
   height = getmaxy(wimm);
 
   // Main loop
@@ -2230,7 +2236,8 @@ bool tui_help() {
       tui_redraw();
       top = 1;
       focus = 1;
-      draw_imm(true, true, L"Program Actions and Keyboard Help", help);
+      draw_imm(true, true, config.colours.help_text,
+               L"Program Actions and Keyboard Help", help);
       draw_help((const wchar_t **)keys_names, keys_names_max, top, focus);
       doupdate();
       height = getmaxy(wimm);

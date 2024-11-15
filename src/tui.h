@@ -219,10 +219,10 @@ extern void draw_stat(const wchar_t *mode, const wchar_t *name,
                       const wchar_t *em);
 
 // Draw an immediate window. is_long specifies whether the window is long or
-// short. is_wide whether it is wide or narrow. The title and help strings is
-// quite obvious what they are.
-void draw_imm(bool is_long, bool is_wide, const wchar_t *title,
-              const wchar_t *help);
+// short. is_wide whether it is wide or narrow. colour specifies the window
+// color. The title and help strings is quite obvious what they are.
+void draw_imm(bool is_long, bool is_wide, colour_t colour,
+              const wchar_t *title, const wchar_t *help);
 
 // Delete the immediate window previously drawn with draw_imm()
 void del_imm();
