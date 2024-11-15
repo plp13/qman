@@ -1,7 +1,7 @@
 # Project declaration
 project('qman', 'c',
   license: 'BSD-2-Clause',
-  version: '1.0.3'
+  version: '1.1.0'
 )
 
 # Configuration subsystem sources (generated from config_def.py using cog)
