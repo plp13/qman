@@ -329,6 +329,15 @@ bool section_header_level(line_t *line) {
 // true if a tag line is a control line
 #define got_ctrl ((glen > 1) && (gline[0] == L'.') && (gline[1] == L'.'))
 
+// true if a tag line starts with .I, .B, .SM, or .SB
+#define got_frmt                                                               \
+  (((glen > 1) && (gline[0] == L'.') && (gline[1] == L'I')) ||                 \
+   ((glen > 1) && (gline[0] == L'.') && (gline[1] == L'B')) ||                 \
+   ((glen > 2) && (gline[0] == L'.') && (gline[1] == L'S') &&                  \
+    (gline[2] == L'M')) ||                                                     \
+   ((glen > 2) && (gline[0] == L'.') && (gline[1] == L'S') &&                  \
+    (gline[2] == L'B')))
+
 // Helper of man_toc(). Massage text member of every entry in toc (of size
 // toc_len) with the groff command, in order to remove escaped characters, etc.
 void tocgroff(toc_entry_t *toc, unsigned toc_len) {
@@ -1433,6 +1442,18 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
             glen = mbstowcs(gline, tmp, BS_LINE);
           }
         }
+        {
+          // Edge case: the tag line starts with a formatting command that sets
+          // a trap for the next line; skip to the next line
+          while (got_frmt && wmargtrim(gline, NULL) < 4) {
+            xgzgets(gp, tmp, BS_LINE);
+            if (gzeof(gp))
+              break;
+            glen = mbstowcs(gline, tmp, BS_LINE);
+          }
+          if (gzeof(gp))
+            break;
+        }
         textsp = wmargend(gline, NULL);
         res[en].type = TT_TAGPAR;
         res[en].text = walloc(BS_LINE);
@@ -1457,6 +1478,11 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   }
 
   xgzclose(gp);
+
+  // Uncomment the following to log output into qman.log for debugging
+  // logprintf("man_toc()");
+  // for (unsigned i = 0; i < en; i++)
+  //   logprintf("%d: type=%d text=%ls", i, res[i].type, res[i].text);
 
   tocgroff(res, en);
   *dst = res;
