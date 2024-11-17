@@ -91,7 +91,7 @@ mouse_t mouse_status = MS_EMPTY;
   }
 
 // Helper of ls_jump(), i.e. of tui_open() and tui_toc(). Return the line number
-// that best matches local searh target trgt.
+// that best matches local searh link target trgt.
 int ls_discover(wchar_t *trgt) {
   wchar_t **trgt_words = walloca(BS_SHORT); // words in trgt
   unsigned trgt_words_len;                  // no. of words in trgt
@@ -119,11 +119,16 @@ int ls_discover(wchar_t *trgt) {
       line_nos[j] = ln;
       line_scores[j] = 0;
       // Candidate line score is calculated as the number of its words that
-      // match the words in trgt
+      // exactly match the words in trgt (the last word in trgt is also
+      // partially matched, i.e. it will still count as a match if it matches
+      // just the beginning of its corresponding word in cand)
       cand_words_len = wsplit(&cand_words, BS_SHORT, text, NULL);
       for (i = 0; i < MIN(trgt_words_len, cand_words_len); i++)
         if (0 == wcscmp(cand_words[i], trgt_words[i]))
           line_scores[j]++;
+        else if (trgt_words_len - 1 == i)
+          if (cand_words[i] == wcsstr(cand_words[i], trgt_words[i]))
+            line_scores[j]++;
       // Candidates that got full marks, and either (a) don't include any
       // additional words or (b) are less indended than the following line, get
       // an extra point
@@ -148,25 +153,6 @@ int ls_discover(wchar_t *trgt) {
 
   return max_no;
 }
-
-// Helper of tui_open() and tui_toc(). Search the current page for a line whose
-// text begins with search_term, and jump to said line.
-#define ls_jump(trgt)                                                          \
-  {                                                                            \
-    wchar_t trgt_clone[BS_LINE];                                               \
-    wcscpy(trgt_clone, trgt);                                                  \
-    int best = ls_discover(trgt_clone);                                        \
-    if (best < 0) {                                                            \
-      tui_error(L"Unable to jump to requested location");                      \
-      return false;                                                            \
-    } else {                                                                   \
-      page_top = MIN(best, page_len - config.layout.main_height);              \
-      const link_loc_t fl = first_link(                                        \
-          page, page_len, page_top, page_top + config.layout.main_height - 1); \
-      if (fl.ok)                                                               \
-        page_flink = fl;                                                       \
-    }                                                                          \
-  }
 
 // Helper of tui_sp_open(). Print quick search results in wimm as the user
 // types. If the user has selected a result using arrow keys or the mouse,
