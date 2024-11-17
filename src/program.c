@@ -326,17 +326,51 @@ bool section_header_level(line_t *line) {
   ((glen > 2) && (gline[0] == L'.') && (gline[1] == L'\\') &&                  \
    ((gline[2] == L'\"' || gline[2] == L'#')))
 
-// true if a tag line is a control line
-#define got_ctrl ((glen > 1) && (gline[0] == L'.') && (gline[1] == L'.'))
+// Components of got_trap and got_ok
+#define got_b                                                                  \
+  ((glen > 1) && (L'.' == gline[0]) && (L'B' == gline[1] || L'b' == gline[1]))
+#define got_i                                                                  \
+  ((glen > 1) && (L'.' == gline[0]) && (L'I' == gline[1] || L'i' == gline[1]))
+#define got_sm                                                                 \
+  ((glen > 2) && (L'.' == gline[0]) &&                                         \
+   (L's' == gline[1] || L'S' == gline[1]) &&                                   \
+   (L'm' == gline[2] || L'M' == gline[2]))
+#define got_sb                                                                 \
+  ((glen > 2) && (L'.' == gline[0]) &&                                         \
+   (L's' == gline[1] || L'S' == gline[1]) &&                                   \
+   (L'b' == gline[2] || L'B' == gline[2]))
+#define got_bi                                                                 \
+  ((glen > 2) && (L'.' == gline[0]) &&                                         \
+   (L'b' == gline[1] || L'B' == gline[1]) &&                                   \
+   (L'i' == gline[2] || L'I' == gline[2]))
+#define got_br                                                                 \
+  ((glen > 2) && (L'.' == gline[0]) &&                                         \
+   (L'b' == gline[1] || L'B' == gline[1]) &&                                   \
+   (L'r' == gline[2] || L'R' == gline[2]))
+#define got_ib                                                                 \
+  ((glen > 2) && (L'.' == gline[0]) &&                                         \
+   (L'i' == gline[1] || L'I' == gline[1]) &&                                   \
+   (L'b' == gline[2] || L'B' == gline[2]))
+#define got_ir                                                                 \
+  ((glen > 2) && (L'.' == gline[0]) &&                                         \
+   (L'i' == gline[1] || L'I' == gline[1]) &&                                   \
+   (L'r' == gline[2] || L'R' == gline[2]))
+#define got_rb                                                                 \
+  ((glen > 2) && (L'.' == gline[0]) &&                                         \
+   (L'r' == gline[1] || L'R' == gline[1]) &&                                   \
+   (L'b' == gline[2] || L'B' == gline[2]))
+#define got_ri                                                                 \
+  ((glen > 2) && (L'.' == gline[0]) &&                                         \
+   (L'r' == gline[1] || L'R' == gline[1]) &&                                   \
+   (L'i' == gline[2] || L'I' == gline[2]))
 
-// true if a tag line starts with .I, .B, .SM, or .SB
-#define got_frmt                                                               \
-  (((glen > 1) && (gline[0] == L'.') && (gline[1] == L'I')) ||                 \
-   ((glen > 1) && (gline[0] == L'.') && (gline[1] == L'B')) ||                 \
-   ((glen > 2) && (gline[0] == L'.') && (gline[1] == L'S') &&                  \
-    (gline[2] == L'M')) ||                                                     \
-   ((glen > 2) && (gline[0] == L'.') && (gline[1] == L'S') &&                  \
-    (gline[2] == L'B')))
+// true if a tag line starts with a formatting command that sets a trap
+#define got_trap (got_b || got_i || got_sm || got_sb)
+
+// true if a tag line atarts with an allowed formatting command
+#define got_ok                                                                 \
+  (got_b || got_i || got_sm || got_sb || got_bi || got_br || got_ib ||         \
+   got_ir || got_rb || got_ri)
 
 // Helper of man_toc(). Massage text member of every entry in toc (of size
 // toc_len) with the groff command, in order to remove escaped characters, etc.
@@ -380,6 +414,11 @@ void tocgroff(toc_entry_t *toc, unsigned toc_len) {
     wmargtrim(toc[i].text, L"\n");
   }
   xpclose(pp);
+
+  // Uncomment the following to log output into qman.log for debugging
+  // logprintf("tocgroff()");
+  // for (i = 0; i < toc_len; i++)
+  //   logprintf("%d: type=%d text=%ls", i, toc[i].type, toc[i].text);
 
   // Tidy up and restore the environment
   unlink(tpath);
@@ -853,7 +892,6 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
                          const unsigned sc_len, const wchar_t *key,
                          const wchar_t *title, const wchar_t *ver,
                          const wchar_t *date) {
-
   // Text blocks widths
   const unsigned line_width = MAX(60, config.layout.main_width);
   const unsigned lmargin_width = config.layout.lmargin; // left margin
@@ -1428,11 +1466,6 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       if (!gzeof(gp)) {
         glen = mbstowcs(gline, tmp, BS_LINE);
         {
-          // Edge case: the tag line is a control line; ignore it
-          if (got_ctrl)
-            continue;
-        }
-        {
           // Edge case: the tag line contains only a comment or a line that must
           // otherwise be skipped; skip to next line
           while (got_comment || got_tp || got_pd) {
@@ -1445,7 +1478,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
         {
           // Edge case: the tag line starts with a formatting command that sets
           // a trap for the next line; skip to the next line
-          while (got_frmt && wmargtrim(gline, NULL) < 4) {
+          while (got_trap && wmargtrim(gline, NULL) < 4) {
             xgzgets(gp, tmp, BS_LINE);
             if (gzeof(gp))
               break;
@@ -1453,6 +1486,12 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
           }
           if (gzeof(gp))
             break;
+        }
+        {
+          // Edge case: the tag line starts with a non-acceptable command;
+          // ignore it
+          if (L'.' == gline[0] && (!got_ok))
+            continue;
         }
         textsp = wmargend(gline, NULL);
         res[en].type = TT_TAGPAR;
