@@ -1154,13 +1154,27 @@ void ctbeep() {
     cbeep();
 }
 
-void editcopy(wchar_t *src) {
-  unsigned srcs_len = 3 * wcslen(src); // Length of char* version of src
-  char *srcs = salloca(srcs_len);      // char* version of src
+void entitle(wchar_t *src) {
+  // char* version of src
+  unsigned srcs_len = 3 * wcslen(src); // length
+  char *srcs = salloca(srcs_len);      // actual string
   wcstombs(srcs, src, srcs_len);
 
-  size_t src64_len; // Base64-encoded version of src
-  char *src64 = base64_encode((unsigned char *)srcs, srcs_len, &src64_len);
+  char *seq = salloca(7 + strlen(srcs));
+  sprintf(seq, "]0;%s\07", srcs);
+  sendescseq(seq);
+}
+
+void editcopy(wchar_t *src) {
+  // char* version of src
+  unsigned srcs_len = 3 * wcslen(src); // length
+  char *srcs = salloca(srcs_len);      // actual string
+  wcstombs(srcs, src, srcs_len);
+
+  // Base64-encoded version of src
+  size_t src64_len; // length
+  char *src64 = base64_encode((unsigned char *)srcs, srcs_len,
+                              &src64_len); // actual string
 
   if (tcap.clipboard) {
     // If supported, copy using escape code 52

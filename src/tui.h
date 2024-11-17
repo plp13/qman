@@ -286,6 +286,9 @@ extern void cbeep();
 // Beep if config.layout.beep is true, and terminal size has not been changed
 extern void ctbeep();
 
+// Set the terminal window title to src
+extern void entitle(wchar_t *src);
+
 // Copy src to clipboard. This is done using the escape code 52 (which may or
 // may not be supported by the user's terminal) and also via xclip (if running
 // in X11) or wl-copy (if running in Wayland), to ensure the maximum possible

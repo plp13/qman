@@ -1775,27 +1775,32 @@ void populate_page() {
   switch (history[history_cur].request_type) {
   case RT_INDEX:
     wcscpy(page_title, L"All Manual Pages");
+    entitle(page_title);
     page_len = index_page(&page);
     break;
   case RT_MAN:
     swprintf(page_title, BS_SHORT, L"Manual page(s) for: %ls",
              history[history_cur].args);
+    entitle(page_title);
     page_len = man(&page, history[history_cur].args, false);
     break;
   case RT_MAN_LOCAL:
     swprintf(page_title, BS_SHORT, L"Manual page in local file(s): %ls",
              history[history_cur].args);
+    entitle(page_title);
     page_len = man(&page, history[history_cur].args, true);
     break;
   case RT_APROPOS:
     swprintf(page_title, BS_SHORT, L"Apropos for: %ls",
              history[history_cur].args);
+    entitle(page_title);
     page_len = aprowhat(&page, AW_APROPOS, history[history_cur].args,
                         L"APROPOS", page_title);
     break;
   case RT_WHATIS:
     swprintf(page_title, BS_SHORT, L"Whatis for: %ls",
              history[history_cur].args);
+    entitle(page_title);
     page_len = aprowhat(&page, AW_WHATIS, history[history_cur].args, L"WHATIS",
                         page_title);
     break;
