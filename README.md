@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.1.0
+Version 1.1.0 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -61,6 +61,23 @@ All basic functionality has been completed. The software has been in use for
 over a year now, and should considered stable. Bugs may still arise, of course,
 and should be reported using the [issues](https://github.com/plp13/qman/issues)
 page.
+
+## New in this version
+- Improved incremental search: it's now possible to select manual pages using
+  the keyboard and mouse
+- The terminal window title is now set to the current page title
+- Table of contents and internal links functionality have been reworked, and
+  should now be more robust
+- New configuration options: history_text, history_text_f, toc_text, toc_text_f,
+  escdelay
+
+> **:bulb: Note**
+>
+> Users using custom config files might want to update them to include the
+> aforementioned config options. Please refer to the manual page, and to:
+> [modernity.conf](https://github.com/plp13/qman/blob/main/config/modernity.conf)
+> and [modernity_gui.conf](https://github.com/plp13/qman/blob/main/config/modernity_gui.conf)
+> for more info.
 
 ## Downloading
 Clone the [main](https://github.com/plp13/qman/tree/main) branch, which contains
