@@ -68,6 +68,7 @@ page.
 - The terminal window title is now set to the current page title
 - Table of contents and internal links functionality have been reworked, and
   should now be more robust
+- Removed delay after hitting the ESC key
 - New configuration options: history_text, history_text_f, toc_text, toc_text_f,
   escdelay
 
