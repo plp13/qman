@@ -20,6 +20,7 @@ Test against the following terminal emulators:
 - alacritty
 - kitty
 - st
+- ghostty
 
 ## Configuration files
 
