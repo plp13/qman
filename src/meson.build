@@ -1,9 +1,3 @@
-# Project declaration
-project('qman', 'c',
-  license: 'BSD-2-Clause',
-  version: '1.1.0'
-)
-
 # Configuration subsystem sources (generated from config_def.py using cog)
 cog = find_program('cogapp', 'cog')
 cog_cmd = [cog, '-d', '-o', '@OUTPUT@', '@INPUT@']
@@ -39,15 +33,4 @@ executable('qman',
   dependencies: deps,
   install: true,
   install_dir: 'bin'
-)
-
-# Manual page
-pandoc = find_program('pandoc')
-pandoc_cmd = [pandoc, '@INPUT@', '-s', '-t', 'man', '-o', '@OUTPUT@']
-custom_target('manpage',
-  input: 'qman.1.md',
-  output: 'qman.1',
-  command: pandoc_cmd,
-  install: true,
-  install_dir: 'man/man1'
 )
