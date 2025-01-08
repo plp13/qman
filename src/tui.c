@@ -492,6 +492,9 @@ void init_tui_mouse() {
 }
 
 void sendescseq(char *s) {
+  if (! config.layout.tui)
+    return;
+  
   putchar('\033');
 
   unsigned i = 0;
