@@ -6,25 +6,25 @@ Version 1.1.0 -- [see what's new](#new-in-this-version)
 ## Screenshots
 
 Index page:
-![Index Page](/screenshots/qman_index.png)
+![Index Page](/docs/screenshots/qman_index.png)
 
 Opening a manual page:
-![Opening a Manual Page](/screenshots/qman_open.png)
+![Opening a Manual Page](/docs/screenshots/qman_open.png)
 
 Viewing a manual page:
-![Viewing a Manual Page](/screenshots/qman_man.png)
+![Viewing a Manual Page](/docs/screenshots/qman_man.png)
 
 Using the table of contents:
-![Searching incrementally](/screenshots/qman_toc.png)
+![Searching incrementally](/docs/screenshots/qman_toc.png)
 
 Searching incrementally:
-![Searching incrementally](/screenshots/qman_search.png)
+![Searching incrementally](/docs/screenshots/qman_search.png)
 
 Performing apropos:
-![Performing Apropos](/screenshots/qman_apropos.png)
+![Performing Apropos](/docs/screenshots/qman_apropos.png)
 
 Online help:
-![On-line Help](/screenshots/qman_help.png)
+![On-line Help](/docs/screenshots/qman_help.png)
 
 ## Rationale
 Linux manual pages are lovely. They are concise, well-written, complete, and
@@ -185,7 +185,7 @@ operating systems and distros:
 Make sure all of the above dependencies are installed, and do the following:
 
 ```
-$ meson setup build/ src/
+$ meson setup build/
 $ cd build/
 $ meson compile
 $ sudo meson install
