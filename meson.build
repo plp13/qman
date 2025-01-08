@@ -1,3 +1,4 @@
+# Master build file
 
 # Project declaration
 project('qman', 'c',
@@ -7,4 +8,3 @@ project('qman', 'c',
 
 subdir('src')
 subdir('docs')
-

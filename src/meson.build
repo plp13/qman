@@ -1,3 +1,5 @@
+# Executable build file
+
 # Configuration subsystem sources (generated from config_def.py using cog)
 cog = find_program('cogapp', 'cog')
 cog_cmd = [cog, '-d', '-o', '@OUTPUT@', '@INPUT@']

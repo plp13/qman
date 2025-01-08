@@ -1,4 +1,6 @@
+# Documentation build file
 
+# Manual page
 pandoc = find_program('pandoc')
 pandoc_cmd = [pandoc, '@INPUT@', '-s', '-t', 'man', '-o', '@OUTPUT@']
 custom_target('manpage',
@@ -8,4 +10,3 @@ custom_target('manpage',
   install: true,
   install_dir: 'man/man1'
 )
-
