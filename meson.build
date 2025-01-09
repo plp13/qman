@@ -7,4 +7,24 @@ project('qman', 'c',
 )
 
 subdir('src')
-subdir('docs')
+subdir('man')
+
+# README.md
+custom_target('readme_md',
+  input: 'README.md',
+  output: 'README.md',
+  command: ['cp', '@INPUT@', '@OUTPUT@'],
+  install: true,
+  install_dir: 'share/doc/qman',
+  install_tag: 'docs'
+)
+
+# TESTING.md
+custom_target('testing_md',
+  input: 'TESTING.md',
+  output: 'TESTING.md',
+  command: ['cp', '@INPUT@', '@OUTPUT@'],
+  install: true,
+  install_dir: 'share/doc/qman',
+  install_tag: 'docs'
+)

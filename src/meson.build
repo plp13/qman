@@ -34,5 +34,6 @@ executable('qman',
   sources: src,
   dependencies: deps,
   install: true,
-  install_dir: 'bin'
+  install_dir: 'bin',
+  install_tag: 'program'
 )
