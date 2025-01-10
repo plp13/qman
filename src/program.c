@@ -545,7 +545,7 @@ int parse_options(int argc, char *const *argv) {
   // Parse the options and modify config and history
   while (true) {
     int cur_i;
-    char cur = getopt_long(argc, argv, optstring, longopts, &cur_i);
+    int cur = getopt_long(argc, argv, optstring, longopts, &cur_i);
     switch (cur) {
     case -1:
       free(longopts);
