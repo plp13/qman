@@ -72,8 +72,8 @@ page.
 
 > **:bulb: Note**
 >
-> Users using custom config files might want to update them to include the
-> aforementioned config options. Please refer to the manual page, and to:
+> Users using custom config files might need to update them when a new version
+> version of Qman comes out. Please refer to the manual page,
 > [modernity.conf](https://github.com/plp13/qman/blob/main/config/modernity.conf)
 > and [modernity_gui.conf](https://github.com/plp13/qman/blob/main/config/modernity_gui.conf)
 > for more info.
