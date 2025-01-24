@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.1.0 -- [see what's new](#new-in-this-version)
+Version 1.2.0 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -63,19 +63,17 @@ and should be reported using the [issues](https://github.com/plp13/qman/issues)
 page.
 
 ## New in this version
-- Improved incremental search: it's now possible to select manual pages using
-  the keyboard and mouse
-- The terminal window title is now set to the current page title
-- Table of contents and internal links functionality have been reworked, and
-  should now be more robust
-- Removed delay after hitting the ESC key
-- New configuration options: history_text, history_text_f, toc_text, toc_text_f,
-  escdelay
+- Fixed issue #6: hang on AArch64
+- The build system has been re-worked and made more modular
+- Installation of the manual page and other documentation can now be skipped or
+  performed separately
+- The compiled manual page is now distributed with the source. This removes
+  `pandoc` as a build dependency.
 
 > **:bulb: Note**
 >
-> Users using custom config files might want to update them to include the
-> aforementioned config options. Please refer to the manual page, and to:
+> Users using custom config files might need to update them when a new version
+> version of Qman comes out. Please refer to the manual page,
 > [modernity.conf](https://github.com/plp13/qman/blob/main/config/modernity.conf)
 > and [modernity_gui.conf](https://github.com/plp13/qman/blob/main/config/modernity_gui.conf)
 > for more info.
@@ -98,14 +96,7 @@ $ git clone -b devel https://github.com/plp13/qman qman
 ## Dependencies
 Qman is written in plain C, and thus requires a compiler such as `gcc` or
 `clang`. Its only library dependencies are `glibc`, `ncurses`, `hinit`, and
-`zlib`. It uses the `meson` build system. Its manual page is written in
-Markdown, and is compiled using `pandoc`.
-
-> **:warning: Warning**
->
-> `pandoc` is written in Haskell and requires installing a large number of
-> dependencies. These are only necessary for compiling Qman's manual page, and
-> can be removed after building.
+`zlib`. It uses the `meson` build system.
 
 The program is a front-end to GNU `man`, and therefore requires `man` and
 `groff` to be installed. In order for it to make sense, a Unix manual pages
@@ -117,13 +108,13 @@ operating systems and distros:
 ### Arch Linux
 ```
   # pacman -Sy
-  # pacman -S base-devel git meson libinih python-cogapp pandoc man-db man-pages
+  # pacman -S base-devel git meson libinih python-cogapp man-db man-pages
 ```
 
 ### Debian 12
 ```
   # apt update
-  # apt install build-essential git meson pkg-config libncurses-dev libinih-dev pipx pandoc man-db
+  # apt install build-essential git meson pkg-config libncurses-dev libinih-dev pipx man-db
   $ pipx install cogapp
 ```
 
@@ -136,7 +127,7 @@ operating systems and distros:
 ### Debian 11
 ```
   # apt update
-  # apt install build-essential git meson pkg-config libncurses-dev libinih-dev python3-pip pandoc man-db
+  # apt install build-essential git meson pkg-config libncurses-dev libinih-dev python3-pip man-db
   # pip install cogapp
 ```
 
@@ -145,7 +136,7 @@ operating systems and distros:
   # dnf install epel-release
   # dnf update
   # dnf group install "Development Tools"
-  # dnf install man-db man-pages ncurses-devel python3-pip pandoc
+  # dnf install man-db man-pages ncurses-devel python3-pip
   # dnf --enablerepo devel install meson inih-devel
   # pip install cogapp
 ```
@@ -160,7 +151,7 @@ operating systems and distros:
   # dnf update
   # dnf group install "Development Tools"
   # dnf install man-db man-pages ncurses-devel python3-pip inih-devel
-  # dnf --enablerepo devel install meson pandoc
+  # dnf --enablerepo devel install meson
   # pip3 install cogapp
 ```
 
@@ -171,13 +162,13 @@ operating systems and distros:
 ### Ubuntu 24.04
 ```
   # apt update
-  # apt install build-essential git meson cmake pkg-config libncurses-dev libinih-dev python3-cogapp pandoc man-db
+  # apt install build-essential git meson cmake pkg-config libncurses-dev libinih-dev python3-cogapp man-db
 ```
 
 ### Ubuntu 22.04 and 20.04
 ```
   # apt update
-  # apt install build-essential git meson cmake pkg-config libncurses-dev libinih-dev python3-pip pandoc man-db
+  # apt install build-essential git meson cmake pkg-config libncurses-dev libinih-dev python3-pip man-db
   # pip install cogapp
 ```
 
@@ -185,7 +176,7 @@ operating systems and distros:
 Make sure all of the above dependencies are installed, and do the following:
 
 ```
-$ meson setup build/ src/
+$ meson setup build/
 $ cd build/
 $ meson compile
 $ sudo meson install
