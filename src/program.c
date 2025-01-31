@@ -375,13 +375,18 @@ bool section_header_level(line_t *line) {
 // Helper of man_toc(). Massage text member of every entry in toc (of size
 // toc_len) with the groff command, in order to remove escaped characters, etc.
 void tocgroff(toc_entry_t *toc, unsigned toc_len) {
-  char *tpath;               // temporary file path
+  char tpath[TPATH_MAX_LEN]; // temporary file path
   char cmdstr[BS_LINE] = ""; // groff 'massage' command
   char texts[BS_LINE];       // 8-bit version of current toc text
   unsigned i;                // iterator
 
+
   // Prepare tpath and cmdstr
-  tpath = tempnam(NULL, "qman");
+  char *tmpdir = getenv("TMPDIR");
+  if (!tmpdir) {
+    tmpdir = "/tmp";
+  }
+  snprintf(tpath, sizeof(tpath), "%s/qmanXXXXXX", tmpdir);
   snprintf(cmdstr, BS_LINE, "%s -man -rLL=1024m -Tutf8 %s 2>>/dev/null",
            config.misc.groff_path, tpath);
 
@@ -421,21 +426,25 @@ void tocgroff(toc_entry_t *toc, unsigned toc_len) {
   //   logprintf("%d: type=%d text=%ls", i, toc[i].type, toc[i].text);
 
   // Tidy up and restore the environment
+  free(tmpdir);
   unlink(tpath);
-  free(tpath);
 }
 
 // Helper of man_sections(). Massage every entry in sections (of size
 // sections_len) with the groff command, in order to remove escaped characters,
 // etc.
 void secgroff(wchar_t **sections, unsigned sections_len) {
-  char *tpath;               // temporary file path
+  char tpath[TPATH_MAX_LEN]; // temporary file path
   char cmdstr[BS_LINE] = ""; // groff 'massage' command
   char texts[BS_LINE];       // 8-bit version of current toc text
   unsigned i;                // iterator
 
   // Prepare tpath and cmdstr
-  tpath = tempnam(NULL, "qman");
+  char *tmpdir = getenv("TMPDIR");
+  if (!tmpdir) {
+    tmpdir = "/tmp";
+  }
+  snprintf(tpath, sizeof(tpath), "%s/qmanXXXXXX", tmpdir);
   snprintf(cmdstr, BS_LINE, "%s -man -rLL=1024m -Tutf8 %s 2>>/dev/null",
            config.misc.groff_path, tpath);
 
@@ -470,8 +479,8 @@ void secgroff(wchar_t **sections, unsigned sections_len) {
   xpclose(pp);
 
   // Tidy up and restore the environment
+  free(tmpdir);
   unlink(tpath);
-  free(tpath);
 }
 
 //

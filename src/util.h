@@ -40,6 +40,7 @@ typedef struct {
 // Buffer sizes
 #define BS_SHORT 128 // length of a short array
 #define BS_LINE 1024 // length of an array that is suitable for a line of text
+#define TPATH_MAX_LEN 512 // max length of a temporary path (must account for appearance in BS_LINE cutoff in commands)
 
 // Rudimentary logging, used for debugging
 #define F_LOG "./qman.log" // log file
