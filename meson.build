@@ -16,7 +16,7 @@ custom_target('readme_md',
   command: ['cp', '@INPUT@', '@OUTPUT@'],
   install: true,
   install_dir: 'share/doc/qman',
-  install_tag: 'docs'
+  install_tag: 'doc'
 )
 
 # TESTING.md
@@ -26,5 +26,5 @@ custom_target('testing_md',
   command: ['cp', '@INPUT@', '@OUTPUT@'],
   install: true,
   install_dir: 'share/doc/qman',
-  install_tag: 'docs'
+  install_tag: 'doc'
 )

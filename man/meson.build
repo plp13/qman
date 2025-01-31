@@ -7,5 +7,5 @@ custom_target('manpage',
   command: ['cp', '@INPUT@', '@OUTPUT@'],
   install: true,
   install_dir: 'man/man1',
-  install_tag: 'docs'
+  install_tag: 'doc'
 )
