@@ -1,5 +1,17 @@
 option('docdir',
-  type : 'string',
-  value : 'share/doc/qman',
+  type: 'string',
+  value: 'share/doc/qman',
   description : 'directory for documentation files'
+)
+
+option('man-pages',
+  type: 'feature',
+  value: 'auto',
+  description: 'install manpage'
+)
+
+option('docs',
+  type: 'feature',
+  value: 'auto',
+  description: 'install extra documentation'
 )

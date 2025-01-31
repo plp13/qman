@@ -10,8 +10,10 @@ subdir('src')
 subdir('man')
 
 # Documentation files
-install_data(
-  ['README.md', 'TESTING.md'],
-  install_dir: get_option('docdir'),
-  install_tag: 'doc'
-)
+if get_option('docs').allowed()
+  install_data(
+    ['README.md', 'TESTING.md'],
+    install_dir: get_option('docdir'),
+    install_tag: 'doc'
+  )
+endif
