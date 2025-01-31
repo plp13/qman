@@ -9,22 +9,9 @@ project('qman', 'c',
 subdir('src')
 subdir('man')
 
-# README.md
-custom_target('readme_md',
-  input: 'README.md',
-  output: 'README.md',
-  command: ['cp', '@INPUT@', '@OUTPUT@'],
-  install: true,
-  install_dir: 'share/doc/qman',
-  install_tag: 'doc'
-)
-
-# TESTING.md
-custom_target('testing_md',
-  input: 'TESTING.md',
-  output: 'TESTING.md',
-  command: ['cp', '@INPUT@', '@OUTPUT@'],
-  install: true,
-  install_dir: 'share/doc/qman',
+# Documentation files
+install_data(
+  ['README.md', 'TESTING.md'],
+  install_dir: get_option('docdir'),
   install_tag: 'doc'
 )

@@ -1,0 +1,5 @@
+option('docdir',
+  type : 'string',
+  value : 'share/doc/qman',
+  description : 'directory for documentation files'
+)
