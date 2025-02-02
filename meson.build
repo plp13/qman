@@ -6,10 +6,13 @@ project('qman', 'c',
   version: '1.2.0'
 )
 
+# Executable
 subdir('src')
+
+# Manual page
 subdir('man')
 
-# Documentation files
+# Additional documentation
 if get_option('docs').allowed()
   install_data(
     ['README.md', 'TESTING.md'],
