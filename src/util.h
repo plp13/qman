@@ -185,7 +185,8 @@ extern wchar_t *xwcsdup(const wchar_t *s);
 extern void xsystem(const char *cmd, bool fail);
 
 // A safe version of tempnam(), that also creates the temporary file whose name
-// it returns to avoid race conditions
+// it returns, avoiding potential race conditions. Unlike with tempnam(), pfx
+// can be more than 5 characters long, however it cannot contain an 'X'.
 extern char *xtempnam(const char *dir, const char *pfx);
 
 // Return the value of environment variable name as an integer. Return 0 in case

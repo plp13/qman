@@ -240,6 +240,11 @@ char *xtempnam(const char *dir, const char *pfx) {
     errno = ENOMEM;
     return NULL;
   }
+  for (unsigned i = 0; i < strlen(pfx); i++)
+    if ('X' == pfx[i]) {
+      errno = ENOMEM;
+      return NULL;
+    }
   if (strlen(dir) + strlen(pfx) + 2 > BS_SHORT) {
     errno = ENOMEM;
     return NULL;
