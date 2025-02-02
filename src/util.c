@@ -233,6 +233,8 @@ char *xtempnam(const char *dir, const char *pfx) {
   char *fn;
   int fd;
 
+  if (NULL != getenv("TMPDIR"))
+    dir = getenv("TMPDIR");
   if (NULL == dir)
     dir = P_tmpdir;
 
