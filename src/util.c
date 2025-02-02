@@ -229,6 +229,33 @@ void xsystem(const char *cmd, bool fail) {
   }
 }
 
+char *xtempnam(const char *dir, const char *pfx) {
+  char *fn;
+  int fd;
+
+  if (NULL == dir)
+    dir = P_tmpdir;
+
+  if (NULL == pfx) {
+    errno = ENOMEM;
+    return NULL;
+  }
+  if (strlen(dir) + strlen(pfx) + 2 > BS_SHORT) {
+    errno = ENOMEM;
+    return NULL;
+  }
+
+  fn = salloc(BS_SHORT);
+  snprintf(fn, BS_SHORT, "%s/%sXXXXXX", dir, pfx);
+
+  fd = mkstemp(fn);
+  if (-1 == fd)
+    return NULL;
+  close(fd);
+
+  return fn;
+}
+
 int getenvi(const char *name) {
   const char *const val = getenv(name);
 

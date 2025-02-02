@@ -381,7 +381,7 @@ void tocgroff(toc_entry_t *toc, unsigned toc_len) {
   unsigned i;                // iterator
 
   // Prepare tpath and cmdstr
-  tpath = tempnam(NULL, "qman");
+  tpath = xtempnam(NULL, "qman");
   snprintf(cmdstr, BS_LINE, "%s -man -rLL=1024m -Tutf8 %s 2>>/dev/null",
            config.misc.groff_path, tpath);
 
@@ -435,7 +435,7 @@ void secgroff(wchar_t **sections, unsigned sections_len) {
   unsigned i;                // iterator
 
   // Prepare tpath and cmdstr
-  tpath = tempnam(NULL, "qman");
+  tpath = xtempnam(NULL, "qman");
   snprintf(cmdstr, BS_LINE, "%s -man -rLL=1024m -Tutf8 %s 2>>/dev/null",
            config.misc.groff_path, tpath);
 
