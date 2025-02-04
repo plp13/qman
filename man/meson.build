@@ -1,11 +1,6 @@
 # Manual page build file
 
 # Manual page
-custom_target('manpage',
-  input: 'qman.1',
-  output: 'qman.1',
-  command: ['cp', '@INPUT@', '@OUTPUT@'],
-  install: true,
-  install_dir: 'man/man1',
-  install_tag: 'docs'
-)
+if get_option('man-pages').enabled() or get_option('man-pages').auto()
+  install_man('qman.1')
+endif

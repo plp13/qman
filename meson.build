@@ -3,28 +3,20 @@
 # Project declaration
 project('qman', 'c',
   license: 'BSD-2-Clause',
-  version: '1.2.0'
+  version: '1.2.1'
 )
 
+# Executable
 subdir('src')
+
+# Manual page
 subdir('man')
 
-# README.md
-custom_target('readme_md',
-  input: 'README.md',
-  output: 'README.md',
-  command: ['cp', '@INPUT@', '@OUTPUT@'],
-  install: true,
-  install_dir: 'share/doc/qman',
-  install_tag: 'docs'
-)
-
-# TESTING.md
-custom_target('testing_md',
-  input: 'TESTING.md',
-  output: 'TESTING.md',
-  command: ['cp', '@INPUT@', '@OUTPUT@'],
-  install: true,
-  install_dir: 'share/doc/qman',
-  install_tag: 'docs'
-)
+# Additional documentation
+if get_option('docs').enabled() or get_option('docs').auto()
+  install_data(
+    ['README.md', 'TESTING.md'],
+    install_dir: get_option('docdir'),
+    install_tag: 'doc'
+  )
+endif

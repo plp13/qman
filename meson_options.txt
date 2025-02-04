@@ -1,0 +1,19 @@
+# Meson options
+
+option('docdir',
+  type: 'string',
+  value: 'share/doc/qman',
+  description : 'Location of additional documentation'
+)
+
+option('man-pages',
+  type: 'feature',
+  value: 'auto',
+  description: 'Install manual page'
+)
+
+option('docs',
+  type: 'feature',
+  value: 'auto',
+  description: 'Install additional documentation'
+)

@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.2.0 -- [see what's new](#new-in-this-version)
+Version 1.2.1 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -63,12 +63,8 @@ and should be reported using the [issues](https://github.com/plp13/qman/issues)
 page.
 
 ## New in this version
-- Fixed issue #6: hang on AArch64
-- The build system has been re-worked and made more modular
-- Installation of the manual page and other documentation can now be skipped or
-  performed separately
-- The compiled manual page is now distributed with the source. This removes
-  `pandoc` as a build dependency.
+- Fixed `tempnam()` compiler warning
+- The build system has been further re-worked
 
 > **:bulb: Note**
 >
