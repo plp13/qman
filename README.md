@@ -68,12 +68,6 @@ page.
 
 > **:bulb: Note**
 >
-> From this version onward, installing the manual page and other documentation
-> is optional. As a consequence, the instructions for building and installing
-> Qman [have been amended](#building-and-installing).
-
-> **:bulb: Note**
->
 > Users using custom config files might need to update them when a new version
 > version of Qman comes out. Please refer to the manual page,
 > [modernity.conf](https://github.com/plp13/qman/blob/main/config/modernity.conf)
@@ -180,8 +174,6 @@ Make sure all of the above dependencies are installed, and do the following:
 ```
 $ meson setup build/
 $ cd build/
-$ # The line below is needed for installing the man page and docs
-$ meson configure -Ddocs=enabled -Dman-pages=enabled
 $ meson compile
 $ sudo meson install
 ```

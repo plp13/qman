@@ -13,7 +13,7 @@ subdir('src')
 subdir('man')
 
 # Additional documentation
-if get_option('docs').enabled()
+if get_option('docs').enabled() or get_option('docs').auto()
   install_data(
     ['README.md', 'TESTING.md'],
     install_dir: get_option('docdir'),
