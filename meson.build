@@ -3,7 +3,7 @@
 # Project declaration
 project('qman', 'c',
   license: 'BSD-2-Clause',
-  version: run_command('git', 'describe', '--tags', '--abbrev', check: true).stdout().strip()
+  version: '1.2.1'
 )
 
 # Executable
