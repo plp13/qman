@@ -297,6 +297,9 @@ extern int parse_options(int argc, char *const *argv);
 // history appropriately. Exit in case of usage error.
 extern void parse_args(int argc, char *const *argv);
 
+// Print program version
+extern void version();
+
 // Print usage information
 extern void usage();
 

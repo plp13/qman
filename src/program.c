@@ -30,6 +30,7 @@ option_t options[] = {
      OA_NONE, true},
     {"config-path", 'C', L"Use ARG as the configuration file path", OA_REQUIRED,
      true},
+    {"version", 'v', L"Print program version", OA_NONE, true},
     {"help", 'h', L"Display this help message", OA_NONE, true},
     {0, 0, 0, 0, false}};
 
@@ -586,6 +587,12 @@ int parse_options(int argc, char *const *argv) {
         free(config.misc.config_path);
       config.misc.config_path = xstrdup(optarg);
       break;
+    case 'v':
+      // -v or --version was passed; print program version and exit
+      version();
+      free(longopts);
+      winddown(ES_SUCCESS, NULL);
+      break;
     case 'h':
       // -h or --help was passed; print usage and exit
       usage();
@@ -672,6 +679,8 @@ void parse_args(int argc, char *const *argv) {
     history_replace(history[history_cur].request_type, tmp);
   }
 }
+
+void version() { wprintf(L"%ls\n", config.misc.program_version); }
 
 void usage() {
   // Header
