@@ -26,10 +26,14 @@ src = [
   'qman.c'
 ]
 deps = [
-  dependency('zlib'),
   dependency('ncursesw'),
-  dependency('inih')
+  dependency('inih'),
+  dependency('zlib')
 ]
+if get_option('bzip2').enabled() or get_option('bzip2').auto()
+  add_global_arguments('-DQMAN_BZIP2=true', language : 'c')
+  deps += [dependency('bzip2')]
+endif
 executable('qman',
   sources: src,
   dependencies: deps,

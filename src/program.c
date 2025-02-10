@@ -1137,11 +1137,11 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
   xpclose(pp);
 
   // Open gpath
-  gzFile gp = xgzopen(gpath, "rb");
+  archive_t gp = aropen(gpath);
 
   // For each line in gpath, gline...
-  xgzgets(gp, tmp, BS_LINE);
-  while (!gzeof(gp)) {
+  argets(gp, tmp, BS_LINE);
+  while (!areof(gp)) {
     glen = mbstowcs(gline, tmp, BS_LINE);
 
     if (-1 == glen)
@@ -1159,10 +1159,10 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
       }
     }
 
-    xgzgets(gp, tmp, BS_LINE);
+    argets(gp, tmp, BS_LINE);
   }
 
-  xgzclose(gp);
+  arclose(gp);
 
   secgroff(res, en);
   *dst = res;
@@ -1437,11 +1437,11 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   xpclose(pp);
 
   // Open gpath
-  gzFile gp = xgzopen(gpath, "rb");
+  archive_t gp = aropen(gpath);
 
   // For each line in gpath, gline...
-  xgzgets(gp, tmp, BS_LINE);
-  while (!gzeof(gp)) {
+  argets(gp, tmp, BS_LINE);
+  while (!areof(gp)) {
     glen = mbstowcs(gline, tmp, BS_LINE);
 
     if (-1 == glen)
@@ -1471,15 +1471,15 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       }
     } else if (got_tp && sh_seen) {
       // Tagged paragraph
-      xgzgets(gp, tmp, BS_LINE);
-      if (!gzeof(gp)) {
+      argets(gp, tmp, BS_LINE);
+      if (!areof(gp)) {
         glen = mbstowcs(gline, tmp, BS_LINE);
         {
           // Edge case: the tag line contains only a comment or a line that must
           // otherwise be skipped; skip to next line
           while (got_comment || got_tp || got_pd) {
-            xgzgets(gp, tmp, BS_LINE);
-            if (gzeof(gp))
+            argets(gp, tmp, BS_LINE);
+            if (areof(gp))
               break;
             glen = mbstowcs(gline, tmp, BS_LINE);
           }
@@ -1488,12 +1488,12 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
           // Edge case: the tag line starts with a formatting command that sets
           // a trap for the next line; skip to the next line
           while (got_trap && wmargtrim(gline, NULL) < 4) {
-            xgzgets(gp, tmp, BS_LINE);
-            if (gzeof(gp))
+            argets(gp, tmp, BS_LINE);
+            if (areof(gp))
               break;
             glen = mbstowcs(gline, tmp, BS_LINE);
           }
-          if (gzeof(gp))
+          if (areof(gp))
             break;
         }
         {
@@ -1522,10 +1522,10 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       }
     }
 
-    xgzgets(gp, tmp, BS_LINE);
+    argets(gp, tmp, BS_LINE);
   }
 
-  xgzclose(gp);
+  arclose(gp);
 
   // Uncomment the following to log output into qman.log for debugging
   // logprintf("man_toc()");

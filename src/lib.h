@@ -26,6 +26,10 @@
 #undef lines
 #include <ini.h>
 
+#ifdef QMAN_BZIP2
+#include <bzlib.h>
+#endif
+
 #define _GNU_SOURCE
 extern char *program_invocation_short_name;
 #undef _GNU_SOURCE

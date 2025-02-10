@@ -238,27 +238,22 @@ char *xtempnam(const char *dir, const char *pfx) {
   if (NULL == dir)
     dir = P_tmpdir;
 
-  if (NULL == pfx) {
-    errno = ENOMEM;
-    return NULL;
-  }
+  if (NULL == pfx)
+    winddown(ES_OPER_ERROR, L"Unable to xtempnam(): prefix is NULL");
   for (unsigned i = 0; i < strlen(pfx); i++)
-    if ('X' == pfx[i]) {
-      errno = ENOMEM;
-      return NULL;
-    }
-  if (strlen(dir) + strlen(pfx) + 2 > BS_SHORT) {
-    errno = ENOMEM;
-    return NULL;
-  }
+    if ('X' == pfx[i])
+      winddown(ES_OPER_ERROR, L"Unable to xtempnam(): prefix contains 'X'");
+  if (strlen(dir) + strlen(pfx) + 2 > BS_SHORT)
+    winddown(ES_OPER_ERROR, L"Unable to xtempnam(): prefix too long");
 
   fn = salloc(BS_SHORT);
   snprintf(fn, BS_SHORT, "%s/%sXXXXXX", dir, pfx);
 
   fd = mkstemp(fn);
   if (-1 == fd)
-    return NULL;
-  close(fd);
+    winddown(ES_OPER_ERROR, L"Unable to xtempnam(): mkstemp() failed");
+  if (-1 == close(fd))
+    winddown(ES_OPER_ERROR, L"Unable to xtempnam(): close() failed");
 
   return fn;
 }
@@ -298,6 +293,131 @@ void bclearall(bitarr_t ba, unsigned ba_len) {
 
   for (unsigned i = 0; i < ba_bytes; i++)
     ba[i] = 0;
+}
+
+char *bz2_decompress(const char *bzpath) {
+#ifdef QMAN_BZIP2
+  char *path;        // Decompressed file pathname
+  FILE *fp;          // Decompressed file pointer
+  BZFILE *bzhand;    // Compressed file handle
+  FILE *bzfp;        // Compressed file pointer
+  int bzerror;       // Used for BZ2 library error reporting
+  char buf[BS_LINE]; // Data buffer
+  int len;           // Bytes written into data buffer
+
+  bzfp = xfopen(bzpath, "r");
+  bzhand = BZ2_bzReadOpen(&bzerror, bzfp, 0, 0, NULL, 0);
+  if (BZ_OK != bzerror) {
+    winddown(ES_OPER_ERROR,
+             L"Unable to bz2_decompress(): BZ2_bzReadOpen() failed");
+  }
+
+  path = xtempnam(NULL, "qman");
+  fp = xfopen(path, "w");
+
+  while (true) {
+    len = BZ2_bzRead(&bzerror, bzhand, buf, BS_LINE);
+    if (BZ_OK == bzerror)
+      xfwrite(buf, len, 1, fp);
+    else if (BZ_STREAM_END == bzerror) {
+      xfwrite(buf, len, 1, fp);
+      break;
+    } else
+      winddown(ES_OPER_ERROR,
+               L"Unable to decompress Bzip2 archive: BZ2Read() failed");
+  }
+
+  BZ2_bzReadClose(&bzerror, bzhand);
+  if (BZ_OK != bzerror) {
+    winddown(ES_OPER_ERROR,
+             L"Unable to decompress Bzip2 archive: BZ2_bzReadClose() failed");
+  }
+  xfclose(bzfp);
+  xfclose(fp);
+
+  return path;
+#else
+  winddown(ES_OPER_ERROR, L"Bzip2 archives are not supported");
+  return NULL;
+#endif
+}
+
+archive_t aropen(const char *pathname) {
+  archive_t a;
+  char *pathext = strrchr(pathname, '.');
+
+  if (NULL == pathext)
+    a.type = AR_NONE;
+  else if (0 == strcasecmp(".bz2", pathext))
+    a.type = AR_BZIP2;
+  else if (0 == strcasecmp(".gz", pathext))
+    a.type = AR_GZIP;
+  else
+    a.type = AR_NONE;
+
+  switch (a.type) {
+  case AR_BZIP2:
+    a.path = bz2_decompress(pathname);
+    a.fp_bzip2 = xfopen(a.path, "r");
+    break;
+  case AR_GZIP:
+    a.path = xstrdup(pathname);
+    a.fp_gzip = xgzopen(a.path, "rb");
+    break;
+  case AR_NONE:
+  default:
+    a.path = xstrdup(pathname);
+    a.fp_none = xfopen(a.path, "r");
+    break;
+  }
+
+  return a;
+}
+
+void argets(archive_t ap, char *buf, int len) {
+  switch (ap.type) {
+  case AR_BZIP2:
+    xfgets(buf, len, ap.fp_bzip2);
+    break;
+  case AR_GZIP:
+    xgzgets(ap.fp_gzip, buf, len);
+    break;
+  case AR_NONE:
+  default:
+    xfgets(buf, len, ap.fp_none);
+  }
+}
+
+bool areof(archive_t ap) {
+  switch (ap.type) {
+  case AR_BZIP2:
+    return feof(ap.fp_bzip2);
+    break;
+  case AR_GZIP:
+    return gzeof(ap.fp_gzip);
+    break;
+  case AR_NONE:
+  default:
+    return feof(ap.fp_none);
+  }
+}
+
+void arclose(archive_t ap) {
+  switch (ap.type) {
+  case AR_BZIP2:
+    xfclose(ap.fp_bzip2);
+    unlink(ap.path);
+    break;
+  case AR_GZIP:
+    xgzclose(ap.fp_gzip);
+    break;
+  case AR_NONE:
+  default:
+    xfclose(ap.fp_none);
+    break;
+  }
+
+  free(ap.path);
 }
 
 void wafree(wchar_t **buf, unsigned buf_len) {
