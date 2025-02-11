@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.2.1-11-gd38ba8c -- [see what's new](#new-in-this-version)
+Version 1.2.1-12-gd694d51 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -82,91 +82,21 @@ Qman's latest stable version:
 $ git clone -b main https://github.com/plp13/qman qman
 ```
 
-If you wish to contribute to the program's development, clone the
-[devel](https://github.com/plp13/qman/tree/devel) branch.
-
-```
-$ git clone -b devel https://github.com/plp13/qman qman
-```
-
 ## Dependencies
 Qman is written in plain C, and thus requires a compiler such as `gcc` or
-`clang`. Its only library dependencies are `glibc`, `ncurses`, `hinit`, and
-`zlib`. It uses the `meson` build system.
+`clang`. Its only required library dependencies are `glibc`, `ncurses`, `hinit`,
+and `zlib`. It uses the `meson` build system.
 
-The program is a front-end to GNU `man`, and therefore requires `man` and
+There is also an optional library dependency:
+- `bzip2` -- support for manual pages compressed with `bzip2`
+
+Note that Qman is a front-end to GNU `man`, and therefore requires `man` and
 `groff` to be installed. In order for it to make sense, a Unix manual pages
 database must also be present.
 
-The following commands should install all necessary dependencies for different
-operating systems and distros:
-
-### Arch Linux
-```
-  # pacman -Sy
-  # pacman -S base-devel git meson libinih python-cogapp man-db man-pages
-```
-
-### Debian 12
-```
-  # apt update
-  # apt install build-essential git meson pkg-config libncurses-dev libinih-dev pipx man-db
-  $ pipx install cogapp
-```
-
-> **:bulb: Note**
->
-> By default, `pipx` will install the `cog` executable in `~/.local/bin`. You
-> will have to add this directory to your path before proceeding with
-> `meson setup`.
-
-### Debian 11
-```
-  # apt update
-  # apt install build-essential git meson pkg-config libncurses-dev libinih-dev python3-pip man-db
-  # pip install cogapp
-```
-
-### Rocky Linux 9
-```
-  # dnf install epel-release
-  # dnf update
-  # dnf group install "Development Tools"
-  # dnf install man-db man-pages ncurses-devel python3-pip
-  # dnf --enablerepo devel install meson inih-devel
-  # pip install cogapp
-```
-
-> **:bulb: Note**
->
-> These steps should also work with Red Hat Enterprise Linux 9 and AlmaLinux 9.
-
-### Rocky Linux 8
-```
-  # dnf install epel-release
-  # dnf update
-  # dnf group install "Development Tools"
-  # dnf install man-db man-pages ncurses-devel python3-pip inih-devel
-  # dnf --enablerepo devel install meson
-  # pip3 install cogapp
-```
-
-> **:bulb: Note**
->
-> These steps should also work with Red Hat Enterprise Linux 9 and AlmaLinux 9.
-
-### Ubuntu 24.04
-```
-  # apt update
-  # apt install build-essential git meson cmake pkg-config libncurses-dev libinih-dev python3-cogapp man-db
-```
-
-### Ubuntu 22.04 and 20.04
-```
-  # apt update
-  # apt install build-essential git meson cmake pkg-config libncurses-dev libinih-dev python3-pip man-db
-  # pip install cogapp
-```
+Prospective packagers should take a look at [DEPENDENCIES.md](DEPENDENCIES.md),
+which provides help on installing the dependencies necessary for building the
+program.
 
 ## Building and installing
 Make sure all of the above dependencies are installed, and do the following:
@@ -233,3 +163,14 @@ That look can be achieved by using one of the supplied
 and [modernity_gui.conf](https://github.com/plp13/qman/blob/main/config/modernity_gui.conf)
 configuration files. Both files require a modern virtual terminal with support
 for Unicode fonts and 256 colors.
+
+#Contributing
+If you wish to contribute to the program's development, clone the
+[devel](https://github.com/plp13/qman/tree/devel) branch:
+
+```
+$ git clone -b devel https://github.com/plp13/qman qman
+```
+
+You should also take a look at [TESTING.md](TESTING.md), which describes the
+procedures and tools we use for testing.

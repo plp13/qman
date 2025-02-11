@@ -3,7 +3,7 @@
 # Project declaration
 project('qman', 'c',
   license: 'BSD-2-Clause',
-  version: '1.2.1-11-gd38ba8c'
+  version: '1.2.1-12-gd694d51'
 )
 
 # Executable
@@ -15,7 +15,7 @@ subdir('man')
 # Additional documentation
 if get_option('docs').enabled() or get_option('docs').auto()
   install_data(
-    ['README.md', 'TESTING.md'],
+    ['README.md', 'DEPENDENCIES.md', 'TESTING.md'],
     install_dir: get_option('docdir'),
     install_tag: 'doc'
   )
