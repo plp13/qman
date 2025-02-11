@@ -407,12 +407,19 @@ void tocgroff(toc_entry_t *toc, unsigned toc_len) {
   FILE *pp = xpopen(cmdstr, "r");
   xfgets(texts, BS_LINE, pp); // discarded
   xfgets(texts, BS_LINE, pp); // discarded
-  xfgets(texts, BS_LINE, pp); // discarded
-  for (i = 0; i < toc_len; i++) {
+  for (i = 0; i < toc_len;) {
     xfgets(texts, BS_LINE, pp);
     mbstowcs(toc[i].text, texts, BS_LINE);
     wbs(toc[i].text);
     wmargtrim(toc[i].text, L"\n");
+    
+    // Discard empty line output
+    if (L'\0' != toc[i].text[0])
+      i++;
+    
+    // Failsafe: exit loop on EOF
+    if (feof(pp))
+      break;
   }
   xpclose(pp);
 
@@ -461,12 +468,19 @@ void secgroff(wchar_t **sections, unsigned sections_len) {
   FILE *pp = xpopen(cmdstr, "r");
   xfgets(texts, BS_LINE, pp); // discarded
   xfgets(texts, BS_LINE, pp); // discarded
-  xfgets(texts, BS_LINE, pp); // discarded
-  for (i = 0; i < sections_len; i++) {
+  for (i = 0; i < sections_len;) {
     xfgets(texts, BS_LINE, pp);
     mbstowcs(sections[i], texts, BS_LINE);
     wbs(sections[i]);
     wmargtrim(sections[i], L"\n");
+    
+    // Discard empty line output
+    if (L'\0' != sections[i][0])
+      i++;
+
+    // Failsafe: exit loop on EOF
+    if (feof(pp))
+      break;
   }
   xpclose(pp);
 

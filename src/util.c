@@ -640,6 +640,7 @@ unsigned wmargtrim(wchar_t *trgt, const wchar_t *extras) {
     i--;
   }
 
+  trgt[0] = L'\0';
   return 0;
 }
 
