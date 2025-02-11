@@ -1,5 +1,7 @@
 # Executable build file
 
+cc = meson.get_compiler('c')
+
 # Configuration subsystem sources (generated from config_def.py using cog)
 cog = find_program('cogapp', 'cog')
 cog_cmd = [cog, '-d', '-o', '@OUTPUT@', '@INPUT@']
@@ -31,8 +33,13 @@ deps = [
   dependency('zlib')
 ]
 if get_option('bzip2').enabled() or get_option('bzip2').auto()
+  bz2 = dependency('bzip2', required : false)
+  if not bz2.found()
+    bz2 = cc.find_library('bz2', required : true)
+  endif
+
+  deps += [bz2]
   add_global_arguments('-DQMAN_BZIP2=true', language : 'c')
-  deps += [dependency('bzip2')]
 endif
 executable('qman',
   sources: src,
