@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.2.1-12-gd694d51 -- [see what's new](#new-in-this-version)
+Version 1.2.1-13-g6d79690 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -111,7 +111,7 @@ $ sudo meson install
 > **:bulb: Note**
 >
 > If using an older version of `meson`, you may need to substitute the
-> aforementioned `meson compile` command with `ninja`.
+> aforementioned `meson compile` command with `ninja`
 
 ### Packages
 For Arch Linux users, there is a an
@@ -164,7 +164,7 @@ and [modernity_gui.conf](https://github.com/plp13/qman/blob/main/config/modernit
 configuration files. Both files require a modern virtual terminal with support
 for Unicode fonts and 256 colors.
 
-#Contributing
+## Contributing
 If you wish to contribute to the program's development, clone the
 [devel](https://github.com/plp13/qman/tree/devel) branch:
 
