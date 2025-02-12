@@ -1,32 +1,44 @@
 [
   {
     "directory": "/home/plp/Documents/Development/C/qman/build",
-    "command": "cc -Iqman.p -I. -I../src -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -O0 -g -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -MD -MQ qman.p/util.c.o -MF qman.p/util.c.o.d -o qman.p/util.c.o -c ../src/util.c",
+    "command": "ccache cc -Isrc/qman.p -Isrc -I../src -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -O0 -g -DQMAN_BZIP2=true -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -MD -MQ src/qman.p/meson-generated_.._config.c.o -MF src/qman.p/meson-generated_.._config.c.o.d -o src/qman.p/meson-generated_.._config.c.o -c src/config.c",
+    "file": "src/config.c",
+    "output": "src/qman.p/meson-generated_.._config.c.o"
+  },
+  {
+    "directory": "/home/plp/Documents/Development/C/qman/build",
+    "command": "ccache cc -Isrc/qman.p -Isrc -I../src -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -O0 -g -DQMAN_BZIP2=true -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -MD -MQ src/qman.p/util.c.o -MF src/qman.p/util.c.o.d -o src/qman.p/util.c.o -c ../src/util.c",
     "file": "../src/util.c",
-    "output": "qman.p/util.c.o"
+    "output": "src/qman.p/util.c.o"
   },
   {
     "directory": "/home/plp/Documents/Development/C/qman/build",
-    "command": "cc -Iqman.p -I. -I../src -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -O0 -g -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -MD -MQ qman.p/program.c.o -MF qman.p/program.c.o.d -o qman.p/program.c.o -c ../src/program.c",
+    "command": "ccache cc -Isrc/qman.p -Isrc -I../src -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -O0 -g -DQMAN_BZIP2=true -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -MD -MQ src/qman.p/base64.c.o -MF src/qman.p/base64.c.o.d -o src/qman.p/base64.c.o -c ../src/base64.c",
+    "file": "../src/base64.c",
+    "output": "src/qman.p/base64.c.o"
+  },
+  {
+    "directory": "/home/plp/Documents/Development/C/qman/build",
+    "command": "ccache cc -Isrc/qman.p -Isrc -I../src -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -O0 -g -DQMAN_BZIP2=true -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -MD -MQ src/qman.p/program.c.o -MF src/qman.p/program.c.o.d -o src/qman.p/program.c.o -c ../src/program.c",
     "file": "../src/program.c",
-    "output": "qman.p/program.c.o"
+    "output": "src/qman.p/program.c.o"
   },
   {
     "directory": "/home/plp/Documents/Development/C/qman/build",
-    "command": "cc -Iqman.p -I. -I../src -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -O0 -g -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -MD -MQ qman.p/cli.c.o -MF qman.p/cli.c.o.d -o qman.p/cli.c.o -c ../src/cli.c",
+    "command": "ccache cc -Isrc/qman.p -Isrc -I../src -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -O0 -g -DQMAN_BZIP2=true -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -MD -MQ src/qman.p/cli.c.o -MF src/qman.p/cli.c.o.d -o src/qman.p/cli.c.o -c ../src/cli.c",
     "file": "../src/cli.c",
-    "output": "qman.p/cli.c.o"
+    "output": "src/qman.p/cli.c.o"
   },
   {
     "directory": "/home/plp/Documents/Development/C/qman/build",
-    "command": "cc -Iqman.p -I. -I../src -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -O0 -g -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -MD -MQ qman.p/tui.c.o -MF qman.p/tui.c.o.d -o qman.p/tui.c.o -c ../src/tui.c",
+    "command": "ccache cc -Isrc/qman.p -Isrc -I../src -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -O0 -g -DQMAN_BZIP2=true -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -MD -MQ src/qman.p/tui.c.o -MF src/qman.p/tui.c.o.d -o src/qman.p/tui.c.o -c ../src/tui.c",
     "file": "../src/tui.c",
-    "output": "qman.p/tui.c.o"
+    "output": "src/qman.p/tui.c.o"
   },
   {
     "directory": "/home/plp/Documents/Development/C/qman/build",
-    "command": "cc -Iqman.p -I. -I../src -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -O0 -g -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -MD -MQ qman.p/qman.c.o -MF qman.p/qman.c.o.d -o qman.p/qman.c.o -c ../src/qman.c",
+    "command": "ccache cc -Isrc/qman.p -Isrc -I../src -fdiagnostics-color=always -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -O0 -g -DQMAN_BZIP2=true -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -MD -MQ src/qman.p/qman.c.o -MF src/qman.p/qman.c.o.d -o src/qman.p/qman.c.o -c ../src/qman.c",
     "file": "../src/qman.c",
-    "output": "qman.p/qman.c.o"
+    "output": "src/qman.p/qman.c.o"
   }
 ]

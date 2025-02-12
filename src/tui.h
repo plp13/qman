@@ -143,25 +143,6 @@ extern mouse_t mouse_status;
     }                                                                          \
   }
 
-// Helper of tui_open() and tui_toc(). Search the current page for a line whose
-// text begins with search_term, and jump to said line.
-#define ls_jump(trgt)                                                          \
-  {                                                                            \
-    wchar_t trgt_clone[BS_LINE];                                               \
-    wcscpy(trgt_clone, trgt);                                                  \
-    int best = ls_discover(trgt_clone);                                        \
-    if (best < 0) {                                                            \
-      tui_error(L"Unable to jump to requested location");                      \
-      return false;                                                            \
-    } else {                                                                   \
-      page_top = MIN(best, page_len - config.layout.main_height);              \
-      const link_loc_t fl = first_link(                                        \
-          page, page_len, page_top, page_top + config.layout.main_height - 1); \
-      if (fl.ok)                                                               \
-        page_flink = fl;                                                       \
-    }                                                                          \
-  }
-
 //
 // Functions (utility)
 //
