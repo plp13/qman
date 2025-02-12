@@ -246,6 +246,10 @@ bool section_header_level(line_t *line) {
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'1') && (tmpw[i + 3] == L'm'))
 
+// true if tmpw[i] contains a 'bold' typewriter (NO_SGR) sequence
+#define got_bold_nosgr                                                         \
+  ((i + 3 < len) && (tmpw[i] == tmpw[i + 2]) && (tmpw[i + 1] == L'\b'))
+
 // true if tmpw[i] contains a 'not bold' terminal escape sequence
 #define got_not_bold                                                           \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
@@ -265,6 +269,10 @@ bool section_header_level(line_t *line) {
 #define got_uline                                                              \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'4') && (tmpw[i + 3] == L'm'))
+
+// true if tmpw[i] contains a 'underline' typewriter (NO_SGR) sequence
+#define got_uline_nosgr                                                        \
+  ((i + 3 < len) && (tmpw[i] == L'_') && (tmpw[i + 1] == L'\b'))
 
 // true if tmpw[i] contains a 'not underline' terminal escape sequence
 #define got_not_uline                                                          \
@@ -412,11 +420,11 @@ void tocgroff(toc_entry_t *toc, unsigned toc_len) {
     mbstowcs(toc[i].text, texts, BS_LINE);
     wbs(toc[i].text);
     wmargtrim(toc[i].text, L"\n");
-    
+
     // Discard empty line output
     if (L'\0' != toc[i].text[0])
       i++;
-    
+
     // Failsafe: exit loop on EOF
     if (feof(pp))
       break;
@@ -473,7 +481,7 @@ void secgroff(wchar_t **sections, unsigned sections_len) {
     mbstowcs(sections[i], texts, BS_LINE);
     wbs(sections[i]);
     wmargtrim(sections[i], L"\n");
-    
+
     // Discard empty line output
     if (L'\0' != sections[i][0])
       i++;
@@ -1247,10 +1255,10 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   setenv("MANWIDTH", tmps, true);
   sprintf(tmps, "%s %s", config.misc.hyphenate ? "" : "--nh",
           config.misc.justify ? "" : "--nj");
-  setenv("MAN_KEEP_FORMATTING", "1", true);
-  setenv("GROFF_SGR", "1", true);
-  setenv("MANROFFOPT", "", true);
   setenv("MANOPT", tmps, true);
+  setenv("MAN_KEEP_FORMATTING", "1", true);
+  setenv("MANROFFOPT", "", true);
+  setenv("GROFF_SGR", "1", true);
   unsetenv("GROFF_NO_SGR");
 
   // Prepare man command
@@ -1343,6 +1351,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 
     // Read the contents of tmpw one character at a time, and build the line's
     // text, reg, bold, italic, and uline members
+    bool bold_nosgr = false;  // a 'bold' typewriter sequence has been seen
+    bool uline_nosgr = false; // a 'underline' typewriter sequence has been seen
     for (i = 0; i < len; i++) {
       if (got_not_bold) {
         bset(res[ln].reg, j);
@@ -1353,12 +1363,36 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
       } else if (got_bold) {
         bset(res[ln].bold, j);
         i += 3;
+      } else if (bold_nosgr && !got_bold_nosgr) {
+        bset(res[ln].reg, j);
+        bold_nosgr = false;
+        res[ln].text[j] = tmpw[i];
+        j++;
+      } else if (got_bold_nosgr) {
+        if (!bold_nosgr)
+          bset(res[ln].bold, j);
+        bold_nosgr = true;
+        i += 2;
+        res[ln].text[j] = tmpw[i];
+        j++;
       } else if (got_italic) {
         bset(res[ln].italic, j);
         i += 3;
       } else if (got_uline) {
         bset(res[ln].uline, j);
         i += 3;
+      } else if (uline_nosgr && !got_uline_nosgr) {
+        bset(res[ln].reg, j);
+        uline_nosgr = false;
+        res[ln].text[j] = tmpw[i];
+        j++;
+      } else if (got_uline_nosgr) {
+        if (!uline_nosgr)
+          bset(res[ln].uline, j);
+        uline_nosgr = true;
+        i += 2;
+        res[ln].text[j] = tmpw[i];
+        j++;
       } else if (got_any_1) {
         i += 3;
       } else if (got_any_2) {
