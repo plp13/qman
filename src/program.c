@@ -1400,9 +1400,21 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
       } else if (got_any_3) {
         i += 5;
       } else if (got_esc8) {
+        // wchar_t url[BS_LINE];
+        // unsigned k = 0;
+        // i += 2;
+        // if (tmpw[i] == L';' && tmpw[i + 1] == L';') {
+        //   i += 2;
+        //   while (!(tmpw[i] == L'\e' && tmpw[i + 1] == L'\\')) {
+        //     url[k] = tmpw[i];
+        //     k++;
+        //   }
+        //   i += 1;
+        // }
         i += 3;
         while (i < len && !(tmpw[i - 1] == L'\e' && tmpw[i] == L'\\'))
           i++;
+        // logprintf("%u: %ls", ln, url);
       } else if (tmpw[i] != L'\n') {
         res[ln].text[j] = tmpw[i];
         j++;
