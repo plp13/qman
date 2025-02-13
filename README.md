@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.2.1-16-g6391608 -- [see what's new](#new-in-this-version)
+Version 1.2.1-17-g003f4ca -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -63,9 +63,7 @@ and should be reported using the [issues](https://github.com/plp13/qman/issues)
 page.
 
 ## New in this version
-Version 1.3.0 introduces features and bug fixes that should make the program
-more portable across diferent Linux distributions:
-
+- Improved navigation using the table of contents
 - Support for manual pages compressed using Bzip2
 - Support for `groff`'s legacy typewriter sequences (GROFF_NO_SGR)
 - Automated versioning
