@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.2.1-15-g9228122 -- [see what's new](#new-in-this-version)
+Version 1.2.1-16-g6391608 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -63,8 +63,15 @@ and should be reported using the [issues](https://github.com/plp13/qman/issues)
 page.
 
 ## New in this version
-- Fixed `tempnam()` compiler warning
-- The build system has been further re-worked
+Version 1.3.0 introduces features and bug fixes that should make the program
+more portable across diferent Linux distributions:
+
+- Support for manual pages compressed using Bzip2
+- Support for `groff`'s legacy typewriter sequences (GROFF_NO_SGR)
+- Automated versioning
+- Installation instructions for different distributions have been brought up to
+  date and moved to [PACKAGING.md](PACKAGING.md)
+- Miscellaneous bug fixes and documentation enhancements
 
 > **:bulb: Note**
 >
@@ -82,6 +89,9 @@ Qman's latest stable version:
 $ git clone -b main https://github.com/plp13/qman qman
 ```
 
+[Tagged releases](https://github.com/plp13/qman/tags) with tarballs are also
+available, starting with version 1.2.1.
+
 ## Dependencies
 Qman is written in plain C, and thus requires a compiler such as `gcc` or
 `clang`. Its only required library dependencies are `glibc`, `ncurses`, `hinit`,
@@ -93,10 +103,6 @@ There is also an optional library dependency:
 Note that Qman is a front-end to GNU `man`, and therefore requires `man` and
 `groff` to be installed. In order for it to make sense, a Unix manual pages
 database must also be present.
-
-Prospective packagers should take a look at [DEPENDENCIES.md](DEPENDENCIES.md),
-which provides help on installing the dependencies necessary for building the
-program.
 
 ## Building and installing
 Make sure all of the above dependencies are installed, and do the following:
@@ -116,6 +122,9 @@ $ sudo meson install
 ### Packages
 For Arch Linux users, there is a an
 [AUR package](https://aur.archlinux.org/packages/qman-git).
+
+Prospective packagers should take a look at [PACKAGING.md](PACKAGING.md),
+which provides help for building the program on various Linux distributions.
 
 ## Troubleshooting
 Always make sure you are up-to-date with the `main` branch. And, of course,
