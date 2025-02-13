@@ -242,12 +242,10 @@ extern full_regex_t re_man, // a manual page
     line.uline = NULL;                                                         \
   }
 
-// Allocate memory for an extra link for line, and increase its link_length
-// by 1. trgt_length is the length of the new link's trgt member.
-#define line_realloc_link(line, trgt_len)                                      \
+// Allocate memory for an extra link for line, and increase its link_length by 1
+#define line_realloc_link(line)                                                \
   line.links_length++;                                                         \
-  line.links = xreallocarray(line.links, line.links_length, sizeof(link_t));   \
-  line.links[line.links_length - 1].trgt = walloc(trgt_len);
+  line.links = xreallocarray(line.links, line.links_length, sizeof(link_t));
 
 // Free memory for all members of (line_t variable) line
 #define line_free(line)                                                        \

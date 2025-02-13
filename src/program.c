@@ -113,16 +113,30 @@ full_regex_t re_man, re_http, re_email;
 void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
               unsigned start_next, unsigned end_next, link_type_t type,
               const wchar_t *trgt) {
-  unsigned trgt_len = wcslen(trgt);
+  link_t link;
+  int i;
 
-  line_realloc_link((*line), trgt_len);
-  line->links[line->links_length - 1].start = start;
-  line->links[line->links_length - 1].end = end;
-  line->links[line->links_length - 1].type = type;
-  line->links[line->links_length - 1].in_next = in_next;
-  line->links[line->links_length - 1].start_next = start_next;
-  line->links[line->links_length - 1].end_next = end_next;
-  wcscpy(line->links[line->links_length - 1].trgt, trgt);
+  link.start = start;
+  link.end = end;
+  link.type = type;
+  link.in_next = in_next;
+  link.start_next = start_next;
+  link.end_next = end_next;
+  link.trgt = walloc(wcslen(trgt));
+  wcscpy(link.trgt, trgt);
+
+  line_realloc_link((*line));
+  if (1 == line->links_length)
+    i = 0;
+  else {
+    for (i = line->links_length - 2; i >= 0; i--)
+      if (line->links[i].start > link.end)
+        line->links[i + 1] = line->links[i];
+      else
+        break;
+    i++;
+  }
+  line->links[i] = link;
 }
 
 // Helper of man(). Discover links that match re in the text of line, and add
@@ -1245,6 +1259,16 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   wchar_t *tmpw = walloc(BS_LINE); // temporary
   char *tmps = salloc(BS_LINE);    // temporary
 
+  bool ilink = false;   // we are inside an embedded HTTP link
+  unsigned ilink_ln;    // embedded link line
+  int ilink_start;      // embedded link start position
+  int ilink_end;        // embedded link end position
+  int ilink_start_next; // embedded link start position (in next line, for
+                        // hyphenated links)
+  int ilink_end_next;   // embedded link end position (in next line, for
+                        // hypehnated links)
+  wchar_t ilink_trgt[BS_LINE]; // embedded link URL
+
   unsigned res_len = BS_LINE;            // result buffer length
   line_t *res = aalloc(res_len, line_t); // result buffer
 
@@ -1393,28 +1417,47 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
         i += 2;
         res[ln].text[j] = tmpw[i];
         j++;
+      } else if (got_esc8) {
+        i += 3;
+        if (ilink) {
+          if (ilink_ln == ln) {
+            ilink_end = j;
+            if (ilink_end > ilink_start)
+              add_link(&res[ln], ilink_start, j, false, 0, 0, LT_HTTP,
+                       ilink_trgt);
+          } else if (ln > 0) {
+            ilink_end = res[ln - 1].length - 1;
+            ilink_start_next = wmargend(res[ln].text, NULL);
+            ilink_end_next = j;
+            if (ilink_end > ilink_start && ilink_end_next > ilink_start_next)
+              add_link(&res[ln - 1], ilink_start, ilink_end, true,
+                       ilink_start_next, ilink_end_next, LT_HTTP, ilink_trgt);
+          }
+          ilink = false;
+        } else {
+          if (tmpw[i] == L';' && tmpw[i + 1] == L';') {
+            i += 2;
+            unsigned k = 0;
+            while (!(tmpw[i] == L'\e' && tmpw[i + 1] == L'\\')) {
+              ilink_trgt[k] = tmpw[i];
+              i++;
+              k++;
+            }
+            ilink_trgt[k] = L'\0';
+            i += 1;
+            ilink = true;
+            ilink_ln = ln;
+            ilink_start = j;
+          }
+        }
+        while (i < len && !(tmpw[i - 1] == L'\e' && tmpw[i] == L'\\'))
+          i++;
       } else if (got_any_1) {
         i += 3;
       } else if (got_any_2) {
         i += 4;
       } else if (got_any_3) {
         i += 5;
-      } else if (got_esc8) {
-        // wchar_t url[BS_LINE];
-        // unsigned k = 0;
-        // i += 2;
-        // if (tmpw[i] == L';' && tmpw[i + 1] == L';') {
-        //   i += 2;
-        //   while (!(tmpw[i] == L'\e' && tmpw[i + 1] == L'\\')) {
-        //     url[k] = tmpw[i];
-        //     k++;
-        //   }
-        //   i += 1;
-        // }
-        i += 3;
-        while (i < len && !(tmpw[i - 1] == L'\e' && tmpw[i] == L'\\'))
-          i++;
-        // logprintf("%u: %ls", ln, url);
       } else if (tmpw[i] != L'\n') {
         res[ln].text[j] = tmpw[i];
         j++;
