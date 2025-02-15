@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.2.1-19-gecb14b7 -- [see what's new](#new-in-this-version)
+Version 1.2.1-24-g327cdc4 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
