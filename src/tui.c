@@ -161,14 +161,14 @@ int ls_discover(wchar_t *trgt, unsigned sln) {
       // word in trgt
       line_nos[j] = ln;
       line_scores[j] = 0;
-      // Candidate line score is calculated as the number of its words that
-      // exactly match the words in trgt (the last word in trgt is also
-      // partially matched, i.e. it will still count as a match if it matches
-      // just the beginning of its corresponding word in cand)
+      // Candidate line score is calculated as 2x the number of its words that
+      // exactly match the words in trgt. An extra point is added to said score
+      // if the last word in trgt matches just the beginning of its
+      // corresponding word in cand
       cand_words_len = wsplit(&cand_words, BS_SHORT, text, NULL);
       for (i = 0; i < MIN(trgt_words_len, cand_words_len); i++)
         if (0 == wcscmp(cand_words[i], trgt_words[i]))
-          line_scores[j]++;
+          line_scores[j] += 2;
         else if (trgt_words_len - 1 == i)
           if (cand_words[i] == wcsstr(cand_words[i], trgt_words[i]))
             line_scores[j]++;
