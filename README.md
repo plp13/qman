@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.2.1-27-g22af74b -- [see what's new](#new-in-this-version)
+Version 1.2.1-28-g843babb -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -68,6 +68,7 @@ page.
 - Support for `groff`'s legacy typewriter sequences (GROFF_NO_SGR)
 - Support for embedded HTTP links (for example, `named(8)` uses these to
   provide links to several RFC documents)
+- New light RGB theme [catppuccin_latte.conf](config/catppuccin_latte.conf)
 - Automated versioning
 - Installation instructions for different distributions have been brought up to
   date and moved to [PACKAGING.md](PACKAGING.md)
