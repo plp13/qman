@@ -30,6 +30,7 @@ option_t options[] = {
      OA_NONE, true},
     {"config-path", 'C', L"Use ARG as the configuration file path", OA_REQUIRED,
      true},
+    {"version", 'v', L"Print program version", OA_NONE, true},
     {"help", 'h', L"Display this help message", OA_NONE, true},
     {0, 0, 0, 0, false}};
 
@@ -112,16 +113,30 @@ full_regex_t re_man, re_http, re_email;
 void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
               unsigned start_next, unsigned end_next, link_type_t type,
               const wchar_t *trgt) {
-  unsigned trgt_len = wcslen(trgt);
+  link_t link;
+  int i;
 
-  line_realloc_link((*line), trgt_len);
-  line->links[line->links_length - 1].start = start;
-  line->links[line->links_length - 1].end = end;
-  line->links[line->links_length - 1].type = type;
-  line->links[line->links_length - 1].in_next = in_next;
-  line->links[line->links_length - 1].start_next = start_next;
-  line->links[line->links_length - 1].end_next = end_next;
-  wcscpy(line->links[line->links_length - 1].trgt, trgt);
+  link.start = start;
+  link.end = end;
+  link.type = type;
+  link.in_next = in_next;
+  link.start_next = start_next;
+  link.end_next = end_next;
+  link.trgt = walloc(wcslen(trgt));
+  wcscpy(link.trgt, trgt);
+
+  line_realloc_link((*line));
+  if (1 == line->links_length)
+    i = 0;
+  else {
+    for (i = line->links_length - 2; i >= 0; i--)
+      if (line->links[i].start > link.end)
+        line->links[i + 1] = line->links[i];
+      else
+        break;
+    i++;
+  }
+  line->links[i] = link;
 }
 
 // Helper of man(). Discover links that match re in the text of line, and add
@@ -245,6 +260,10 @@ bool section_header_level(line_t *line) {
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'1') && (tmpw[i + 3] == L'm'))
 
+// true if tmpw[i] contains a 'bold' typewriter (NO_SGR) sequence
+#define got_bold_nosgr                                                         \
+  ((i + 3 < len) && (tmpw[i] == tmpw[i + 2]) && (tmpw[i + 1] == L'\b'))
+
 // true if tmpw[i] contains a 'not bold' terminal escape sequence
 #define got_not_bold                                                           \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
@@ -264,6 +283,10 @@ bool section_header_level(line_t *line) {
 #define got_uline                                                              \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'4') && (tmpw[i + 3] == L'm'))
+
+// true if tmpw[i] contains a 'underline' typewriter (NO_SGR) sequence
+#define got_uline_nosgr                                                        \
+  ((i + 3 < len) && (tmpw[i] == L'_') && (tmpw[i + 1] == L'\b'))
 
 // true if tmpw[i] contains a 'not underline' terminal escape sequence
 #define got_not_uline                                                          \
@@ -406,12 +429,19 @@ void tocgroff(toc_entry_t *toc, unsigned toc_len) {
   FILE *pp = xpopen(cmdstr, "r");
   xfgets(texts, BS_LINE, pp); // discarded
   xfgets(texts, BS_LINE, pp); // discarded
-  xfgets(texts, BS_LINE, pp); // discarded
-  for (i = 0; i < toc_len; i++) {
+  for (i = 0; i < toc_len;) {
     xfgets(texts, BS_LINE, pp);
     mbstowcs(toc[i].text, texts, BS_LINE);
     wbs(toc[i].text);
     wmargtrim(toc[i].text, L"\n");
+
+    // Discard empty line output
+    if (L'\0' != toc[i].text[0])
+      i++;
+
+    // Failsafe: exit loop on EOF
+    if (feof(pp))
+      break;
   }
   xpclose(pp);
 
@@ -460,12 +490,19 @@ void secgroff(wchar_t **sections, unsigned sections_len) {
   FILE *pp = xpopen(cmdstr, "r");
   xfgets(texts, BS_LINE, pp); // discarded
   xfgets(texts, BS_LINE, pp); // discarded
-  xfgets(texts, BS_LINE, pp); // discarded
-  for (i = 0; i < sections_len; i++) {
+  for (i = 0; i < sections_len;) {
     xfgets(texts, BS_LINE, pp);
     mbstowcs(sections[i], texts, BS_LINE);
     wbs(sections[i]);
     wmargtrim(sections[i], L"\n");
+
+    // Discard empty line output
+    if (L'\0' != sections[i][0])
+      i++;
+
+    // Failsafe: exit loop on EOF
+    if (feof(pp))
+      break;
   }
   xpclose(pp);
 
@@ -586,6 +623,12 @@ int parse_options(int argc, char *const *argv) {
         free(config.misc.config_path);
       config.misc.config_path = xstrdup(optarg);
       break;
+    case 'v':
+      // -v or --version was passed; print program version and exit
+      version();
+      free(longopts);
+      winddown(ES_SUCCESS, NULL);
+      break;
     case 'h':
       // -h or --help was passed; print usage and exit
       usage();
@@ -672,6 +715,8 @@ void parse_args(int argc, char *const *argv) {
     history_replace(history[history_cur].request_type, tmp);
   }
 }
+
+void version() { wprintf(L"%ls\n", config.misc.program_version); }
 
 void usage() {
   // Header
@@ -1128,11 +1173,11 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
   xpclose(pp);
 
   // Open gpath
-  gzFile gp = xgzopen(gpath, "rb");
+  archive_t gp = aropen(gpath);
 
   // For each line in gpath, gline...
-  xgzgets(gp, tmp, BS_LINE);
-  while (!gzeof(gp)) {
+  argets(gp, tmp, BS_LINE);
+  while (!areof(gp)) {
     glen = mbstowcs(gline, tmp, BS_LINE);
 
     if (-1 == glen)
@@ -1150,10 +1195,10 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
       }
     }
 
-    xgzgets(gp, tmp, BS_LINE);
+    argets(gp, tmp, BS_LINE);
   }
 
-  xgzclose(gp);
+  arclose(gp);
 
   secgroff(res, en);
   *dst = res;
@@ -1214,6 +1259,16 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   wchar_t *tmpw = walloc(BS_LINE); // temporary
   char *tmps = salloc(BS_LINE);    // temporary
 
+  bool ilink = false;   // we are inside an embedded HTTP link
+  unsigned ilink_ln;    // embedded link line
+  int ilink_start;      // embedded link start position
+  int ilink_end;        // embedded link end position
+  int ilink_start_next; // embedded link start position (in next line, for
+                        // hyphenated links)
+  int ilink_end_next;   // embedded link end position (in next line, for
+                        // hypehnated links)
+  wchar_t ilink_trgt[BS_LINE]; // embedded link URL
+
   unsigned res_len = BS_LINE;            // result buffer length
   line_t *res = aalloc(res_len, line_t); // result buffer
 
@@ -1224,10 +1279,10 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   setenv("MANWIDTH", tmps, true);
   sprintf(tmps, "%s %s", config.misc.hyphenate ? "" : "--nh",
           config.misc.justify ? "" : "--nj");
-  setenv("MAN_KEEP_FORMATTING", "1", true);
-  setenv("GROFF_SGR", "1", true);
-  setenv("MANROFFOPT", "", true);
   setenv("MANOPT", tmps, true);
+  setenv("MAN_KEEP_FORMATTING", "1", true);
+  setenv("MANROFFOPT", "", true);
+  setenv("GROFF_SGR", "1", true);
   unsetenv("GROFF_NO_SGR");
 
   // Prepare man command
@@ -1320,6 +1375,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 
     // Read the contents of tmpw one character at a time, and build the line's
     // text, reg, bold, italic, and uline members
+    bool bold_nosgr = false;  // a 'bold' typewriter sequence has been seen
+    bool uline_nosgr = false; // a 'underline' typewriter sequence has been seen
     for (i = 0; i < len; i++) {
       if (got_not_bold) {
         bset(res[ln].reg, j);
@@ -1330,22 +1387,77 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
       } else if (got_bold) {
         bset(res[ln].bold, j);
         i += 3;
+      } else if (bold_nosgr && !got_bold_nosgr) {
+        bset(res[ln].reg, j);
+        bold_nosgr = false;
+        res[ln].text[j] = tmpw[i];
+        j++;
+      } else if (got_bold_nosgr) {
+        if (!bold_nosgr)
+          bset(res[ln].bold, j);
+        bold_nosgr = true;
+        i += 2;
+        res[ln].text[j] = tmpw[i];
+        j++;
       } else if (got_italic) {
         bset(res[ln].italic, j);
         i += 3;
       } else if (got_uline) {
         bset(res[ln].uline, j);
         i += 3;
+      } else if (uline_nosgr && !got_uline_nosgr) {
+        bset(res[ln].reg, j);
+        uline_nosgr = false;
+        res[ln].text[j] = tmpw[i];
+        j++;
+      } else if (got_uline_nosgr) {
+        if (!uline_nosgr)
+          bset(res[ln].uline, j);
+        uline_nosgr = true;
+        i += 2;
+        res[ln].text[j] = tmpw[i];
+        j++;
+      } else if (got_esc8) {
+        i += 3;
+        if (ilink) {
+          if (ilink_ln == ln) {
+            ilink_end = j;
+            if (ilink_end > ilink_start)
+              add_link(&res[ln], ilink_start, j, false, 0, 0, LT_HTTP,
+                       ilink_trgt);
+          } else if (ln > 0) {
+            ilink_end = res[ln - 1].length - 1;
+            ilink_start_next = wmargend(res[ln].text, NULL);
+            ilink_end_next = j;
+            if (ilink_end > ilink_start && ilink_end_next > ilink_start_next)
+              add_link(&res[ln - 1], ilink_start, ilink_end, true,
+                       ilink_start_next, ilink_end_next, LT_HTTP, ilink_trgt);
+          }
+          ilink = false;
+        } else {
+          if (tmpw[i] == L';' && tmpw[i + 1] == L';') {
+            i += 2;
+            unsigned k = 0;
+            while (!(tmpw[i] == L'\e' && tmpw[i + 1] == L'\\')) {
+              ilink_trgt[k] = tmpw[i];
+              i++;
+              k++;
+            }
+            ilink_trgt[k] = L'\0';
+            i += 1;
+            ilink = true;
+            ilink_ln = ln;
+            ilink_start = j;
+          }
+        }
+        while (i < len && !(tmpw[i - 1] == L'\e' && tmpw[i] == L'\\'))
+          i++;
       } else if (got_any_1) {
         i += 3;
       } else if (got_any_2) {
         i += 4;
       } else if (got_any_3) {
         i += 5;
-      } else if (got_esc8) {
-        i += 3;
-        while (i < len && !(tmpw[i - 1] == L'\e' && tmpw[i] == L'\\'))
-          i++;
       } else if (tmpw[i] != L'\n') {
         res[ln].text[j] = tmpw[i];
         j++;
@@ -1428,11 +1540,11 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   xpclose(pp);
 
   // Open gpath
-  gzFile gp = xgzopen(gpath, "rb");
+  archive_t gp = aropen(gpath);
 
   // For each line in gpath, gline...
-  xgzgets(gp, tmp, BS_LINE);
-  while (!gzeof(gp)) {
+  argets(gp, tmp, BS_LINE);
+  while (!areof(gp)) {
     glen = mbstowcs(gline, tmp, BS_LINE);
 
     if (-1 == glen)
@@ -1462,15 +1574,15 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       }
     } else if (got_tp && sh_seen) {
       // Tagged paragraph
-      xgzgets(gp, tmp, BS_LINE);
-      if (!gzeof(gp)) {
+      argets(gp, tmp, BS_LINE);
+      if (!areof(gp)) {
         glen = mbstowcs(gline, tmp, BS_LINE);
         {
           // Edge case: the tag line contains only a comment or a line that must
           // otherwise be skipped; skip to next line
           while (got_comment || got_tp || got_pd) {
-            xgzgets(gp, tmp, BS_LINE);
-            if (gzeof(gp))
+            argets(gp, tmp, BS_LINE);
+            if (areof(gp))
               break;
             glen = mbstowcs(gline, tmp, BS_LINE);
           }
@@ -1479,12 +1591,12 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
           // Edge case: the tag line starts with a formatting command that sets
           // a trap for the next line; skip to the next line
           while (got_trap && wmargtrim(gline, NULL) < 4) {
-            xgzgets(gp, tmp, BS_LINE);
-            if (gzeof(gp))
+            argets(gp, tmp, BS_LINE);
+            if (areof(gp))
               break;
             glen = mbstowcs(gline, tmp, BS_LINE);
           }
-          if (gzeof(gp))
+          if (areof(gp))
             break;
         }
         {
@@ -1513,10 +1625,10 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       }
     }
 
-    xgzgets(gp, tmp, BS_LINE);
+    argets(gp, tmp, BS_LINE);
   }
 
-  xgzclose(gp);
+  arclose(gp);
 
   // Uncomment the following to log output into qman.log for debugging
   // logprintf("man_toc()");

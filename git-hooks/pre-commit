@@ -1,0 +1,16 @@
+#!/bin/bash
+# Call bump.sh to set program version
+
+VERSION=$(git describe --tags)
+VERSION=${VERSION#v}
+
+if [ "X${VERSION}" = "X" ]
+then
+  VERSION="null"
+fi
+
+./bump.sh ${VERSION}
+git add meson.build src/config_def.py README.md man/qman.1.md man/qman.1
+touch /tmp/qman-commit
+
+exit 0

@@ -90,9 +90,49 @@ mouse_t mouse_status = MS_EMPTY;
     return false;                                                              \
   }
 
+// Helper of tui_toc(). Search the current page for a line whose text matches
+// the text of the focus'ed entry in toc.
+#define toc_jump(toc, focus)                                                   \
+  int prev;                                                                    \
+  for (prev = MAX(0, focus - 1); prev >= 0; prev--)                            \
+    if (TT_HEAD == toc[prev].type || TT_SUBHEAD == toc[prev].type)             \
+      break;                                                                   \
+  ls_jump(toc[focus].text, toc[prev].text);
+
+// Helper of tui_open() and toc_jump(), i.e. tui_toc(). Search the current page
+// for a line whose text matches trgt, and jump to said line. (But if trgt_prev
+// is not NULL, make sure that the matched line is preceded by a line whose text
+// matches trgt_prev.)
+#define ls_jump(trgt, trgt_prev)                                               \
+  {                                                                            \
+    wchar_t trgt_clone[BS_LINE];                                               \
+    wcscpy(trgt_clone, trgt);                                                  \
+    int best;                                                                  \
+    if (NULL == trgt_prev)                                                     \
+      best = 0;                                                                \
+    else {                                                                     \
+      wchar_t trgt_prev_clone[BS_LINE];                                        \
+      /* ?/: is necessary to avoid a spurious -Wnonnull compiler warning */    \
+      wcscpy(trgt_prev_clone, NULL != trgt_prev ? trgt_prev : L"");            \
+      best = ls_discover(trgt_prev_clone, 0);                                  \
+    }                                                                          \
+    best = ls_discover(trgt_clone, best);                                      \
+    if (best < 0) {                                                            \
+      tui_error(L"Unable to jump to requested location");                      \
+      return false;                                                            \
+    } else {                                                                   \
+      page_top = MIN(best, page_len - config.layout.main_height);              \
+      const link_loc_t fl = first_link(                                        \
+          page, page_len, page_top, page_top + config.layout.main_height - 1); \
+      if (fl.ok)                                                               \
+        page_flink = fl;                                                       \
+    }                                                                          \
+  }
+
 // Helper of ls_jump(), i.e. of tui_open() and tui_toc(). Return the line number
-// that best matches local searh link target trgt.
-int ls_discover(wchar_t *trgt) {
+// that best matches local searh link target trgt, or -1 if error. Start
+// searching at line number sln.
+int ls_discover(wchar_t *trgt, unsigned sln) {
   wchar_t **trgt_words = walloca(BS_SHORT); // words in trgt
   unsigned trgt_words_len;                  // no. of words in trgt
   wchar_t **cand_words = walloca(BS_SHORT); // words in current candidate line
@@ -108,9 +148,12 @@ int ls_discover(wchar_t *trgt) {
   if (0 == trgt_words_len)
     return -1;
 
+  if (sln >= page_len)
+    return -1;
+
   // Record candidate lines and their scores
   j = 0;
-  for (ln = 0; ln < page_len && j < BS_LINE; ln++) {
+  for (ln = sln; ln < page_len && j < BS_LINE; ln++) {
     wchar_t text[BS_LINE]; // current line text
     wcscpy(text, page[ln].text);
     if (wcsstr(text, trgt_words[0]) == &text[wmargend(text, NULL)]) {
@@ -118,14 +161,14 @@ int ls_discover(wchar_t *trgt) {
       // word in trgt
       line_nos[j] = ln;
       line_scores[j] = 0;
-      // Candidate line score is calculated as the number of its words that
-      // exactly match the words in trgt (the last word in trgt is also
-      // partially matched, i.e. it will still count as a match if it matches
-      // just the beginning of its corresponding word in cand)
+      // Candidate line score is calculated as 2x the number of its words that
+      // exactly match the words in trgt. An extra point is added to said score
+      // if the last word in trgt matches just the beginning of its
+      // corresponding word in cand
       cand_words_len = wsplit(&cand_words, BS_SHORT, text, NULL);
       for (i = 0; i < MIN(trgt_words_len, cand_words_len); i++)
         if (0 == wcscmp(cand_words[i], trgt_words[i]))
-          line_scores[j]++;
+          line_scores[j] += 2;
         else if (trgt_words_len - 1 == i)
           if (cand_words[i] == wcsstr(cand_words[i], trgt_words[i]))
             line_scores[j]++;
@@ -492,9 +535,9 @@ void init_tui_mouse() {
 }
 
 void sendescseq(char *s) {
-  if (! config.layout.tui)
+  if (!config.layout.tui)
     return;
-  
+
   putchar('\033');
 
   unsigned i = 0;
@@ -1482,7 +1525,7 @@ bool tui_open() {
     break;
   case LT_LS:
     // The link is a local search link; jump to the appropriate page location
-    ls_jump(page[page_flink.line].links[page_flink.link].trgt);
+    ls_jump(page[page_flink.line].links[page_flink.link].trgt, NULL);
     break;
   }
 
@@ -1881,7 +1924,7 @@ bool tui_toc() {
       break;
     case PA_OPEN:
       del_imm();
-      ls_jump(toc[focus].text);
+      toc_jump(toc, focus);
       return true;
       break;
     case PA_NULL:
@@ -1907,14 +1950,14 @@ bool tui_toc() {
               // If the left_click_open option is set, go to the appropriate
               // TOC entry
               del_imm();
-              ls_jump(toc[focus].text);
+              toc_jump(toc, focus);
               return true;
             }
           }
       } else if (BT_WHEEL == hms.button && hms.up) {
         // On mouse wheel click, go to the appropriate TOC entry
         del_imm();
-        ls_jump(toc[focus].text);
+        toc_jump(toc, focus);
         return true;
       }
       break;

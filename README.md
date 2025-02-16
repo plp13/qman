@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.2.1 -- [see what's new](#new-in-this-version)
+Version 1.2.1-28-g843babb -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -63,8 +63,16 @@ and should be reported using the [issues](https://github.com/plp13/qman/issues)
 page.
 
 ## New in this version
-- Fixed `tempnam()` compiler warning
-- The build system has been further re-worked
+- Improved navigation using the table of contents
+- Support for manual pages compressed using Bzip2
+- Support for `groff`'s legacy typewriter sequences (GROFF_NO_SGR)
+- Support for embedded HTTP links (for example, `named(8)` uses these to
+  provide links to several RFC documents)
+- New light RGB theme [catppuccin_latte.conf](config/catppuccin_latte.conf)
+- Automated versioning
+- Installation instructions for different distributions have been brought up to
+  date and moved to [PACKAGING.md](PACKAGING.md)
+- Miscellaneous bug fixes and documentation enhancements
 
 > **:bulb: Note**
 >
@@ -82,91 +90,20 @@ Qman's latest stable version:
 $ git clone -b main https://github.com/plp13/qman qman
 ```
 
-If you wish to contribute to the program's development, clone the
-[devel](https://github.com/plp13/qman/tree/devel) branch.
-
-```
-$ git clone -b devel https://github.com/plp13/qman qman
-```
+[Tagged releases](https://github.com/plp13/qman/tags) with tarballs are also
+available, starting with version 1.2.1.
 
 ## Dependencies
 Qman is written in plain C, and thus requires a compiler such as `gcc` or
-`clang`. Its only library dependencies are `glibc`, `ncurses`, `hinit`, and
-`zlib`. It uses the `meson` build system.
+`clang`. Its only required library dependencies are `glibc`, `ncurses`, `hinit`,
+and `zlib`. It uses the `meson` build system.
 
-The program is a front-end to GNU `man`, and therefore requires `man` and
+There is also an optional library dependency:
+- `bzip2` -- support for manual pages compressed with `bzip2`
+
+Note that Qman is a front-end to GNU `man`, and therefore requires `man` and
 `groff` to be installed. In order for it to make sense, a Unix manual pages
 database must also be present.
-
-The following commands should install all necessary dependencies for different
-operating systems and distros:
-
-### Arch Linux
-```
-  # pacman -Sy
-  # pacman -S base-devel git meson libinih python-cogapp man-db man-pages
-```
-
-### Debian 12
-```
-  # apt update
-  # apt install build-essential git meson pkg-config libncurses-dev libinih-dev pipx man-db
-  $ pipx install cogapp
-```
-
-> **:bulb: Note**
->
-> By default, `pipx` will install the `cog` executable in `~/.local/bin`. You
-> will have to add this directory to your path before proceeding with
-> `meson setup`.
-
-### Debian 11
-```
-  # apt update
-  # apt install build-essential git meson pkg-config libncurses-dev libinih-dev python3-pip man-db
-  # pip install cogapp
-```
-
-### Rocky Linux 9
-```
-  # dnf install epel-release
-  # dnf update
-  # dnf group install "Development Tools"
-  # dnf install man-db man-pages ncurses-devel python3-pip
-  # dnf --enablerepo devel install meson inih-devel
-  # pip install cogapp
-```
-
-> **:bulb: Note**
->
-> These steps should also work with Red Hat Enterprise Linux 9 and AlmaLinux 9.
-
-### Rocky Linux 8
-```
-  # dnf install epel-release
-  # dnf update
-  # dnf group install "Development Tools"
-  # dnf install man-db man-pages ncurses-devel python3-pip inih-devel
-  # dnf --enablerepo devel install meson
-  # pip3 install cogapp
-```
-
-> **:bulb: Note**
->
-> These steps should also work with Red Hat Enterprise Linux 9 and AlmaLinux 9.
-
-### Ubuntu 24.04
-```
-  # apt update
-  # apt install build-essential git meson cmake pkg-config libncurses-dev libinih-dev python3-cogapp man-db
-```
-
-### Ubuntu 22.04 and 20.04
-```
-  # apt update
-  # apt install build-essential git meson cmake pkg-config libncurses-dev libinih-dev python3-pip man-db
-  # pip install cogapp
-```
 
 ## Building and installing
 Make sure all of the above dependencies are installed, and do the following:
@@ -181,11 +118,14 @@ $ sudo meson install
 > **:bulb: Note**
 >
 > If using an older version of `meson`, you may need to substitute the
-> aforementioned `meson compile` command with `ninja`.
+> aforementioned `meson compile` command with `ninja`
 
 ### Packages
 For Arch Linux users, there is a an
 [AUR package](https://aur.archlinux.org/packages/qman-git).
+
+Prospective packagers should take a look at [PACKAGING.md](PACKAGING.md),
+which provides help for building the program on various Linux distributions.
 
 ## Troubleshooting
 Always make sure you are up-to-date with the `main` branch. And, of course,
@@ -233,3 +173,14 @@ That look can be achieved by using one of the supplied
 and [modernity_gui.conf](https://github.com/plp13/qman/blob/main/config/modernity_gui.conf)
 configuration files. Both files require a modern virtual terminal with support
 for Unicode fonts and 256 colors.
+
+## Contributing
+If you wish to contribute to the program's development, clone the
+[devel](https://github.com/plp13/qman/tree/devel) branch:
+
+```
+$ git clone -b devel https://github.com/plp13/qman qman
+```
+
+You should also take a look at [TESTING.md](TESTING.md), which describes the
+procedures and tools we use for testing.

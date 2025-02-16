@@ -33,6 +33,22 @@ typedef struct {
   unsigned end; // end
 } range_t;
 
+// Compressed archive type
+typedef enum {
+  AR_NONE, // no compression
+  AR_GZIP, // gzip
+  AR_BZIP2 // bzip2
+} archive_type_t;
+
+// A file pointer to a compressed archive
+typedef struct {
+  archive_type_t type; // archive type
+  char *path;          // path to / filename of archive
+  FILE *fp_none;       // file pointer if uncompressed
+  gzFile fp_gzip;      // file pointer if gzip
+  FILE *fp_bzip2;      // file pointer if bzip2
+} archive_t;
+
 //
 // Constants
 //
@@ -186,7 +202,8 @@ extern void xsystem(const char *cmd, bool fail);
 
 // A safe version of tempnam(), that also creates the temporary file whose name
 // it returns, avoiding potential race conditions. Unlike with tempnam(), pfx
-// can be more than 5 characters long, however it cannot contain an 'X'.
+// can be more than 5 characters long, although it cannot contain an 'X'. In
+// case of error, xtempnam() will call winddown().
 extern char *xtempnam(const char *dir, const char *pfx);
 
 // Return the value of environment variable name as an integer. Return 0 in case
@@ -204,6 +221,24 @@ extern void bclear(bitarr_t ba, unsigned i);
 
 // Clear all bits of ba. ba_len is ba's size.
 extern void bclearall(bitarr_t ba, unsigned ba_len);
+
+// Decompress the BZ2-compressed file at pathname, place the resulting data into
+// a temporary file, and return its path
+extern char *bz2_decompress(const char *pathname);
+
+// Open compressed archive at pathname for reading, and return the relevant
+// file pointer
+extern archive_t aropen(const char *pathname);
+
+// Read a line of text from archive file pointer ap, and place it into buf, len
+// being the length of buf
+extern void argets(archive_t ap, char *buf, int len);
+
+// Return true if archive file pointer ap has reached EOF, false otherwise
+extern bool areof(archive_t ap);
+
+// Close archive file pointer ap
+extern void arclose(archive_t ap);
 
 // Free all memory in an array of (wide) strings buf. buf_len is the length of
 // buf.

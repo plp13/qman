@@ -17,3 +17,9 @@ option('docs',
   value: 'auto',
   description: 'Install additional documentation'
 )
+
+option('bzip2',
+  type: 'feature',
+  value: 'auto',
+  description: 'Support Bzip2-compressed manual pages'
+)

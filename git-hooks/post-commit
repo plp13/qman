@@ -1,0 +1,11 @@
+#!/bin/bash
+# Add the files modified by pre-commit into HEAD
+
+if [ -e /tmp/qman-commit ]
+then
+  rm /tmp/qman-commit
+  git commit --amend -C HEAD --no-verify
+  echo "Version changes committed"
+fi
+
+exit 0
