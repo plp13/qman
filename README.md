@@ -121,11 +121,16 @@ $ sudo meson install
 > aforementioned `meson compile` command with `ninja`
 
 ### Packages
-For Arch Linux users, there is a an
-[AUR package](https://aur.archlinux.org/packages/qman-git).
+Arch Linux: package [qman-git](https://aur.archlinux.org/packages/qman-git) is
+available on AUR
 
-Prospective packagers should take a look at [PACKAGING.md](PACKAGING.md),
-which provides help for building the program on various Linux distributions.
+Gentoo Linux: package
+[app-misc/qman](https://gitweb.gentoo.org/repo/proj/guru.git/tree/app-misc/qman)
+is available on GURU
+
+Packagers for other operating systems are always welcome. To get started, please
+look at [PACKAGING.md](PACKAGING.md), which provides guidance on how to build
+Qman on some popular Linux distributions.
 
 ## Troubleshooting
 Always make sure you are up-to-date with the `main` branch. And, of course,
