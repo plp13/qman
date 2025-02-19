@@ -313,6 +313,11 @@ extern unsigned scopylines(FILE *source, FILE *target);
 // Otherwise, return -1.
 extern int sreadline(char *str, unsigned size, FILE *fp);
 
+// Split a path environment variable into a list of paths, placing them into dst
+// (of maximum length dst_len). Return the number of paths found. This function
+// modifes src.
+extern unsigned split_path(char ***dst, unsigned dst_len, char *src);
+
 // Initialize full regular expression re, using str and snpt
 extern void fr_init(full_regex_t *re, char *str, wchar_t *snpt);
 

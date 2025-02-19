@@ -133,9 +133,10 @@ mouse_t mouse_status = MS_EMPTY;
 // that best matches local searh link target trgt, or -1 if error. Start
 // searching at line number sln.
 int ls_discover(wchar_t *trgt, unsigned sln) {
-  wchar_t **trgt_words = walloca(BS_SHORT); // words in trgt
-  unsigned trgt_words_len;                  // no. of words in trgt
-  wchar_t **cand_words = walloca(BS_SHORT); // words in current candidate line
+  wchar_t **trgt_words = alloca(BS_SHORT * sizeof(wchar_t *)); // words in trgt
+  unsigned trgt_words_len; // no. of words in trgt
+  wchar_t **cand_words =
+      walloca(BS_SHORT * sizeof(wchar_t *)); // words in current candidate line
   unsigned cand_words_len;       // no. of words in current candidate line
   unsigned ln;                   // current line number
   unsigned line_nos[BS_LINE];    // candidate line numbers
