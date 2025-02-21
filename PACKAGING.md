@@ -83,3 +83,10 @@ different operating systems and distros:
 >
 > For Ubuntu 20.04, you must substitute `meson compile` with `ninja` during the
 > build process
+
+## openSUSE Tumbleweed
+
+```
+  # zypper refresh
+  # zypper install gcc cmake meson ninja python3-cogapp ncurses-devel libinih-devel cmake zlib-devel libbz2-devel
+```

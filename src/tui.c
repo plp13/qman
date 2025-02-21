@@ -412,7 +412,7 @@ void draw_toc(toc_entry_t *toc, unsigned toc_len, unsigned top,
 
 void init_tui() {
   // Initialize and set up ncurses
-  ESCDELAY = config.tcap.escdelay;
+  set_escdelay(config.tcap.escdelay);
   initscr();
   raw();
   keypad(stdscr, true);
