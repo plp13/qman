@@ -713,6 +713,28 @@ int sreadline(char *str, unsigned size, FILE *fp) {
   return nlc - str;
 }
 
+unsigned split_path(char ***dst, unsigned dst_len, char *src) {
+  char **res = *dst;           // results
+  unsigned res_cnt = 0;        // number of results
+  unsigned pos = 0;            // starting position of last path found
+  unsigned i;                  // iterator
+
+  for (i = 0;; i++) {
+    if (':' == src[i] || '\0' == src[i]) {
+      res[res_cnt] = &src[pos];
+      res_cnt++;
+      pos = i + 1;
+
+      if ('\0' == src[i])
+        break;
+      else
+        src[i] = '\0';
+    }
+  }
+
+  return res_cnt;
+}
+
 void fr_init(full_regex_t *re, char *str, wchar_t *snpt) {
   re->str = str;
   re->snpt = snpt;

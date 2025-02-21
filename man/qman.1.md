@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.3.0
+footer: Qman 1.3.0-3-g8bf6e00
 date: December 15, 2023
 ---
 
@@ -143,7 +143,7 @@ The program accepts the following non-argument options:
 : Approximately equivalent to **whatis(1)**. Display the name, sections, and
   short descriptions of each of the manual _page_ arguments.
 
-**-l, \-\-local-file** _file_ ...
+**-l, \-\-local\-file** _file_ ...
 : Activate "local" mode. Format and display each local manual _file_ instead of
   searching through the system's manual collection. Each _file_ will be
   interpreted as an nroff source file in the correct format.
@@ -163,23 +163,30 @@ The program accepts the following non-argument options:
   option can be used to redirect the program's formatted output to a text file
   or to another command.
 
-**-C, \-\-config-path=file**
-: Use this user configuration file rather than the default.
+**-C, \-\-config\-path** _file_
+: Use _file_ as the configuration file for **Qman**.
+
+**-v, \-\-version**
+: Print program version and exit.
 
 **-h, \-\-help**
 : Print a help message and exit.
 
 # CONFIGURATION
-**Qman** will attempt to load its configuration from _~/.config/qman.conf_
-(the user config file). Failing that, it will try to load it from
-_/etc/xdg/qman.conf_ (the system config file). The process stops once a config
-file has been found and loaded; in other words, the system and user config files
-are not cumulative.
+**Qman** expects to find its configuration file in the standard locations
+defined by the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/latest/).
+The following locations are searched in sequence:
 
-If the user specifies the **-C** option, the program instead tries to load its
-configuration from the file specified by the user.
+- Any file specified using **-C** or **\-\-config\-path**
+- _\${XDG_CONFIG_HOME}/qman.conf_
+- _\${HOME}/.config/qman.conf_
+- _\${D}/qman.conf_ where _\${D}_ is an entry in _\${XDG_CONFIG_DIRS}_
+- _/etc/xdg/qman.conf_
+- _/etc/qman.conf_
 
-**Qman** uses the INI file format (https://en.wikipedia.org/wiki/INI_file).
+The process stops once a configuration file has been found.
+
+**Qman** uses the [INI file format](https://en.wikipedia.org/wiki/INI_file).
 Different configuration options are grouped into sections. The paragraphs
 below summarize the sections and configuration options that are available:
 

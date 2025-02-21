@@ -574,7 +574,7 @@ for section, options in config_def.config_def.items():
 void configure() {
   static bool ft = true;    // true if this is the first invocation of
                             // configure()
-  FILE *fp;                 // config file
+  FILE *fp = NULL;          // config file
   wchar_t errmsg[BS_SHORT]; // error message
 
   // If this isn't the first invocation of configure(), call
@@ -597,14 +597,57 @@ void configure() {
     }
   } else {
     // No -C option; try to find and open a config file at the standard
-    // locations: ~/.config/qman.conf and /etc/xdg/qman.conf
-    const char *home = getenv("HOME");
-    const unsigned hc_len = strlen(home) + 19;
-    char *hc = salloca(hc_len);
-    snprintf(hc, hc_len, "%s/.config/qman.conf", home);
-    fp = fopen(hc, "r");
-    if (NULL == fp)
+    // locations
+    char path[BS_LINE]; // candidate config file path
+
+    // ${XCD_CONFIG_HOME}/qman.conf
+    const char *xch = getenv("XDG_CONFIG_HOME");
+    if (NULL != xch) {
+      snprintf(path, BS_LINE, "%s/qman.conf", xch);
+      // logprintf("xdg_config_home - %s", path);
+      fp = fopen(path, "r");
+    }
+
+    // ${HOME}/.config/qman.conf
+    if (NULL == fp) {
+      const char *home = getenv("HOME");
+      if (NULL != home) {
+        snprintf(path, BS_LINE, "%s/.config/qman.conf", home);
+        // logprintf("home - %s", path);
+        fp = fopen(path, "r");
+      }
+    }
+
+    // ${P}/qman.conf, where ${P} is a path in ${XDG_CONFIG_DIRS}
+    if (NULL == fp) {
+      const char *xcd = getenv("XDG_CONFIG_DIRS");
+      if (NULL != xcd) {
+        char *xcd_dup = xstrdup(xcd);
+        char **xcd_paths = xcalloc(BS_SHORT, sizeof(char *));
+        unsigned xcd_count = split_path(&xcd_paths, BS_SHORT, xcd_dup);
+        for (unsigned i = 0; i < xcd_count; i++) {
+          snprintf(path, BS_LINE, "%s/qman.conf", xcd_paths[i]);
+          // logprintf("xdg_config_dirs - %s", path);
+          fp = fopen(path, "r");
+          if (NULL != fp)
+            break;
+        }
+        free(xcd_dup);
+        free(xcd_paths);
+      }
+    }
+
+    // /etc/xdg/qman.conf
+    if (NULL == fp) {
+      // logprintf("fallback - /etc/xdg/qman.conf")
       fp = fopen("/etc/xdg/qman.conf", "r");
+    }
+
+    // /etc/qman.conf
+    if (NULL == fp) {
+      // logprintf("fallback - /etc/qman.conf")
+      fp = fopen("/etc/qman.conf", "r");
+    }
   }
 
   // If we have a config file, process it
