@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.3.0-3-g8bf6e00 -- [see what's new](#new-in-this-version)
+Version 1.3.1 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -63,6 +63,7 @@ and should be reported using the [issues](https://github.com/plp13/qman/issues)
 page.
 
 ## New in this version
+New features in v1.3.0:
 - Improved navigation using the table of contents
 - Support for manual pages compressed using Bzip2
 - Support for `groff`'s legacy typewriter sequences (GROFF_NO_SGR)
@@ -73,6 +74,13 @@ page.
 - Installation instructions for different distributions have been brought up to
   date and moved to [PACKAGING.md](PACKAGING.md)
 - Miscellaneous bug fixes and documentation enhancements
+
+
+New features in v1.3.1:
+- Search process for the configuration file now follows the
+  [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/latest/)
+- Minor bug fixes, necessary for building on openSUSE Tumbleweed
+- Minor updates to manual page and documentation
 
 > **:bulb: Note**
 >
