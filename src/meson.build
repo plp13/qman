@@ -4,7 +4,7 @@
 cc = meson.get_compiler('c')
 
 # Configuration subsystem sources (generated from config_def.py using cog)
-cog = find_program('cogapp', 'cog')
+cog = find_program('cogapp', 'cog', 'cog.py')
 cog_cmd = [cog, '-d', '-o', '@OUTPUT@', '@INPUT@']
 config_h = custom_target('config.h',
   input: 'config.h.cog',
