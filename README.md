@@ -129,8 +129,8 @@ $ sudo meson install
 > aforementioned `meson compile` command with `ninja`
 
 ### Packages
-Arch Linux: package [qman-git](https://aur.archlinux.org/packages/qman-git) is
-available on AUR
+Arch Linux: package [qman](https://aur.archlinux.org/packages/qman) is available
+on AUR
 
 Gentoo Linux: package
 [app-misc/qman](https://gitweb.gentoo.org/repo/proj/guru.git/tree/app-misc/qman)
