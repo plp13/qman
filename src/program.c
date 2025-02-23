@@ -30,7 +30,7 @@ option_t options[] = {
      OA_NONE, true},
     {"config-path", 'C', L"Use ARG as the configuration file path", OA_REQUIRED,
      true},
-    {"version", 'v', L"Print program version", OA_NONE, true},
+    {"version", 'V', L"Print program version", OA_NONE, true},
     {"help", 'h', L"Display this help message", OA_NONE, true},
     {0, 0, 0, 0, false}};
 
@@ -623,7 +623,7 @@ int parse_options(int argc, char *const *argv) {
         free(config.misc.config_path);
       config.misc.config_path = xstrdup(optarg);
       break;
-    case 'v':
+    case 'V':
       // -v or --version was passed; print program version and exit
       version();
       free(longopts);
