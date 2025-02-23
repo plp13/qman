@@ -464,7 +464,12 @@ void init_tui_tcap() {
     tcap.clipboard = false;
     break;
   case t_auto:
-    tcap.clipboard = 0 == strcmp(tcap.term, "xterm-kitty");
+    if (0 == strcmp(tcap.term, "xterm-kitty"))
+      tcap.clipboard = true;
+    else if (0 == strcmp(tcap.term, "xterm-ghostty"))
+      tcap.clipboard = true;
+    else
+      tcap.clipboard = false;
   }
 
   tcap.escdelay = config.tcap.escdelay;

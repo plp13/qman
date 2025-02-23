@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.3.1
+footer: Qman 1.3.1-3-g5441f22
 date: December 15, 2023
 ---
 
@@ -118,12 +118,13 @@ The above behavior can be customized. For more information, see
 **NOTE 1**
 : There is no reliable method for terminal clients to copy data to the
   clipboard. An escape code (OSC 52) does exist but is only reliably supported
-  by **kitty(1)**. For all other terminals, **Qman** will try to use
-  **xclip(1)** and/or **wl-clipboard(1)**. However, this will only work when
-  running locally and within a desktop environment (not when using SSH).
+  by **kitty(1)** and **ghostty(1)**. For all other terminals, **Qman** will
+  default to using **xclip(1)** and/or **wl-clipboard(1)**. However, these will
+  only work when running locally and within a desktop environment (not when
+  using SSH).
 
 **NOTE 2**
-: Some terminals may report the cursor position inaccurately, causing
+: Some terminals may report mouse cursor position inaccurately, causing
   difficulties with clicking and dragging.
 
 # OPTIONS
