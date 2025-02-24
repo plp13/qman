@@ -183,6 +183,18 @@ int xfputs(const char *s, FILE *stream) {
   return res;
 }
 
+size_t xfread(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+  const size_t cnt = fread(ptr, size, nmemb, stream);
+
+  if (ferror(stream)) {
+    static wchar_t errmsg[BS_SHORT];
+    serror(errmsg, L"Unable to read()");
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+
+  return cnt;
+}
+
 size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
   const size_t cnt = fwrite(ptr, size, nmemb, stream);
 
@@ -295,7 +307,7 @@ void bclearall(bitarr_t ba, unsigned ba_len) {
     ba[i] = 0;
 }
 
-char *bz2_decompress(const char *bzpath) {
+char *bzip2_decompress(const char *bzpath) {
 #ifdef QMAN_BZIP2
   char *path;        // Decompressed file pathname
   FILE *fp;          // Decompressed file pointer
@@ -309,7 +321,7 @@ char *bz2_decompress(const char *bzpath) {
   bzhand = BZ2_bzReadOpen(&bzerror, bzfp, 0, 0, NULL, 0);
   if (BZ_OK != bzerror) {
     winddown(ES_OPER_ERROR,
-             L"Unable to bz2_decompress(): BZ2_bzReadOpen() failed");
+             L"Unable to decompress Bzip2 archive: BZ2_bzReadOpen() failed");
   }
 
   path = xtempnam(NULL, "qman");
@@ -342,12 +354,78 @@ char *bz2_decompress(const char *bzpath) {
 #endif
 }
 
+char *lzma_decompress(const char *pathname) {
+#ifdef QMAN_LZMA
+  char *path;                            // Decompressed file pathname
+  FILE *fp;                              // Decompressed file pointer
+  lzma_ret lzret;                        // Lzma return status
+  lzma_stream lzstrm = LZMA_STREAM_INIT; // Lzma stream
+  FILE *lzfp;                            // Compressed file pointer
+  uint8_t buf[BUFSIZ];                   // Decompressed data buffer
+  uint8_t lzbuf[BUFSIZ];                 // Compressed data buffer
+
+  lzfp = xfopen(pathname, "r");
+
+  lzret = lzma_stream_decoder(&lzstrm, UINT64_MAX, LZMA_CONCATENATED);
+  if (LZMA_OK != lzret) {
+    winddown(ES_OPER_ERROR,
+             L"Unable to decompress XZ archive: lzma_stream_decoder() failed");
+  }
+
+  path = xtempnam(NULL, "qman");
+  fp = xfopen(path, "w");
+
+  lzstrm.next_in = NULL;
+  lzstrm.avail_in = 0;
+  lzstrm.next_out = buf;
+  lzstrm.avail_out = sizeof(buf);
+
+  while (true) {
+
+    if (0 == lzstrm.avail_in && !feof(lzfp)) {
+      lzstrm.next_in = lzbuf;
+      lzstrm.avail_in = xfread(lzbuf, 1, sizeof(lzbuf), lzfp);
+    }
+
+    if (!feof(lzfp))
+      lzret = lzma_code(&lzstrm, LZMA_RUN);
+    else
+      lzret = lzma_code(&lzstrm, LZMA_FINISH);
+
+    if (0 == lzstrm.avail_out || LZMA_STREAM_END == lzret) {
+      xfwrite(buf, 1, sizeof(buf) - lzstrm.avail_out, fp);
+      lzstrm.next_out = buf;
+      lzstrm.avail_out = sizeof(buf);
+    }
+
+    if (LZMA_STREAM_END == lzret)
+      break;
+
+    if (LZMA_OK != lzret) {
+      winddown(ES_OPER_ERROR,
+               L"Unable to decompress XZ archive: lzma_code() failed");
+    }
+  }
+
+  xfclose(fp);
+  lzma_end(&lzstrm);
+  xfclose(lzfp);
+
+  return path;
+#else
+  winddown(ES_OPER_ERROR, L"XZ archives are not supported");
+  return NULL;
+#endif
+}
+
 archive_t aropen(const char *pathname) {
   archive_t a;
   char *pathext = strrchr(pathname, '.');
 
   if (NULL == pathext)
     a.type = AR_NONE;
+  else if (0 == strcasecmp(".xz", pathext))
+    a.type = AR_LZMA;
   else if (0 == strcasecmp(".bz2", pathext))
     a.type = AR_BZIP2;
   else if (0 == strcasecmp(".gz", pathext))
@@ -356,8 +434,12 @@ archive_t aropen(const char *pathname) {
     a.type = AR_NONE;
 
   switch (a.type) {
+  case AR_LZMA:
+    a.path = lzma_decompress(pathname);
+    a.fp_lzma = xfopen(a.path, "r");
+    break;
   case AR_BZIP2:
-    a.path = bz2_decompress(pathname);
+    a.path = bzip2_decompress(pathname);
     a.fp_bzip2 = xfopen(a.path, "r");
     break;
   case AR_GZIP:
@@ -376,6 +458,9 @@ archive_t aropen(const char *pathname) {
 
 void argets(archive_t ap, char *buf, int len) {
   switch (ap.type) {
+  case AR_LZMA:
+    xfgets(buf, len, ap.fp_lzma);
+    break;
   case AR_BZIP2:
     xfgets(buf, len, ap.fp_bzip2);
     break;
@@ -390,6 +475,9 @@ void argets(archive_t ap, char *buf, int len) {
 
 bool areof(archive_t ap) {
   switch (ap.type) {
+  case AR_LZMA:
+    return feof(ap.fp_lzma);
+    break;
   case AR_BZIP2:
     return feof(ap.fp_bzip2);
     break;
@@ -404,6 +492,10 @@ bool areof(archive_t ap) {
 
 void arclose(archive_t ap) {
   switch (ap.type) {
+  case AR_LZMA:
+    xfclose(ap.fp_lzma);
+    unlink(ap.path);
+    break;
   case AR_BZIP2:
     xfclose(ap.fp_bzip2);
     unlink(ap.path);
@@ -714,10 +806,10 @@ int sreadline(char *str, unsigned size, FILE *fp) {
 }
 
 unsigned split_path(char ***dst, unsigned dst_len, char *src) {
-  char **res = *dst;           // results
-  unsigned res_cnt = 0;        // number of results
-  unsigned pos = 0;            // starting position of last path found
-  unsigned i;                  // iterator
+  char **res = *dst;    // results
+  unsigned res_cnt = 0; // number of results
+  unsigned pos = 0;     // starting position of last path found
+  unsigned i;           // iterator
 
   for (i = 0;; i++) {
     if (':' == src[i] || '\0' == src[i]) {

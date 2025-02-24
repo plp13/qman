@@ -1181,7 +1181,7 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
     glen = mbstowcs(gline, tmp, BS_LINE);
 
     if (-1 == glen)
-      winddown(ES_OPER_ERROR, L"Failed to read compressed manual page source");
+      winddown(ES_OPER_ERROR, L"Failed to read manual page source");
 
     // If line is a section heading, add the corresponding data to res
     if (got_sh) {
@@ -1548,7 +1548,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
     glen = mbstowcs(gline, tmp, BS_LINE);
 
     if (-1 == glen)
-      winddown(ES_OPER_ERROR, L"Failed to read compressed manual page source");
+      winddown(ES_OPER_ERROR, L"Failed to read manual page source");
 
     // If line can be a TOC entry, add the corresponding data to res
     if (got_sh) {

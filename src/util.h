@@ -35,9 +35,10 @@ typedef struct {
 
 // Compressed archive type
 typedef enum {
-  AR_NONE, // no compression
-  AR_GZIP, // gzip
-  AR_BZIP2 // bzip2
+  AR_NONE,  // no compression
+  AR_GZIP,  // gzip
+  AR_BZIP2, // bzip2
+  AR_LZMA   // xz
 } archive_type_t;
 
 // A file pointer to a compressed archive
@@ -47,6 +48,7 @@ typedef struct {
   FILE *fp_none;       // file pointer if uncompressed
   gzFile fp_gzip;      // file pointer if gzip
   FILE *fp_bzip2;      // file pointer if bzip2
+  FILE *fp_lzma;       // file pointer if xz
 } archive_t;
 
 //
@@ -187,6 +189,9 @@ extern char *xfgets(char *s, int size, FILE *stream);
 // Safely call fputs()
 extern int xfputs(const char *s, FILE *stream);
 
+// Safely call fread()
+extern size_t xfread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+
 // Safely call fwrite()
 extern size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 
@@ -222,9 +227,13 @@ extern void bclear(bitarr_t ba, unsigned i);
 // Clear all bits of ba. ba_len is ba's size.
 extern void bclearall(bitarr_t ba, unsigned ba_len);
 
-// Decompress the BZ2-compressed file at pathname, place the resulting data into
+// Decompress the bzip2-compressed file at pathname, place the resulting data
+// into a temporary file, and return its path
+extern char *bzip2_decompress(const char *pathname);
+
+// Decompress the xz-compressed file at pathname, place the resulting data into
 // a temporary file, and return its path
-extern char *bz2_decompress(const char *pathname);
+extern char *lzma_decompress(const char *pathname);
 
 // Open compressed archive at pathname for reading, and return the relevant
 // file pointer

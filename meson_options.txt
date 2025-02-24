@@ -23,3 +23,9 @@ option('bzip2',
   value: 'auto',
   description: 'Support Bzip2-compressed manual pages'
 )
+
+option('lzma',
+  type: 'feature',
+  value: 'auto',
+  description: 'Support XZ-compressed manual pages'
+)

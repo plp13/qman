@@ -30,6 +30,10 @@
 #include <bzlib.h>
 #endif
 
+#ifdef QMAN_LZMA
+#include <lzma.h>
+#endif
+
 #define _GNU_SOURCE
 extern char *program_invocation_short_name;
 #undef _GNU_SOURCE
