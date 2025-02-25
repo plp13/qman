@@ -61,6 +61,7 @@ int xpclose(FILE *stream) {
   return status;
 }
 
+#ifdef QMAN_GZIP
 gzFile xgzopen(const char *path, const char *mode) {
   gzFile gzfp = gzopen(path, mode);
 
@@ -72,7 +73,9 @@ gzFile xgzopen(const char *path, const char *mode) {
 
   return gzfp;
 }
+#endif
 
+#ifdef QMAN_GZIP
 int xgzclose(gzFile file) {
   const int status = gzclose(file);
 
@@ -84,6 +87,7 @@ int xgzclose(gzFile file) {
 
   return status;
 }
+#endif
 
 FILE *xfopen(const char *pathname, const char *mode) {
   FILE *const file = fopen(pathname, mode);
@@ -121,6 +125,7 @@ FILE *xtmpfile() {
   return file;
 }
 
+#ifdef QMAN_GZIP
 char *xgzgets(gzFile file, char *buf, int len) {
   char *res;
 
@@ -145,6 +150,7 @@ char *xgzgets(gzFile file, char *buf, int len) {
     }
   }
 }
+#endif
 
 char *xfgets(char *s, int size, FILE *stream) {
   char *res;
@@ -443,8 +449,12 @@ archive_t aropen(const char *pathname) {
     a.fp_bzip2 = xfopen(a.path, "r");
     break;
   case AR_GZIP:
+#ifdef QMAN_GZIP
     a.path = xstrdup(pathname);
     a.fp_gzip = xgzopen(a.path, "rb");
+#else
+    winddown(ES_OPER_ERROR, L"Gzip archives are not supported");
+#endif
     break;
   case AR_NONE:
   default:
@@ -465,7 +475,9 @@ void argets(archive_t ap, char *buf, int len) {
     xfgets(buf, len, ap.fp_bzip2);
     break;
   case AR_GZIP:
+#ifdef QMAN_GZIP
     xgzgets(ap.fp_gzip, buf, len);
+#endif
     break;
   case AR_NONE:
   default:
@@ -482,7 +494,11 @@ bool areof(archive_t ap) {
     return feof(ap.fp_bzip2);
     break;
   case AR_GZIP:
+#ifdef QMAN_GZIP
     return gzeof(ap.fp_gzip);
+#else
+    return false;
+#endif
     break;
   case AR_NONE:
   default:
@@ -501,7 +517,9 @@ void arclose(archive_t ap) {
     unlink(ap.path);
     break;
   case AR_GZIP:
+#ifdef QMAN_GZIP
     xgzclose(ap.fp_gzip);
+#endif
     break;
   case AR_NONE:
   default:

@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.3.1-6-g2a23f6c -- [see what's new](#new-in-this-version)
+Version 1.3.1-7-gd21ef51 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -103,11 +103,13 @@ available, starting with version 1.2.1.
 
 ## Dependencies
 Qman is written in plain C, and thus requires a compiler such as `gcc` or
-`clang`. Its only required library dependencies are `glibc`, `ncurses`, `hinit`,
-and `zlib`. It uses the `meson` build system.
+`clang`. Its only required library dependencies are `glibc`, `ncurses`, and
+`hinit`. It uses the `meson` build system.
 
-There is also an optional library dependency:
-- `bzip2` -- support for manual pages compressed with `bzip2`
+There are also a number of optional dependencies:
+- `zlib`: suport for manual pages compressed with `gzip`
+- `bzip2`: support for manual pages compressed with `bzip2`
+- `liblzma`: support for manual pages compressed with `xz`
 
 Note that Qman is a front-end to GNU `man`, and therefore requires `man` and
 `groff` to be installed. In order for it to make sense, a Unix manual pages
@@ -122,6 +124,21 @@ $ cd build/
 $ meson compile
 $ sudo meson install
 ```
+
+### Meson options
+
+Option `-Ddocdir=<path>` can be passed to `meson setup`, to set the directory
+where Qman's documentation will be installed.
+
+If building for an embedded system, the following optional arguments can be
+passed to `meson setup`, to disable certain program features:
+- `-Dman-pages=disabled`: do not install the manual page
+- `-Ddocs=disabled`: do not install documentation
+- `-Dgzip=disabled`: disable support for manual pages compressed with `gzip`
+- `-Dbzip2=disabled`: disable support for manual pages compressed with `bzip2`
+- `-Dlzma=disabled`: disable support for manual pages compressed with `xz`
+
+By default, all features are enabled.
 
 > **:bulb: Note**
 >

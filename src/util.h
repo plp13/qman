@@ -46,7 +46,9 @@ typedef struct {
   archive_type_t type; // archive type
   char *path;          // path to / filename of archive
   FILE *fp_none;       // file pointer if uncompressed
+#ifdef QMAN_GZIP
   gzFile fp_gzip;      // file pointer if gzip
+#endif
   FILE *fp_bzip2;      // file pointer if bzip2
   FILE *fp_lzma;       // file pointer if xz
 } archive_t;
@@ -166,10 +168,14 @@ extern FILE *xpopen(const char *command, const char *type);
 extern int xpclose(FILE *stream);
 
 // Safely call gzopen()
+#ifdef QMAN_GZIP
 extern gzFile xgzopen(const char *path, const char *mode);
+#endif
 
 // Safely call gzclose()
+#ifdef QMAN_GZIP
 extern int xgzclose(gzFile file);
+#endif
 
 // Safely call fopen()
 extern FILE *xfopen(const char *pathname, const char *mode);
@@ -181,7 +187,9 @@ extern int xfclose(FILE *stream);
 extern FILE *xtmpfile();
 
 // Safely call gzgets()
+#ifdef QMAN_GZIP
 extern char *xgzgets(gzFile file, char *buf, int len);
+#endif
 
 // Safely call fgets()
 extern char *xfgets(char *s, int size, FILE *stream);

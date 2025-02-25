@@ -18,14 +18,20 @@ option('docs',
   description: 'Install additional documentation'
 )
 
+option('gzip',
+  type: 'feature',
+  value: 'auto',
+  description: 'Support gzip-compressed manual pages'
+)
+
 option('bzip2',
   type: 'feature',
   value: 'auto',
-  description: 'Support Bzip2-compressed manual pages'
+  description: 'Support bzip2-compressed manual pages'
 )
 
 option('lzma',
   type: 'feature',
   value: 'auto',
-  description: 'Support XZ-compressed manual pages'
+  description: 'Support xz-compressed manual pages'
 )

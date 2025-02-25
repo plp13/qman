@@ -31,8 +31,12 @@ src = [
 deps = [
   dependency('ncursesw', required: true),
   dependency('inih', required: true),
-  dependency('zlib', required: true)
 ]
+if get_option('gzip').enabled() or get_option('gzip').auto()
+  gzip = dependency('zlib', required: true)
+  deps += [gzip]
+  add_global_arguments('-DQMAN_GZIP=true', language : 'c')
+endif
 if get_option('bzip2').enabled() or get_option('bzip2').auto()
   bzip2 = dependency('bzip2', required : false)
   if not bzip2.found()
