@@ -865,7 +865,7 @@ range_t fr_search(const full_regex_t *re, const wchar_t *src) {
   range_t res;          // return value
 
   // If re->snpt isn't in src, return {0, 0}
-  if (NULL == wcsstr(src, re->snpt)) {
+  if (NULL != re->snpt && NULL == wcsstr(src, re->snpt)) {
     res.beg = 0;
     res.end = 0;
     return res;

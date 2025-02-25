@@ -43,6 +43,7 @@ extern char *program_invocation_short_name;
 #undef _GNU_SOURCE
 
 #include "util.h"
+#include "eini.h"
 #include "base64.h"
 #include "config.h"
 #include "program.h"
