@@ -19,13 +19,13 @@ full_regex_t eini_re_include, eini_re_section, eini_re_value;
   if (NULL == mykey)                                                           \
     ret.key = NULL;                                                            \
   else {                                                                       \
-    wcscpy(ret_key, mykey);                                                    \
+    wcsncpy(ret_key, mykey, BS_SHORT);                                         \
     ret.key = ret_key;                                                         \
   }                                                                            \
   if (NULL == myvalue)                                                         \
     ret.value = NULL;                                                          \
   else {                                                                       \
-    wcscpy(ret_value, myvalue);                                                \
+    wcsncpy(ret_value, myvalue, BS_LINE);                                      \
     ret.value = ret_value;                                                     \
   }
 

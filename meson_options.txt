@@ -35,3 +35,9 @@ option('lzma',
   value: 'auto',
   description: 'Support xz-compressed manual pages'
 )
+
+option('tests',
+  type: 'feature',
+  value: 'auto',
+  description: 'Enable unit tests'
+)

@@ -17,7 +17,7 @@ config_c = custom_target('config.c',
   command: cog_cmd
 )
 
-# Executable
+# Qman executable
 src = [
   config_h,
   config_c,
@@ -38,17 +38,17 @@ if get_option('gzip').enabled() or get_option('gzip').auto()
   add_global_arguments('-DQMAN_GZIP=true', language : 'c')
 endif
 if get_option('bzip2').enabled() or get_option('bzip2').auto()
-  bzip2 = dependency('bzip2', required : false)
+  bzip2 = dependency('bzip2', required: false)
   if not bzip2.found()
-    bzip2 = cc.find_library('bz2', required : true)
+    bzip2 = cc.find_library('bz2', required: true)
   endif
   deps += [bzip2]
   add_global_arguments('-DQMAN_BZIP2=true', language : 'c')
 endif
 if get_option('lzma').enabled() or get_option('lzma').auto()
-  xz = dependency('liblzma', required : false)
+  xz = dependency('liblzma', required: false)
   if not xz.found()
-    xz = cc.find_library('lzma', required : true)
+    xz = cc.find_library('lzma', required: true)
   endif
   deps += [xz]
   add_global_arguments('-DQMAN_LZMA=true', language : 'c')
@@ -60,3 +60,30 @@ executable('qman',
   install_dir: 'bin',
   install_tag: 'program'
 )
+
+# Unit testing executable
+if get_option('tests').enabled() or get_option('tests').auto()
+  t_src = [
+    config_h,
+    config_c,
+    'util.c',
+    'base64.c',
+    'program.c',
+    'cli.c',
+    'tui.c',
+    'qman_tests.c'
+  ]
+  cunit = dependency('cunit', required: true)
+  t_deps = [deps] + [cunit]
+  t_exe = executable('qman_tests',
+    sources: t_src,
+    dependencies: t_deps,
+    install: false
+  )
+  t_all = run_command(find_program('qman_tests_list.sh'), check: true).stdout().split('\n')
+  foreach t: t_all
+    if t != ''
+      test(t, t_exe, args: [t])
+    endif
+  endforeach
+endif
