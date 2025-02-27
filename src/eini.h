@@ -41,9 +41,9 @@ typedef int (*eini_handler_t)(const char *section, // current section
 //
 
 // Regular expressions for...
-extern full_regex_t eini_re_include, // an include directive
-    eini_re_section,                 // a section header
-    eini_re_value;                   // a key/value pair
+extern regex_t eini_re_include, // an include directive
+    eini_re_section,            // a section header
+    eini_re_value;              // a key/value pair
 
 //
 // Functions
@@ -52,7 +52,7 @@ extern full_regex_t eini_re_include, // an include directive
 // Initialize the parser
 extern void eini_init();
 
-// Parse INI line src (of length len) and return its contents
-extern eini_t eini_parse(char *src, unsigned len);
+// Parse INI line `src` and return its contents
+extern eini_t eini_parse(char *src);
 
 #endif

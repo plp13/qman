@@ -47,10 +47,10 @@ typedef struct {
   char *path;          // path to / filename of archive
   FILE *fp_none;       // file pointer if uncompressed
 #ifdef QMAN_GZIP
-  gzFile fp_gzip;      // file pointer if gzip
+  gzFile fp_gzip; // file pointer if gzip
 #endif
-  FILE *fp_bzip2;      // file pointer if bzip2
-  FILE *fp_lzma;       // file pointer if xz
+  FILE *fp_bzip2; // file pointer if bzip2
+  FILE *fp_lzma;  // file pointer if xz
 } archive_t;
 
 //
@@ -68,11 +68,22 @@ typedef struct {
 // Macros
 //
 
-// Swap two numerical values a and b (without using a third variable)
+// Swap two numerical values `a` and `b` (without using a third variable)
 #define swap(a, b)                                                             \
   a = a ^ b;                                                                   \
   b = a ^ b;                                                                   \
   a = a ^ b;
+
+// If you get spurious gcc warnings about NULL string arguments being passed to
+// functions that require them to be non-NULL, wrap said strings in `nnl()` or
+// `wnnl()` to suppress them
+
+// If string `s` is NULL, replace it with ""
+#define nnl(s) ((s) ? (s) : "")
+
+// If wide string `w` is NULL, replace it with ""
+#define wnnl(w) ((w) ? (w) : L"")
+
 // Return the size of array arr
 #define asizeof(arr) (sizeof(arr) / sizeof(arr[0]))
 

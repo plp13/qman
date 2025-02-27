@@ -4,9 +4,12 @@
 // - Define your test function `void test_foo()`
 // - Insert `add_test(foo)` into `main()`
 //
-// Invoking `qman_tests <test name>` runs a specific test.
-// Exit code 0: test run was successful
-//           1: test run failed
+// Invoking `qman_tests <test name>` runs a specific test, while `qman_tests
+// all` runs all tests.
+//
+// Exit codes:
+//           0: all tests succeeded
+//           n: n failures happened during testing
 //          -1: test not found
 //
 // Invoking `qman_tests all` runs all tests, and returns the number of failures
@@ -21,6 +24,7 @@
 // Helper macros
 //
 
+// Initialize the test suite
 #define init_test_suite()                                                      \
   bool test_found = false;                                                     \
   int errors = 0;                                                              \
@@ -31,6 +35,7 @@
     suite = CU_add_suite("qman", NULL, NULL);                                  \
   }
 
+// Add test `tst`. The name of the test function must be `test_<tst>`.
 #define add_test(tst)                                                          \
   if (argc > 1) {                                                              \
     if (0 == strcmp(argv[1], #tst) || 0 == strcmp(argv[1], "all")) {           \
@@ -40,40 +45,122 @@
     }                                                                          \
   }
 
-#define winddown_test_suite()                                                  \
+// Depending on `argc`/`argv`, run one test, or run all tests, or print usage
+// information. Then exit.
+#define run_tests_and_exit()                                                   \
   if (argc > 1) {                                                              \
     if (test_found) {                                                          \
       printf("\n");                                                            \
       CU_basic_run_tests();                                                    \
       errors = CU_get_number_of_failures();                                    \
       CU_cleanup_registry();                                                   \
-      return errors;                                                           \
+      winddown(errors, NULL);                                                  \
     } else {                                                                   \
       printf("No such test '%s'\n", argv[1]);                                  \
-      return -1;                                                               \
+      winddown(-1, NULL);                                                      \
     }                                                                          \
   } else {                                                                     \
     printf("Usage: %s <test name>  # run a single test\n", argv[0]);           \
     printf("       %s all          # run all tests\n", argv[0]);               \
-    return 0;                                                                  \
+    winddown(0, NULL);                                                         \
   }
 
 //
 // Test functions
 //
 
-void test_eini_parse() { CU_ASSERT_EQUAL(0, 2); }
-void test_foo() { CU_ASSERT_EQUAL(1, 1); }
-void test_bar() { CU_ASSERT_EQUAL(2, 2); }
+void test_eini_parse() {
+  eini_t parsed;
+
+  eini_init();
+
+  parsed = eini_parse("include /usr/share/foo");
+  CU_ASSERT_EQUAL(parsed.type, EINI_INCLUDE);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"/usr/share/foo"));
+
+  parsed = eini_parse("\t include\t\t/usr/share/foo ");
+  CU_ASSERT_EQUAL(parsed.type, EINI_INCLUDE);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"/usr/share/foo"));
+
+  parsed = eini_parse("include \"/usr/share/foo\"");
+  CU_ASSERT_EQUAL(parsed.type, EINI_INCLUDE);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"/usr/share/foo"));
+
+  parsed = eini_parse(" include \t  \"/usr/share/foo\"  \t ");
+  CU_ASSERT_EQUAL(parsed.type, EINI_INCLUDE);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"/usr/share/foo"));
+
+  parsed = eini_parse("[section_one]");
+  CU_ASSERT_EQUAL(parsed.type, EINI_SECTION);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"section_one"));
+
+  parsed = eini_parse("  [\tSectionTwo  ]\t\t ");
+  CU_ASSERT_EQUAL(parsed.type, EINI_SECTION);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"SectionTwo"));
+
+  parsed = eini_parse("\t [ Section3  ] \t");
+  CU_ASSERT_EQUAL(parsed.type, EINI_SECTION);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"Section3"));
+
+  parsed = eini_parse("key_1=an egg");
+  CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
+  CU_ASSERT(0 == wcscmp(parsed.key, L"key_1"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"an egg"));
+
+  parsed = eini_parse("\t  KeyTwo = another eggie  \t ");
+  CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
+  CU_ASSERT(0 == wcscmp(parsed.key, L"KeyTwo"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"another eggie"));
+
+  parsed = eini_parse(
+      "\t third_key =  ένα αυγουλάκι που in English το λένε eggie  \t");
+  CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
+  CU_ASSERT(0 == wcscmp(parsed.key, L"third_key"));
+  CU_ASSERT(
+      0 == wcscmp(parsed.value, L"ένα αυγουλάκι που in English το λένε eggie"));
+
+  parsed = eini_parse("key4= \"ακόμη ένα eggie ή αυγό\"");
+  CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
+  CU_ASSERT(0 == wcscmp(parsed.key, L"key4"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"ακόμη ένα eggie ή αυγό"));
+
+  parsed = eini_parse("");
+  CU_ASSERT_EQUAL(parsed.type, EINI_NONE);
+
+  parsed = eini_parse("[garbled$ect_on]");
+  CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"unable to parse"));
+
+  parsed = eini_parse("κλειδί=value");
+  CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"unable to parse"));
+
+  parsed = eini_parse("key=\"value"); // '"value'
+  CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
+
+  parsed = eini_parse("key=\"value\\\""); // '"value\"'
+  CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
+
+  parsed = eini_parse("key=\"value\\\\\""); // '"value\\"'
+  CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
+  CU_ASSERT(0 == wcscmp(parsed.key, L"key"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"value\\\\"));
+
+  parsed = eini_parse("key=\"value\\\\\\\""); // '"value\\\"'
+  CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
+}
 
 // Where we hope it works
 int main(int argc, char **argv) {
+  init();
+  init_cli();
   init_test_suite();
 
   // `add_test()` all your tests here
   add_test(eini_parse);
-  add_test(foo);
-  add_test(bar);
 
-  winddown_test_suite();
+  run_tests_and_exit();
 }

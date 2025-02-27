@@ -17,17 +17,19 @@ config_c = custom_target('config.c',
   command: cog_cmd
 )
 
-# Qman executable
+# Non-main sources
 src = [
   config_h,
   config_c,
   'util.c',
+  'eini.c',
   'base64.c',
   'program.c',
   'cli.c',
-  'tui.c',
-  'qman.c'
+  'tui.c'
 ]
+
+# Dependencies
 deps = [
   dependency('ncursesw', required: true),
   dependency('inih', required: true),
@@ -53,31 +55,25 @@ if get_option('lzma').enabled() or get_option('lzma').auto()
   deps += [xz]
   add_global_arguments('-DQMAN_LZMA=true', language : 'c')
 endif
+if get_option('tests').enabled() or get_option('tests').auto()
+  cunit = dependency('cunit', required: true)
+  deps += [cunit]
+endif
+
+# Qman executable
 executable('qman',
-  sources: src,
+  sources: src + ['qman.c'],
   dependencies: deps,
   install: true,
   install_dir: 'bin',
   install_tag: 'program'
 )
 
-# Unit testing executable
+# Unit testing (executable and tests)
 if get_option('tests').enabled() or get_option('tests').auto()
-  t_src = [
-    config_h,
-    config_c,
-    'util.c',
-    'base64.c',
-    'program.c',
-    'cli.c',
-    'tui.c',
-    'qman_tests.c'
-  ]
-  cunit = dependency('cunit', required: true)
-  t_deps = [deps] + [cunit]
   t_exe = executable('qman_tests',
-    sources: t_src,
-    dependencies: t_deps,
+    sources: src + ['qman_tests.c'],
+    dependencies: deps + [cunit],
     install: false
   )
   t_all = run_command(find_program('qman_tests_list.sh'), check: true).stdout().split('\n')
