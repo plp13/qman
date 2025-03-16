@@ -280,6 +280,15 @@ extern void safree(char **buf, unsigned buf_len);
 // do any memory allocation. Said argument must be a pointer to a buffer of
 // already allocated memory.
 
+// Test whether the character at `src[pos]` is escaped
+extern bool wescaped(wchar_t *src, unsigned pos);
+
+// Unescape the string in `src`. `\a`, `\b`, `\t`, `\n`, `\v`, `\f`, and `\r`
+// are unescaped into character codes 7 to 13, `\e` to character code 27 (ESC),
+// `\\` to `\`, `\"` to `"`, and `\'` to `'`. All other escaped characters are
+// discarded.
+extern void wunescape(wchar_t *src);
+
 // Return the number of occurences of needle in hayst
 extern unsigned wccnt(const wchar_t *hayst, wchar_t needle);
 

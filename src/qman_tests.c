@@ -86,9 +86,21 @@ void test_eini_parse() {
   CU_ASSERT_EQUAL(parsed.type, EINI_INCLUDE);
   CU_ASSERT(0 == wcscmp(parsed.value, L"/usr/share/foo"));
 
-  parsed = eini_parse(" include \t  \"/usr/share/foo\"  \t ");
+  parsed = eini_parse(" include \t  \'/usr/share/foo\'  \t ");
   CU_ASSERT_EQUAL(parsed.type, EINI_INCLUDE);
   CU_ASSERT(0 == wcscmp(parsed.value, L"/usr/share/foo"));
+
+  parsed = eini_parse("include /usr/share/foo ; comment");
+  CU_ASSERT_EQUAL(parsed.type, EINI_INCLUDE);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"/usr/share/foo"));
+
+  parsed = eini_parse("include \"/usr/share/foo\" ; comment");
+  CU_ASSERT_EQUAL(parsed.type, EINI_INCLUDE);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"/usr/share/foo"));
+
+  parsed = eini_parse("include \'/usr/share/foo ; comment\'");
+  CU_ASSERT_EQUAL(parsed.type, EINI_INCLUDE);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"/usr/share/foo ; comment"));
 
   parsed = eini_parse("[section_one]");
   CU_ASSERT_EQUAL(parsed.type, EINI_SECTION);
@@ -101,6 +113,10 @@ void test_eini_parse() {
   parsed = eini_parse("\t [ Section3  ] \t");
   CU_ASSERT_EQUAL(parsed.type, EINI_SECTION);
   CU_ASSERT(0 == wcscmp(parsed.value, L"Section3"));
+
+  parsed = eini_parse("[SectionIV]; comment");
+  CU_ASSERT_EQUAL(parsed.type, EINI_SECTION);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"SectionIV"));
 
   parsed = eini_parse("key_1=an egg");
   CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
@@ -124,6 +140,31 @@ void test_eini_parse() {
   CU_ASSERT(0 == wcscmp(parsed.key, L"key4"));
   CU_ASSERT(0 == wcscmp(parsed.value, L"ακόμη ένα eggie ή αυγό"));
 
+  parsed =
+      eini_parse("key5=ASCII specials are \\a \\b \\t \\n \\v \\f \\r and \\e");
+  CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
+  CU_ASSERT(0 == wcscmp(parsed.key, L"key5"));
+  CU_ASSERT(0 == wcscmp(parsed.value,
+                        L"ASCII specials are \a \b \t \n \v \f \r and \e"));
+
+  parsed = eini_parse("key_VI=Other specials: \\\\ \\' and \\\", naturally");
+  CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
+  CU_ASSERT(0 == wcscmp(parsed.key, L"key_VI"));
+  CU_ASSERT(0 ==
+            wcscmp(parsed.value, L"Other specials: \\ ' and \", naturally"));
+
+  parsed = eini_parse("se7en=\"in double \\\" quotes\\r\"");
+  CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
+  CU_ASSERT(0 == wcscmp(parsed.key, L"se7en"));
+  CU_ASSERT(0 ==
+            wcscmp(parsed.value, L"in double \" quotes\r"));
+
+  parsed = eini_parse("se7enUp=  \'in single \\' quotes\\\\\'");
+  CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
+  CU_ASSERT(0 == wcscmp(parsed.key, L"se7enUp"));
+  CU_ASSERT(0 ==
+            wcscmp(parsed.value, L"in single \' quotes\\"));
+
   parsed = eini_parse("");
   CU_ASSERT_EQUAL(parsed.type, EINI_NONE);
 
@@ -135,20 +176,56 @@ void test_eini_parse() {
   CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
   CU_ASSERT(0 == wcscmp(parsed.value, L"unable to parse"));
 
-  parsed = eini_parse("key=\"value"); // '"value'
+  parsed = eini_parse("key=\"value"); // "value
   CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
   CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
 
-  parsed = eini_parse("key=\"value\\\""); // '"value\"'
+  parsed = eini_parse("key=\"value\\\""); // "value\"
   CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
   CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
 
-  parsed = eini_parse("key=\"value\\\\\""); // '"value\\"'
+  parsed = eini_parse("key=\"value\\\\\""); // "value\\"
   CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
   CU_ASSERT(0 == wcscmp(parsed.key, L"key"));
-  CU_ASSERT(0 == wcscmp(parsed.value, L"value\\\\"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"value\\"));
 
-  parsed = eini_parse("key=\"value\\\\\\\""); // '"value\\\"'
+  parsed = eini_parse("key=\"value\\\\\\\""); // "value\\\"
+  CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
+
+  parsed = eini_parse("key='value"); // 'value
+  CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
+
+  parsed = eini_parse("key='value\\'"); // 'value\'
+  CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
+
+  parsed = eini_parse("key='value\\\\'"); // 'value\\'
+  CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
+  CU_ASSERT(0 == wcscmp(parsed.key, L"key"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"value\\"));
+
+  parsed = eini_parse("key='value\\\\\\'"); // 'value\\\'
+  CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
+
+  parsed = eini_parse("key=value ; comment");
+  CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
+  CU_ASSERT(0 == wcscmp(parsed.key, L"key"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"value"));
+
+  parsed = eini_parse("key='value' ; comment");
+  CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
+  CU_ASSERT(0 == wcscmp(parsed.key, L"key"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"value"));
+
+  parsed = eini_parse("key=\"value ; comment\"");
+  CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
+  CU_ASSERT(0 == wcscmp(parsed.key, L"key"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"value ; comment"));
+
+  parsed = eini_parse("key='value ; comment");
   CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
   CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
 }

@@ -26,26 +26,27 @@ regex_t eini_re_include, eini_re_section, eini_re_value;
     ret.value = NULL;                                                          \
   else {                                                                       \
     wcsncpy(ret_value, wnnl(myvalue), BS_LINE);                                \
+    wunescape(ret_value);                                                      \
     ret.value = ret_value;                                                     \
   }                                                                            \
-  logprintf("ret %d '%ls' '%ls'", ret.type, ret.key, ret.value);
 
 // Helper of `eini_parse()`. Strip trailing whitespace from `src`. If it's
-// surrounded by double quotes, strip those as well. Return any syntax errors.
+// surrounded by single or double quotes, strip those as well. Return any syntax
+// errors.
 #define wsrc_strip                                                             \
   wlen = wmargtrim(wsrc, NULL);                                                \
   if (L'"' == wsrc[0]) {                                                       \
-    /* wsrc begins with a '"' */                                               \
+    /* wsrc begins with a `"` */                                               \
     if (wlen < 2) {                                                            \
-      /* wsrc equals '"'; accept it  as it is */                               \
+      /* wsrc equals `"`; accept it  as it is */                               \
     } else if (L'"' == wsrc[wlen - 1]) {                                       \
       /* wsrc ends in '"' */                                                   \
-      if (escaped(wsrc, wlen - 1)) {                                           \
-        /* the ending '"' is escaped; reject it */                             \
+      if (wescaped(wsrc, wlen - 1)) {                                          \
+        /* the ending `"` is escaped; reject it */                             \
         set_ret(EINI_ERROR, NULL, L"non-terminated quote");                    \
         return ret;                                                            \
       } else {                                                                 \
-        /* the ending '"' is not escaped; remove the '"'s and accept it */     \
+        /* the ending `"` is not escaped; remove the `"`s and accept it */     \
         wsrc[wlen - 1] = L'\0';                                                \
         wsrc = &wsrc[1];                                                       \
       }                                                                        \
@@ -54,23 +55,60 @@ regex_t eini_re_include, eini_re_section, eini_re_value;
       set_ret(EINI_ERROR, NULL, L"non-terminated quote");                      \
       return ret;                                                              \
     }                                                                          \
+  } else if (L'\'' == wsrc[0]) {                                               \
+    /* wsrc begins with a `'` */                                               \
+    if (wlen < 2) {                                                            \
+      /* wsrc equals `'`; accept it  as it is */                               \
+    } else if (L'\'' == wsrc[wlen - 1]) {                                      \
+      /* wsrc ends in `'` */                                                   \
+      if (wescaped(wsrc, wlen - 1)) {                                          \
+        /* the ending `'` is escaped; reject it */                             \
+        set_ret(EINI_ERROR, NULL, L"non-terminated quote");                    \
+        return ret;                                                            \
+      } else {                                                                 \
+        /* the ending `"` is not escaped; remove the `"`s and accept it */     \
+        wsrc[wlen - 1] = L'\0';                                                \
+        wsrc = &wsrc[1];                                                       \
+      }                                                                        \
+    } else {                                                                   \
+      /* wsrc does not end in `'`; reject it */                                \
+      set_ret(EINI_ERROR, NULL, L"non-terminated quote");                      \
+      return ret;                                                              \
+    }                                                                          \
   }
 
-// Helper of `wsrc_strip` i.e. of `eini_parse()`. Test whether the character at
-// `src[pos]` is escaped.
-bool escaped(wchar_t *src, unsigned pos) {
-  int c = 0;   // number of '\'s before `pos`
-  int i = pos; // iterator
+// Helper of `eini_parse()`. Discard all comments in src.
+void decomment(wchar_t *src) {
+  unsigned i = 0;   // iterator
+  bool inq = false; // true if we are inside a quoted string
+  wchar_t qtype =
+      L'?'; // type of quotes used by the string we are in: `'` or `"`
 
-  while (i > 0) {
-    i--;
-    if (L'\\' == src[i])
-      c++;
-    else
-      break;
+  while (L'\0' != src[i]) {
+    if (inq) {
+      // we are inside a quoted string
+      if (qtype == src[i] && !wescaped(src, i)) {
+        // src[i] is an unescaped `"` or `'`, thus the quoted string ends
+        inq = false;
+      }
+    } else {
+      // we are not inside a quoted string
+      if (L';' == src[i]) {
+        // src[i] is `;`, thus we have a comment to the end of line
+        src[i] = L'\0';
+        return;
+      } else if (L'"' == src[i] && !wescaped(src, i)) {
+        // src[i] is an unescaped `"`, thus a double-quoted string begins
+        inq = true;
+        qtype = L'"';
+      } else if (L'\'' == src[i] && !wescaped(src, i)) {
+        // src[i] is an unescaped `'`, thus a single-quoted string begins
+        inq = true;
+        qtype = L'\'';
+      }
+    }
+    i++;
   }
-
-  return c % 2;
 }
 
 // Helper of `eini_parse()`. Find the first match of `re` in `src` and return
@@ -107,12 +145,12 @@ void eini_init() {
 }
 
 eini_t eini_parse(char *src) {
-  wchar_t *wsrc = walloca(BS_SHORT); // wchar_t* version of src
-  int wlen;                          // length of wsrc
-  range_t loc;                       // location of regex match in wsrc
+  wchar_t *wsrc = walloca(BS_SHORT); // wchar_t* version of `src`
+  int wlen;                          // length of `wsrc`
+  range_t loc;                       // location of regex match in `wsrc`
   eini_t ret;                        // return value
-  static wchar_t ret_key[BS_SHORT];  // key contents of ret
-  static wchar_t ret_value[BS_LINE]; // value contents of ret
+  static wchar_t ret_key[BS_SHORT];  // `key` contents of `ret`
+  static wchar_t ret_value[BS_LINE]; // `value` contents of `ret`
 
   wlen = mbstowcs(wsrc, src, BS_LINE);
   if (-1 == wlen) {
@@ -120,21 +158,19 @@ eini_t eini_parse(char *src) {
     set_ret(EINI_ERROR, NULL, L"non-string data");
     return ret;
   }
-  logprintf("src='%ls' len=%d", wsrc, wlen);
+
+  decomment(wsrc);
 
   loc = match(eini_re_include, src);
-  logprintf("include %d-%d", loc.beg, loc.end);
   if (!(0 == loc.beg && 0 == loc.end)) {
     // Include directive
     wsrc = &wsrc[loc.end];
     wsrc_strip;
-    logprintf("wsrc='%ls'", wsrc);
     set_ret(EINI_INCLUDE, NULL, wsrc);
     return ret;
   }
 
   loc = match(eini_re_section, src);
-  logprintf("section %d-%d", loc.beg, loc.end);
   if (!(0 == loc.beg && 0 == loc.end)) {
     // Section
     wsrc = &wsrc[wmargend(wsrc, L"[")];
@@ -144,7 +180,6 @@ eini_t eini_parse(char *src) {
   }
 
   loc = match(eini_re_value, src);
-  logprintf("value %d-%d", loc.beg, loc.end);
   if (!(0 == loc.beg && 0 == loc.end)) {
     // Key/value pair
     wchar_t *wkey = wsrc;
@@ -158,7 +193,6 @@ eini_t eini_parse(char *src) {
   }
 
   wlen = wmargtrim(wsrc, NULL);
-  logprintf("empty %d", wlen);
   if (0 == wlen) {
     // Empty line
     set_ret(EINI_NONE, NULL, NULL);
@@ -166,7 +200,6 @@ eini_t eini_parse(char *src) {
   }
 
   // None of the above
-  logprintf("error");
   set_ret(EINI_ERROR, NULL, L"unable to parse");
   return ret;
 }
