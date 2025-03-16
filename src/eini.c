@@ -244,3 +244,9 @@ void eini(eini_handler_t hf, eini_error_t ef, const char *path) {
 
   xfclose(fp);
 }
+
+void eini_free() {
+  regfree(&eini_re_include);
+  regfree(&eini_re_section);
+  regfree(&eini_re_value);
+}

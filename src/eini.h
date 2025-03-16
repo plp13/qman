@@ -65,4 +65,7 @@ extern eini_t eini_parse(char *src);
 // calls itself whenever it encounters an `include` directive.
 extern void eini(eini_handler_t hf, eini_error_t ef, const char *path);
 
+// Wind down the parser
+extern void eini_free();
+
 #endif

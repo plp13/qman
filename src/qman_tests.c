@@ -228,6 +228,8 @@ void test_eini_parse() {
   parsed = eini_parse("key='value ; comment");
   CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
   CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
+
+  eini_free();
 }
 
 // Where we hope it works
