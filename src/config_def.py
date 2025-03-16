@@ -161,7 +161,7 @@ config_def = {
     },
     "misc": {
         "program_name": (("string",), None, False, "Program executable basename (discovered automatically)"),
-        "program_version": (("wstring",), ("Qman 1.3.1-10-g391eda1",), False, "Formal program name and version"),
+        "program_version": (("wstring",), ("Qman 1.3.1-11-g9ae04ce",), False, "Formal program name and version"),
         "config_path": (("string",), None, False, "Path to the configuration file"),
         "man_path": (("string",), ("/usr/bin/man",), True, "Path to the man(1) command"),
         "groff_path": (("string",), ("/usr/bin/groff",), True, "Path to the groff(1) command"),
