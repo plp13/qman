@@ -29,11 +29,16 @@ typedef struct {
 } eini_t;
 
 // Handler function
-typedef int (*eini_handler_t)(const char *section, // current section
-                              const char *key,     // key name
-                              const char *value,   // value
-                              const char *file,    // config file
-                              const unsigned line  // config file line
+typedef void (*eini_handler_t)(const wchar_t *section, // current section
+                               const wchar_t *key,     // key name
+                               const wchar_t *value,   // value
+                               const char *path,       // config file path
+                               const unsigned line     // config file line
+);
+
+typedef void (*eini_error_t)(const wchar_t *error, // error message
+                             const char *path,     // config file path
+                             const unsigned line   // config file line
 );
 
 //
@@ -54,5 +59,10 @@ extern void eini_init();
 
 // Parse INI line `src` and return its contents
 extern eini_t eini_parse(char *src);
+
+// Parse INI file at `path`, calling `hf` whenever a configuration directive
+// is found or `ef` if a parse error is encountered. This function recursively
+// calls itself whenever it encounters an `include` directive.
+extern void eini(eini_handler_t hf, eini_error_t ef, const char *path);
 
 #endif

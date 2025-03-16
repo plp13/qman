@@ -106,7 +106,7 @@ void test_eini_parse() {
   CU_ASSERT_EQUAL(parsed.type, EINI_SECTION);
   CU_ASSERT(0 == wcscmp(parsed.value, L"section_one"));
 
-  parsed = eini_parse("  [\tSectionTwo  ]\t\t ");
+  parsed = eini_parse("  [\tSectionTwo  ]\t\t \n");
   CU_ASSERT_EQUAL(parsed.type, EINI_SECTION);
   CU_ASSERT(0 == wcscmp(parsed.value, L"SectionTwo"));
 
@@ -129,7 +129,7 @@ void test_eini_parse() {
   CU_ASSERT(0 == wcscmp(parsed.value, L"another eggie"));
 
   parsed = eini_parse(
-      "\t third_key =  ένα αυγουλάκι που in English το λένε eggie  \t");
+      "\t third_key =  ένα αυγουλάκι που in English το λένε eggie  \n");
   CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
   CU_ASSERT(0 == wcscmp(parsed.key, L"third_key"));
   CU_ASSERT(

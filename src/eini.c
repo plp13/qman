@@ -28,7 +28,7 @@ regex_t eini_re_include, eini_re_section, eini_re_value;
     wcsncpy(ret_value, wnnl(myvalue), BS_LINE);                                \
     wunescape(ret_value);                                                      \
     ret.value = ret_value;                                                     \
-  }                                                                            \
+  }
 
 // Helper of `eini_parse()`. Strip trailing whitespace from `src`. If it's
 // surrounded by single or double quotes, strip those as well. Return any syntax
@@ -202,4 +202,45 @@ eini_t eini_parse(char *src) {
   // None of the above
   set_ret(EINI_ERROR, NULL, L"unable to parse");
   return ret;
+}
+
+void eini(eini_handler_t hf, eini_error_t ef, const char *path) {
+  unsigned i = 0;              // current line number
+  FILE *fp;                    // file pointer
+  char ln[BS_LINE];            // current config line
+  eini_t lne;                  // current config line contents
+  wchar_t sec[BS_SHORT] = L""; // current section
+
+  fp = xfopen(path, "r");
+
+  while (!feof(fp)) {
+    xfgets(ln, BS_LINE, fp);
+    i++;
+    lne = eini_parse(ln);
+
+    switch (lne.type) {
+    case EINI_INCLUDE: {
+      char ipath[BS_LINE];
+      wcstombs(ipath, lne.value, BS_LINE);
+      eini(hf, ef, ipath);
+    }
+    case EINI_SECTION: {
+      wcsncpy(sec, lne.value, BS_SHORT);
+      break;
+    }
+    case EINI_VALUE: {
+      hf(sec, lne.key, lne.value, path, i);
+      break;
+    }
+    case EINI_ERROR: {
+      ef(lne.value, path, i);
+      break;
+    }
+    case EINI_NONE:
+    default:
+      break;
+    }
+  }
+
+  xfclose(fp);
 }
