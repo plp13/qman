@@ -24,7 +24,6 @@
 #include <curses.h>
 #include <term.h>
 #undef lines
-#include <ini.h>
 
 #ifdef QMAN_GZIP
 #include <zlib.h>

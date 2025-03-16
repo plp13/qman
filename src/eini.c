@@ -145,7 +145,7 @@ void eini_init() {
 }
 
 eini_t eini_parse(char *src) {
-  wchar_t *wsrc = walloca(BS_SHORT); // wchar_t* version of `src`
+  wchar_t *wsrc = walloca(BS_LINE);  // wchar_t* version of `src`
   int wlen;                          // length of `wsrc`
   range_t loc;                       // location of regex match in `wsrc`
   eini_t ret;                        // return value
@@ -160,6 +160,7 @@ eini_t eini_parse(char *src) {
   }
 
   decomment(wsrc);
+  wcstombs(src, wsrc, BS_LINE);
 
   loc = match(eini_re_include, src);
   if (!(0 == loc.beg && 0 == loc.end)) {
@@ -245,7 +246,7 @@ void eini(eini_handler_t hf, eini_error_t ef, const char *path) {
   xfclose(fp);
 }
 
-void eini_free() {
+void eini_winddown() {
   regfree(&eini_re_include);
   regfree(&eini_re_section);
   regfree(&eini_re_value);
