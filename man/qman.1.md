@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.3.1-16-g3de60b5
+footer: Qman 1.3.1-17-ge22774a
 date: December 15, 2023
 ---
 
@@ -179,11 +179,11 @@ defined by the [XDG Base Directory Specification](https://specifications.freedes
 The following locations are searched in sequence:
 
 - Any file specified using **-C** or **\-\-config\-path**
-- _\${XDG_CONFIG_HOME}/qman.conf_
-- _\${HOME}/.config/qman.conf_
-- _\${D}/qman.conf_ where _\${D}_ is an entry in _\${XDG_CONFIG_DIRS}_
-- _/etc/xdg/qman.conf_
-- _/etc/qman.conf_
+- _\${XDG_CONFIG_HOME}/qman/qman.conf_
+- _\${HOME}/.config/qman/qman.conf_
+- _\${D}/qman/qman.conf_ where _\${D}_ is an entry in _\${XDG_CONFIG_DIRS}_
+- _/etc/xdg/qman/qman.conf_
+- _/etc/qman/qman.conf_
 
 The process stops once a configuration file has been found.
 

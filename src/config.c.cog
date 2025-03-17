@@ -241,7 +241,7 @@ int str2ch(const wchar_t *src) {
     const bool val = str2bool(value);                                          \
     if (0 != errno) {                                                          \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error in %s line %d: invalid boolean value '%s'",\
+               L"Error in %s line %d: Expected boolean, got '%ls'",            \
                path, line, value);                                             \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
@@ -256,7 +256,7 @@ int str2ch(const wchar_t *src) {
     const trit_t val = str2trit(value);                                        \
     if (0 != errno) {                                                          \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error in %s line %d: invalid ternary value '%s'",\
+               L"Error in %s line %d: Expected ternary, got '%ls'",            \
                path, line, value);                                             \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
@@ -273,14 +273,14 @@ int str2ch(const wchar_t *src) {
     const int val = str2int(value);                                            \
     if (0 != errno) {                                                          \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error in %s line %d: invalid integer value '%s'",\
+               L"Error in %s line %d: Expected integer, got '%ls'",            \
                path, line, value);                                             \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
     if (val < min || val > max) {                                              \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error in %s line %d: value out of range",        \
-               path, line);                                                    \
+               L"Error in %s line %d: Expected %d to %d, got %d",              \
+               path, line, min, max, val);                                     \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
     trgt = val;                                                                \
@@ -333,7 +333,7 @@ int str2ch(const wchar_t *src) {
     const int vals_read = swscanf(value, L"%9ls%9ls%9ls", fg, bg, bold);       \
     if (3 != vals_read) {                                                      \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s line %d: invalid color value '%s'",  \
+               L"Error in %s line %d: Invalid color value '%ls'",              \
                path, line, value);                                             \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
@@ -341,7 +341,7 @@ int str2ch(const wchar_t *src) {
     if (-1 == nfg) {                                                           \
       swprintf(                                                                \
           errmsg, BS_SHORT,                                                    \
-          L"Config parse error at %s line %d: invalid foreground color '%s'",  \
+          L"Error in %s line %d: Invalid foreground color '%ls'",              \
           path, line, fg);                                                     \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
@@ -349,14 +349,14 @@ int str2ch(const wchar_t *src) {
     if (-1 == nbg) {                                                           \
       swprintf(                                                                \
           errmsg, BS_SHORT,                                                    \
-          L"Config parse error at %s line %d: invalid background color '%s'",  \
+          L"Error in %s line %d: Invalid background color '%ls'",              \
           path, line, bg);                                                     \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
     nbold = str2bool(bold);                                                    \
     if (0 != errno) {                                                          \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s line %d: invalid boolean value '%s'",\
+               L"Error in %s line %d: Invalid boolean value '%ls'",            \
                path, line, bold);                                              \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
@@ -384,7 +384,7 @@ int str2ch(const wchar_t *src) {
     if (0 == keys_read) {                                                      \
       swprintf(                                                                \
           errmsg, BS_SHORT,                                                    \
-          L"Config parse error at %s line %d: invalid key mapping value '%s'", \
+          L"Error in %s line %d: Invalid key mapping value '%ls'",             \
           path, line, value);                                                  \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
@@ -393,8 +393,8 @@ int str2ch(const wchar_t *src) {
       if (-1 == trgt[i]) {                                                     \
         swprintf(                                                              \
             errmsg, BS_SHORT,                                                  \
-            L"Config parse error at %s line %d: key mapping no. %d is invalid",\
-            path, line, value);                                                \
+            L"Error in %s line %d: Key mapping '%ls' is invalid",              \
+            path, line, keys[i]);                                              \
         winddown(ES_CONFIG_ERROR, errmsg);                                     \
       }                                                                        \
     }                                                                          \
@@ -407,7 +407,7 @@ int str2ch(const wchar_t *src) {
 #define conf_no_such_option                                                    \
   swprintf(                                                                    \
       errmsg, BS_SHORT,                                                        \
-      L"Config parse error at %s line %d: no such option '%s' in section '%s'",\
+      L"Error in %s line %d: No such option '%ls' in section '%ls'",           \
       path, line, name, section);                                              \
   winddown(ES_CONFIG_ERROR, errmsg);                                           \
   return;
@@ -415,7 +415,7 @@ int str2ch(const wchar_t *src) {
 // Helper of `conf_handler()`. Error out with a "no such section" error message.
 #define conf_no_such_section                                                   \
   swprintf(errmsg, BS_SHORT,                                                   \
-           L"Config parse error at %s line %d: no such section '%s'",          \
+           L"Error in %s line %d: No such section '%ls'",                      \
            path, line, section);                                               \
   winddown(ES_CONFIG_ERROR, errmsg);                                           \
   return;
@@ -469,7 +469,7 @@ void error_handler(const wchar_t *error, const char *path,
   wchar_t errmsg[BS_SHORT]; // error message
 
   swprintf(errmsg, BS_SHORT,
-           L"Config parse error at %s line %d: %ls",
+           L"Error in %s line %d: %ls",
            path, line, error);
   winddown(ES_CONFIG_ERROR, errmsg);
 }
@@ -620,25 +620,23 @@ void configure() {
     // No `-C` option; try to find and open a config file at the standard
     // locations
 
-    // ${XCD_CONFIG_HOME}/qman.conf
+    // ${XCD_CONFIG_HOME}/qman/qman.conf
     const char *xch = getenv("XDG_CONFIG_HOME");
     if (NULL != xch) {
-      snprintf(path, BS_LINE, "%s/qman.conf", xch);
-      // logprintf("xdg_config_home - %s", path);
+      snprintf(path, BS_LINE, "%s/qman/qman.conf", xch);
       fp = fopen(path, "r");
     }
 
-    // ${HOME}/.config/qman.conf
+    // ${HOME}/.config/qman/qman.conf
     if (NULL == fp) {
       const char *home = getenv("HOME");
       if (NULL != home) {
-        snprintf(path, BS_LINE, "%s/.config/qman.conf", home);
-        // logprintf("home - %s", path);
+        snprintf(path, BS_LINE, "%s/.config/qman/qman.conf", home);
         fp = fopen(path, "r");
       }
     }
 
-    // ${P}/qman.conf, where ${P} is a path in ${XDG_CONFIG_DIRS}
+    // ${P}/qman/qman.conf, where ${P} is a path in ${XDG_CONFIG_DIRS}
     if (NULL == fp) {
       const char *xcd = getenv("XDG_CONFIG_DIRS");
       if (NULL != xcd) {
@@ -646,8 +644,7 @@ void configure() {
         char **xcd_paths = xcalloc(BS_SHORT, sizeof(char *));
         unsigned xcd_count = split_path(&xcd_paths, BS_SHORT, xcd_dup);
         for (unsigned i = 0; i < xcd_count; i++) {
-          snprintf(path, BS_LINE, "%s/qman.conf", xcd_paths[i]);
-          // logprintf("xdg_config_dirs - %s", path);
+          snprintf(path, BS_LINE, "%s/qman/qman.conf", xcd_paths[i]);
           fp = fopen(path, "r");
           if (NULL != fp)
             break;
@@ -657,17 +654,15 @@ void configure() {
       }
     }
 
-    // /etc/xdg/qman.conf
+    // /etc/xdg/qman/qman.conf
     if (NULL == fp) {
-      // logprintf("fallback - /etc/xdg/qman.conf")
-      strncpy(path, config.misc.config_path, BS_LINE);
+      strncpy(path, "/etc/xdg/qman/qman.conf", BS_LINE);
       fp = fopen(path, "r");
     }
 
-    // /etc/qman.conf
+    // /etc/qman/qman.conf
     if (NULL == fp) {
-      // logprintf("fallback - /etc/qman.conf")
-      strncpy(path, config.misc.config_path, BS_LINE);
+      strncpy(path, "/etc/qman/qman.conf", BS_LINE);
       fp = fopen(path, "r");
     }
   }

@@ -83,7 +83,7 @@ typedef struct {
 #define nnl(s) ((s) ? (s) : "")
 
 // If wide string `w` is NULL, replace it with ""
-#define wnnl(w) ((w) ? (w) : L"")
+#define wnnl(w) (NULL != (w) ? (w) : L"")
 
 // Return the size of array `arr`
 #define asizeof(arr) (sizeof(arr) / sizeof(arr[0]))

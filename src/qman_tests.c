@@ -170,19 +170,19 @@ void test_eini_parse() {
 
   parsed = eini_parse("[garbled$ect_on]");
   CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
-  CU_ASSERT(0 == wcscmp(parsed.value, L"unable to parse"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"Unable to parse '[garbled$ect_on]'"));
 
   parsed = eini_parse("κλειδί=value");
   CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
-  CU_ASSERT(0 == wcscmp(parsed.value, L"unable to parse"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"Unable to parse 'κλειδί=value'"));
 
   parsed = eini_parse("key=\"value"); // "value
   CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
-  CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"Non-terminated quote"));
 
   parsed = eini_parse("key=\"value\\\""); // "value\"
   CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
-  CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"Non-terminated quote"));
 
   parsed = eini_parse("key=\"value\\\\\""); // "value\\"
   CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
@@ -191,15 +191,15 @@ void test_eini_parse() {
 
   parsed = eini_parse("key=\"value\\\\\\\""); // "value\\\"
   CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
-  CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"Non-terminated quote"));
 
   parsed = eini_parse("key='value"); // 'value
   CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
-  CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"Non-terminated quote"));
 
   parsed = eini_parse("key='value\\'"); // 'value\'
   CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
-  CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"Non-terminated quote"));
 
   parsed = eini_parse("key='value\\\\'"); // 'value\\'
   CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
@@ -208,7 +208,7 @@ void test_eini_parse() {
 
   parsed = eini_parse("key='value\\\\\\'"); // 'value\\\'
   CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
-  CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"Non-terminated quote"));
 
   parsed = eini_parse("key=value ; comment");
   CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
@@ -227,7 +227,11 @@ void test_eini_parse() {
 
   parsed = eini_parse("key='value ; comment");
   CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
-  CU_ASSERT(0 == wcscmp(parsed.value, L"non-terminated quote"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"Non-terminated quote"));
+
+  parsed = eini_parse("blah");
+  CU_ASSERT_EQUAL(parsed.type, EINI_ERROR);
+  CU_ASSERT(0 == wcscmp(parsed.value, L"Unable to parse 'blah'"));
 
   eini_winddown();
 }
