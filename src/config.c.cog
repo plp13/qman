@@ -48,9 +48,9 @@ cog.outl("};")
       100 * config.colours.stat_input_prompt.pair +                            \
       config.colours.stat_input_em.pair;
 
-// Helper of various `conf_...()` functions and methods. Return true if src is
-// equal to `true`, `yes`, or `1`. Return false if it's equal to `false`, `no`,
-// or `0`. Set `errno` to 0 if parsed successfully or to -1 if not.
+// Helper of various `conf_...()` functions and methods. Return true if `src`
+// is equal to `true`, `yes`, or `1`. Return false if it's equal to `false`,
+// `no`, or `0`. Set `errno` to 0 if parsed successfully or to -1 if not.
 bool str2bool(const wchar_t *src) {
   if (0 == wcscasecmp(src, L"TRUE") || 0 == wcscasecmp(src, L"YES") ||
       0 == wcscmp(src, L"1")) {
@@ -66,10 +66,10 @@ bool str2bool(const wchar_t *src) {
   }
 }
 
-// Helper of various `conf_...()` functions and methods. Return `t_true` if src
-// is equal to `true`, `yes`, or `1`. Return `t_false` if it's equal to `false`,
-// 'no', or '0'. Return `t_auto` if it's equal to `auto` or `-`. Set `errno` to
-// 0 if parsed successfully or to -1 if not.
+// Helper of various `conf_...()` functions and methods. Return `t_true` if
+// `src` is equal to `true`, `yes`, or `1`. Return `t_false` if it's equal to
+// `false`, 'no', or '0'. Return `t_auto` if it's equal to `auto` or `-`. Set
+// `errno` to 0 if parsed successfully or to -1 if not.
 trit_t str2trit(const wchar_t *src) {
   if (0 == wcscasecmp(src, L"TRUE") || 0 == wcscasecmp(src, L"YES") ||
       0 == wcscmp(src, L"1")) {

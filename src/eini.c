@@ -222,7 +222,15 @@ void eini(eini_handler_t hf, eini_error_t ef, const char *path) {
     switch (lne.type) {
     case EINI_INCLUDE: {
       char ipath[BS_LINE];
-      wcstombs(ipath, lne.value, BS_LINE);
+      if (L'/' == lne.value[0]) {
+        wcstombs(ipath, lne.value, BS_LINE);
+      } else {
+        char apath[BS_LINE];
+        wcstombs(apath, lne.value, BS_LINE);
+        strncpy(ipath, xdirname(path), BS_LINE);
+        strncat(ipath, "/", BS_LINE - strlen(ipath) - 1);
+        strncat(ipath, apath, BS_LINE - strlen(ipath) - 1);
+      }
       eini(hf, ef, ipath);
     }
     case EINI_SECTION: {

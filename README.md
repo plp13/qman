@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.3.1-15-g15f6229 -- [see what's new](#new-in-this-version)
+Version 1.3.1-16-g3de60b5 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 

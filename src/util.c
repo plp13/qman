@@ -213,6 +213,20 @@ size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
   return cnt;
 }
 
+char *xbasename(const char *path) {
+  static char pathc[BS_LINE];
+
+  strncpy(pathc, path, BS_LINE);
+  return basename(pathc);
+}
+
+char *xdirname(const char *path) {
+  static char pathc[BS_LINE];
+
+  strncpy(pathc, path, BS_LINE);
+  return dirname(pathc);
+}
+
 char *xstrdup(const char *s) {
   char *const res = strdup(s);
 
