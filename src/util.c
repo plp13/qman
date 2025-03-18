@@ -213,6 +213,20 @@ size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
   return cnt;
 }
 
+char *xbasename(const char *path) {
+  static char pathc[BS_LINE];
+
+  strncpy(pathc, path, BS_LINE);
+  return basename(pathc);
+}
+
+char *xdirname(const char *path) {
+  static char pathc[BS_LINE];
+
+  strncpy(pathc, path, BS_LINE);
+  return dirname(pathc);
+}
+
 char *xstrdup(const char *s) {
   char *const res = strdup(s);
 
@@ -548,6 +562,72 @@ void safree(char **buf, unsigned buf_len) {
   free(buf);
 }
 
+// Test whether the character at `src[pos]` is escaped
+bool wescaped(wchar_t *src, unsigned pos) {
+  int c = 0;   // number of '\'s before `pos`
+  int i = pos; // iterator
+
+  while (i > 0) {
+    i--;
+    if (L'\\' == src[i])
+      c++;
+    else
+      break;
+  }
+
+  return c % 2;
+}
+
+void wunescape(wchar_t *src) {
+  int i = 0, j = 0; // iterators
+
+  while (L'\0' != src[i]) {
+    if (L'\\' == src[i]) {
+      switch (src[i + 1]) {
+      case L'a':
+        src[j++] = L'\a';
+        break;
+      case L'b':
+        src[j++] = L'\b';
+        break;
+      case L't':
+        src[j++] = L'\t';
+        break;
+      case L'n':
+        src[j++] = L'\n';
+        break;
+      case L'v':
+        src[j++] = L'\v';
+        break;
+      case L'f':
+        src[j++] = L'\f';
+        break;
+      case L'r':
+        src[j++] = L'\r';
+        break;
+      case L'e':
+        src[j++] = L'\e';
+        break;
+      case L'\\':
+        src[j++] = L'\\';
+        break;
+      case L'"':
+        src[j++] = L'"';
+        break;
+      case L'\'':
+        src[j++] = L'\'';
+        break;
+      }
+      i += 2;
+    } else {
+      src[j++] = src[i];
+      i++;
+    }
+  }
+
+  src[j] = L'\0';
+}
+
 unsigned wccnt(const wchar_t *hayst, wchar_t needle) {
   unsigned cnt = 0;
 
@@ -865,7 +945,7 @@ range_t fr_search(const full_regex_t *re, const wchar_t *src) {
   range_t res;          // return value
 
   // If re->snpt isn't in src, return {0, 0}
-  if (NULL == wcsstr(src, re->snpt)) {
+  if (NULL != re->snpt && NULL == wcsstr(src, re->snpt)) {
     res.beg = 0;
     res.end = 0;
     return res;

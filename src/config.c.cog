@@ -34,7 +34,7 @@ cog.outl("};")
 // Helper macros and functions
 //
 
-// Helper of conf_init() conf_handler(). Initialize the values of all color
+// Helper of `conf_init()` `conf_handler()`. Initialize the values of all color
 // pairs used for transitions.
 #define set_transition_colours                                                 \
   config.colours.trans_mode_name = 100 * config.colours.stat_indic_mode.pair + \
@@ -48,16 +48,16 @@ cog.outl("};")
       100 * config.colours.stat_input_prompt.pair +                            \
       config.colours.stat_input_em.pair;
 
-// Helper of various conf_...() functions and methods. Return true if src is
-// equal to 'true', 'yes', or '1'. Return false if it's equal to 'false', 'no',
-// or '0'. Set errno to 0 if parsed successfully or to -1 if not.
-bool str2bool(const char *src) {
-  if (0 == strcasecmp(src, "TRUE") || 0 == strcasecmp(src, "YES") ||
-      0 == strcmp(src, "1")) {
+// Helper of various `conf_...()` functions and methods. Return true if `src`
+// is equal to `true`, `yes`, or `1`. Return false if it's equal to `false`,
+// `no`, or `0`. Set `errno` to 0 if parsed successfully or to -1 if not.
+bool wcs2bool(const wchar_t *src) {
+  if (0 == wcscasecmp(src, L"TRUE") || 0 == wcscasecmp(src, L"YES") ||
+      0 == wcscmp(src, L"1")) {
     errno = 0;
     return true;
-  } else if (0 == strcasecmp(src, "FALSE") || 0 == strcasecmp(src, "NO") ||
-             0 == strcasecmp(src, "0")) {
+  } else if (0 == wcscasecmp(src, L"FALSE") || 0 == wcscasecmp(src, L"NO") ||
+             0 == wcscmp(src, L"0")) {
     errno = 0;
     return false;
   } else {
@@ -66,20 +66,20 @@ bool str2bool(const char *src) {
   }
 }
 
-// Helper of various conf_...() functions and methods. Return t_true if src is
-// equal to 'true', 'yes', or '1'. Return t_false if it's equal to 'false',
-// 'no', or '0'. Return t_auto if it's equal to 'auto' or '-'. Set errno to 0 if
-// parsed successfully or to -1 if not.
-trit_t str2trit(const char *src) {
-  if (0 == strcasecmp(src,"TRUE") || 0 == strcasecmp(src, "YES") ||
-      0 == strcasecmp(src, "1")) {
+// Helper of various `conf_...()` functions and methods. Return `t_true` if
+// `src` is equal to `true`, `yes`, or `1`. Return `t_false` if it's equal to
+// `false`, 'no', or '0'. Return `t_auto` if it's equal to `auto` or `-`. Set
+// `errno` to 0 if parsed successfully or to -1 if not.
+trit_t wcs2trit(const wchar_t *src) {
+  if (0 == wcscasecmp(src, L"TRUE") || 0 == wcscasecmp(src, L"YES") ||
+      0 == wcscmp(src, L"1")) {
     errno = 0;
     return t_true;
-  } else if (0 == strcasecmp(src, "FALSE") || 0 == strcasecmp(src, "NO") ||
-      0 == strcmp(src, "0")) {
+  } else if (0 == wcscasecmp(src, L"FALSE") || 0 == wcscasecmp(src, L"NO") ||
+      0 == wcscmp(src, L"0")) {
     errno = 0;
     return t_false;
-  } else if (0 == strcasecmp(src, "AUTO") || 0 == strcasecmp(src, "-")) {
+  } else if (0 == wcscasecmp(src, L"AUTO") || 0 == wcscmp(src, L"-")) {
     errno = 0;
     return t_auto;
   } else {
@@ -88,12 +88,12 @@ trit_t str2trit(const char *src) {
   }
 }
 
-// Helper of various conf_...() functions and methods. Return the integer value
-// held into src as an integer, and set errno to 0. If src cannot be parsed into
-// an integer return INT_MIN and set errno to -1.
-int str2int(const char *src) {
+// Helper of various `conf_...()` functions and methods. Return the integer
+// value held into `src` as an integer, and set `errno` to 0. If src cannot be
+// parsed into an integer return `INT_MIN` and set `errno` to -1.
+int wcs2int(const wchar_t *src) {
   int val, vals_read;
-  vals_read = sscanf(src, "%d", &val);
+  vals_read = swscanf(src, L"%d", &val);
   if (1 != vals_read) {
     errno = -1;
     return INT_MIN;
@@ -103,14 +103,14 @@ int str2int(const char *src) {
   }
 }
 
-// Helper of various conf_...() functions and methods. Return the ncurses color
-// that corresponds to src. Allowed values for src are 'black', 'red', 'green',
-// 'yellow', 'blue', 'magenta', 'cyan', 'white', a positive integer, or
-// '#rrggbb'. Return -1 in case of parse error, or -2 if the terminal cannot
+// Helper of various `conf_...()` functions and methods. Return the ncurses
+// color that corresponds to `src`. Allowed values for `src` are `black`, `red`,
+// `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, a positive integer, or
+// `#rrggbb`. Return -1 in case of parse error, or -2 if the terminal cannot
 // support such a color.
-short str2colour(const char *src) {
-  // Try to parse src as integer. If successful, return it.
-  const int srci = str2int(src);
+short wcs2colour(const wchar_t *src) {
+  // Try to parse `src` as integer. If successful, return it.
+  const int srci = wcs2int(src);
   if (errno == 0 && srci >= 0) {
     if (tcap.colours < 256) {
       // Terminal does not support 256 colors; return -2
@@ -119,30 +119,31 @@ short str2colour(const char *src) {
     return srci;
   }
 
-  // If src matches a color name such as 'black', 'red', etc. return the
+  // If `src` matches a color name such as `black`, `red`, etc. return the
   // corresponding color.
-  else if (0 == strcasecmp(src, "BLACK"))
+  else if (0 == wcscasecmp(src, L"BLACK"))
     return COLOR_BLACK;
-  else if (0 == strcasecmp(src, "RED"))
+  else if (0 == wcscasecmp(src, L"RED"))
     return COLOR_RED;
-  else if (0 == strcasecmp(src, "GREEN"))
+  else if (0 == wcscasecmp(src, L"GREEN"))
     return COLOR_GREEN;
-  else if (0 == strcasecmp(src, "YELLOW"))
+  else if (0 == wcscasecmp(src, L"YELLOW"))
     return COLOR_YELLOW;
-  else if (0 == strcasecmp(src, "BLUE"))
+  else if (0 == wcscasecmp(src, L"BLUE"))
     return COLOR_BLUE;
-  else if (0 == strcasecmp(src, "MAGENTA"))
+  else if (0 == wcscasecmp(src, L"MAGENTA"))
     return COLOR_MAGENTA;
-  else if (0 == strcasecmp(src, "CYAN"))
+  else if (0 == wcscasecmp(src, L"CYAN"))
     return COLOR_CYAN;
-  else if (0 == strcasecmp(src, "WHITE"))
+  else if (0 == wcscasecmp(src, L"WHITE"))
     return COLOR_WHITE;
 
-  // Otherwise, try to parse src as '#rrggbb' and return the corresponding color
+  // Otherwise, try to parse `src` as ``#rrggbb`` and return the corresponding
+  // color
   else {
     static short ret = 255;
     unsigned red = 0, green = 0, blue = 0; // New color values
-    if (3 != sscanf(src, "#%2x%2x%2x", &red, &green, &blue)) {
+    if (3 != swscanf(src, L"#%2x%2x%2x", &red, &green, &blue)) {
       // Unable to parse src; return -1
       return -1;
     } else {
@@ -160,199 +161,203 @@ short str2colour(const char *src) {
   }
 }
 
-// Helper of various conf_...() functions and methods. Return the ncurses key
-// mapping that corresponds to src. Return -1 in case of parse error.
-int str2ch(const char *src) {
-  if (0 == strcasecmp(src, "KEY_UP"))
+// Helper of various `conf_...()` functions and methods. Return the ncurses key
+// mapping that corresponds to `src`. Return -1 in case of parse error.
+int wcs2ch(const wchar_t *src) {
+  if (0 == wcscasecmp(src, L"KEY_UP"))
     return KEY_UP;
-  else if (0 == strcasecmp(src, "KEY_DOWN"))
+  else if (0 == wcscasecmp(src, L"KEY_DOWN"))
     return KEY_DOWN;
-  else if (0 == strcasecmp(src, "KEY_LEFT"))
+  else if (0 == wcscasecmp(src, L"KEY_LEFT"))
     return KEY_LEFT;
-  else if (0 == strcasecmp(src, "KEY_RIGHT"))
+  else if (0 == wcscasecmp(src, L"KEY_RIGHT"))
     return KEY_RIGHT;
-  else if (0 == strcasecmp(src, "KEY_PPAGE"))
+  else if (0 == wcscasecmp(src, L"KEY_PPAGE"))
     return KEY_PPAGE;
-  else if (0 == strcasecmp(src, "KEY_NPAGE"))
+  else if (0 == wcscasecmp(src, L"KEY_NPAGE"))
     return KEY_NPAGE;
-  else if (0 == strcasecmp(src, "KEY_HOME"))
+  else if (0 == wcscasecmp(src, L"KEY_HOME"))
     return KEY_HOME;
-  else if (0 == strcasecmp(src, "KEY_END"))
+  else if (0 == wcscasecmp(src, L"KEY_END"))
     return KEY_END;
-  else if (0 == strcasecmp(src, "ESC"))
+  else if (0 == wcscasecmp(src, L"ESC"))
     return '\e';
-  else if (0 == strcasecmp(src, "KEY_BREAK"))
+  else if (0 == wcscasecmp(src, L"KEY_BREAK"))
     return KEY_BREAK;
-  else if (0 == strcasecmp(src, "ETX"))
+  else if (0 == wcscasecmp(src, L"ETX"))
     return 0x03;
-  else if (0 == strcasecmp(src, "KEY_ENTER"))
+  else if (0 == wcscasecmp(src, L"KEY_ENTER"))
     return KEY_ENTER;
-  else if (0 == strcasecmp(src, "LF"))
+  else if (0 == wcscasecmp(src, L"LF"))
     return '\n';
-  else if (0 == strcasecmp(src, "KEY_BACKSPACE"))
+  else if (0 == wcscasecmp(src, L"KEY_BACKSPACE"))
     return KEY_BACKSPACE;
-  else if (0 == strcasecmp(src, "BS"))
+  else if (0 == wcscasecmp(src, L"BS"))
     return '\b';
-  else if (0 == strcasecmp(src, "HT"))
+  else if (0 == wcscasecmp(src, L"HT"))
     return '\t';
-  else if (0 == strcasecmp(src, "SPACE"))
+  else if (0 == wcscasecmp(src, L"SPACE"))
     return ' ';
-  else if (0 == strcasecmp(src, "F1"))
+  else if (0 == wcscasecmp(src, L"F1"))
     return KEY_F(1);
-  else if (0 == strcasecmp(src, "F2"))
+  else if (0 == wcscasecmp(src, L"F2"))
     return KEY_F(2);
-  else if (0 == strcasecmp(src, "F3"))
+  else if (0 == wcscasecmp(src, L"F3"))
     return KEY_F(3);
-  else if (0 == strcasecmp(src, "F4"))
+  else if (0 == wcscasecmp(src, L"F4"))
     return KEY_F(4);
-  else if (0 == strcasecmp(src, "F5"))
+  else if (0 == wcscasecmp(src, L"F5"))
     return KEY_F(5);
-  else if (0 == strcasecmp(src, "F6"))
+  else if (0 == wcscasecmp(src, L"F6"))
     return KEY_F(6);
-  else if (0 == strcasecmp(src, "F7"))
+  else if (0 == wcscasecmp(src, L"F7"))
     return KEY_F(7);
-  else if (0 == strcasecmp(src, "F8"))
+  else if (0 == wcscasecmp(src, L"F8"))
     return KEY_F(8);
-  else if (0 == strcasecmp(src, "F9"))
+  else if (0 == wcscasecmp(src, L"F9"))
     return KEY_F(9);
-  else if (0 == strcasecmp(src, "F10"))
+  else if (0 == wcscasecmp(src, L"F10"))
     return KEY_F(10);
-  else if (0 == strcasecmp(src, "F11"))
+  else if (0 == wcscasecmp(src, L"F11"))
     return KEY_F(11);
-  else if (0 == strcasecmp(src, "F12"))
+  else if (0 == wcscasecmp(src, L"F12"))
     return KEY_F(12);
-  else if (src[0] >= 33 && src[0] <= 126 && 1 == strlen(src))
+  else if (src[0] >= 33 && src[0] <= 126 && 1 == wcslen(src))
     return src[0];
   else {
-    // Unable to parse src; return -1
+    // Unable to parse `src`; return -1
     return -1;
   }
 }
 
-// Helper of conf_handler(). Return an if statement that matches if section is
-// equal to s.
-#define conf_section(s) if (0 == strcmp(section, s))
+// Helper of `conf_handler()`. Return an if statement that matches if `section`
+// is equal to `s`.
+#define conf_section(s) if (0 == wcscmp(section, s))
 
-// Helper of conf_handler(). Set trgt to the boolean stored in value, using
-// str2bool(), if name is equal to n.
+// Helper of `conf_handler()`. Set `trgt` to the boolean stored in `value`,
+// using `wcs2bool()`, if `name` is equal to `n`.
 #define conf_set_bool(n, trgt)                                                 \
-  if (0 == strcmp(name, n)) {                                                  \
-    const bool val = str2bool(value);                                          \
+  if (0 == wcscmp(name, n)) {                                                  \
+    const bool val = wcs2bool(value);                                          \
     if (0 != errno) {                                                          \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid boolean value '%s'",     \
-               section, name, value);                                          \
+               L"Error in %s line %d: Expected boolean, got '%ls'",            \
+               path, line, value);                                             \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
     trgt = val;                                                                \
-    return true;                                                               \
+    return;                                                                    \
   }
 
-// Helper of conf_handler. Set trgt to the trit_t stored in value, using
-// str2trit(), if name is equal to n.
+// Helper of `conf_handler()`. Set `trgt` to the `trit_t` stored in `value`,
+// using `wcs2trit()`, if `name` is equal to `n`.
 #define conf_set_trit(n, trgt)                                                 \
-  if (0 == strcmp(name, n)) {                                                  \
-    const trit_t val = str2trit(value);                                        \
+  if (0 == wcscmp(name, n)) {                                                  \
+    const trit_t val = wcs2trit(value);                                        \
     if (0 != errno) {                                                          \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid ternary value '%s'",     \
-               section, name, value);                                          \
+               L"Error in %s line %d: Expected ternary, got '%ls'",            \
+               path, line, value);                                             \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
     trgt = val;                                                                \
-    return true;                                                               \
+    return;                                                                    \
   }                                                                            \
 
-// Helper of conf_handler(). Set trgt to the integer stored in value, using
-// str2int(), if name is equal to n. min and max can be used to define a lower
-// and an upper boundary for value, for error-checking purposes.
+// Helper of `conf_handler()`. Set `trgt` to the integer stored in `value`,
+// using `wcs2int()`, if `name` is equal to `n`. `min` and `max` can be used to
+// define a lower and an upper boundary for `value`, for error-checking
+// purposes.
 #define conf_set_int(n, trgt, min, max)                                        \
-  if (0 == strcmp(name, n)) {                                                  \
-    const int val = str2int(value);                                            \
+  if (0 == wcscmp(name, n)) {                                                  \
+    const int val = wcs2int(value);                                            \
     if (0 != errno) {                                                          \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid integer value '%s'",     \
-               section, name, value);                                          \
+               L"Error in %s line %d: Expected integer, got '%ls'",            \
+               path, line, value);                                             \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
     if (val < min || val > max) {                                              \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: value out of range", section,    \
-               name);                                                          \
+               L"Error in %s line %d: Expected %d to %d, got %d",              \
+               path, line, min, max, val);                                     \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
     trgt = val;                                                                \
-    return true;                                                               \
+    return;                                                                    \
   }
 
-// Helper of conf_handler(). Set trgt to a string copy of value, if name is
-// equal to n.
+// Helper of `conf_handler()`. Set `trgt` to a string copy of `value`, if `name`
+// is equal to `n`.
 #define conf_set_string(n, trgt)                                               \
-  if (0 == strcmp(name, n)) {                                                  \
-    if (NULL != trgt)                                                          \
-      free(trgt);                                                              \
-    if (NULL == value)                                                         \
-      trgt = NULL;                                                             \
-    else                                                                       \
-      trgt = xstrdup(value);                                                   \
-    return true;                                                               \
-  }
-
-// Helper of conf_handler(). Set trgt to a wide string copy of value, if name is
-// equal to n.
-#define conf_set_wstring(n, trgt)                                              \
-  if (0 == strcmp(name, n)) {                                                  \
-    const unsigned value_len = strlen(value);                                  \
-    /* If the terminal doesn't support Unicode, reject all non-ASCII TUI    *  \
-     * drawing characters                                                   */ \
-    if (! tcap.unicode && 0 == strcmp(section, "chars") &&                     \
-             (value[0] < 0 || value[0] > 127))                                 \
-      return true;                                                             \
+  if (0 == wcscmp(name, n)) {                                                  \
+    const unsigned value_len = wcslen(value);                                  \
     if (NULL != trgt)                                                          \
       free(trgt);                                                              \
     if (NULL == value)                                                         \
       trgt = NULL;                                                             \
     else {                                                                     \
-      trgt = walloc(value_len);                                                \
-      mbstowcs(trgt, value, value_len);                                        \
+      trgt = walloc(value_len * 4);                                            \
+      wcstombs(trgt, value, value_len);                                        \
     }                                                                          \
-    return true;                                                               \
+    return;                                                                    \
   }
 
-// Helper of conf_handler(). Set trgt to the color that corresponds to value,
-// if name is equal to n. value is formatted as 2 color definitions (as
-// accepted by str2colour) and one boolean, separated by whitespace.
+// Helper of `conf_handler()`. Set `trgt` to a wide string copy of `value`, if
+// `name` is equal to `n`.
+#define conf_set_wstring(n, trgt)                                              \
+  if (0 == wcscmp(name, n)) {                                                  \
+    /* If the terminal doesn't support Unicode, reject all non-ASCII TUI    *  \
+     * drawing characters                                                   */ \
+    if (! tcap.unicode && 0 == wcscmp(section, L"chars") &&                    \
+             (value[0] < 0 || value[0] > 127))                                 \
+      return;                                                                  \
+    if (NULL != trgt)                                                          \
+      free(trgt);                                                              \
+    if (NULL == value)                                                         \
+      trgt = NULL;                                                             \
+    else                                                                       \
+      trgt = xwcsdup(value);                                                   \
+    return;                                                                    \
+  }
+
+// Helper of `conf_handler()`. Set `trgt` to the color that corresponds to
+// `value`, if `name` is equal to `n`. `value` is formatted as 2 color
+// definitions (as accepted by `wcs2colour()`) and one boolean, separated by
+// whitespace.
 #define conf_set_colour(n, trgt)                                               \
-  if (0 == strcmp(name, n)) {                                                  \
-    char fg[10], bg[10], bold[10];                                             \
+  if (0 == wcscmp(name, n)) {                                                  \
+    wchar_t fg[10], bg[10], bold[10];                                          \
     unsigned nfg, nbg;                                                         \
     bool nbold;                                                                \
-    const int vals_read = sscanf(value, "%9s%9s%9s", fg, bg, bold);            \
+    const int vals_read = swscanf(value, L"%9ls%9ls%9ls", fg, bg, bold);       \
     if (3 != vals_read) {                                                      \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid color value '%s'",       \
-               section, name, value);                                          \
+               L"Error in %s line %d: Invalid color value '%ls'",              \
+               path, line, value);                                             \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
-    nfg = str2colour(fg);                                                      \
+    nfg = wcs2colour(fg);                                                      \
     if (-1 == nfg) {                                                           \
-      swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid foreground color '%s'",  \
-               section, name, fg);                                             \
+      swprintf(                                                                \
+          errmsg, BS_SHORT,                                                    \
+          L"Error in %s line %d: Invalid foreground color '%ls'",              \
+          path, line, fg);                                                     \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
-    nbg = str2colour(bg);                                                      \
+    nbg = wcs2colour(bg);                                                      \
     if (-1 == nbg) {                                                           \
-      swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid background color '%s'",  \
-               section, name, bg);                                             \
+      swprintf(                                                                \
+          errmsg, BS_SHORT,                                                    \
+          L"Error in %s line %d: Invalid background color '%ls'",              \
+          path, line, bg);                                                     \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
-    nbold = str2bool(bold);                                                    \
+    nbold = wcs2bool(bold);                                                    \
     if (0 != errno) {                                                          \
       swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid boolean value '%s'",     \
-               section, name, bold);                                           \
+               L"Error in %s line %d: Invalid boolean value '%ls'",            \
+               path, line, bold);                                              \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
     /* Apply colour changes only if the terminal supports it                */ \
@@ -361,66 +366,69 @@ int str2ch(const char *src) {
       trgt.bg = nbg;                                                           \
       trgt.bold = nbold;                                                       \
     }                                                                          \
-    return true;                                                               \
+    return;                                                                    \
   }
 
-// Helper of conf_handler(). Set trgt to the set of key mappings that
-// correspond to value, if name is equal to n. value is formatted as 8 key
-// mapping definitions (as accepted by str2ch) separated by whitespace.
+// Helper of `conf_handler()`. Set `trgt` to the set of key mappings that
+// correspond to `value`, if `name` is equal to `n`. `value` is formatted as 8
+// key mapping definitions (as accepted by `wcs2ch()`) separated by whitespace.
 #define conf_set_key(n, trgt)                                                  \
-  if (0 == strcmp(name, n)) {                                                  \
+  if (0 == wcscmp(name, n)) {                                                  \
     unsigned i;                                                                \
-    char *keys[8];                                                             \
+    wchar_t *keys[8];                                                          \
     for (i = 0; i < 8; i++)                                                    \
       keys[i] = walloca(BS_SHORT);                                             \
-    const int keys_read = sscanf(value, "%s%s%s%s%s%s%s%s", keys[0], keys[1],  \
-                                 keys[2], keys[3], keys[4], keys[5], keys[6],  \
-                                 keys[7]);                                     \
+    const int keys_read = swscanf(value, L"%ls%ls%ls%ls%ls%ls%ls%ls", keys[0], \
+                                 keys[1], keys[2], keys[3], keys[4], keys[5],  \
+                                 keys[6], keys[7]);                            \
     if (0 == keys_read) {                                                      \
-      swprintf(errmsg, BS_SHORT,                                               \
-               L"Config parse error at %s/%s: invalid key mapping value '%s'", \
-               section, name, value);                                          \
+      swprintf(                                                                \
+          errmsg, BS_SHORT,                                                    \
+          L"Error in %s line %d: Invalid key mapping value '%ls'",             \
+          path, line, value);                                                  \
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
     for (i = 0; i < keys_read; i++) {                                          \
-      trgt[i] = str2ch(keys[i]);                                               \
+      trgt[i] = wcs2ch(keys[i]);                                               \
       if (-1 == trgt[i]) {                                                     \
         swprintf(                                                              \
             errmsg, BS_SHORT,                                                  \
-            L"Config parse error at %s/%s: key mapping no. %d is invalid",     \
-            section, name, value);                                             \
+            L"Error in %s line %d: Key mapping '%ls' is invalid",              \
+            path, line, keys[i]);                                              \
         winddown(ES_CONFIG_ERROR, errmsg);                                     \
       }                                                                        \
     }                                                                          \
     for (i = keys_read; i < 8; i++)                                            \
       trgt[i] = 0;                                                             \
-    return true;                                                               \
+    return;                                                                    \
   }
 
-// Helper of conf_handler(). Error out with a "no such option" error message.
+// Helper of `conf_handler()`. Error out with a "no such option" error message.
 #define conf_no_such_option                                                    \
-  swprintf(errmsg, BS_SHORT,                                                   \
-           L"Config parse error: no such option '%s' in section '%s'", name,   \
-           section);                                                           \
+  swprintf(                                                                    \
+      errmsg, BS_SHORT,                                                        \
+      L"Error in %s line %d: No such option '%ls' in section '%ls'",           \
+      path, line, name, section);                                              \
   winddown(ES_CONFIG_ERROR, errmsg);                                           \
-  return false;
+  return;
 
-// Helper of conf_handler(). Error out with a "no such section" error message.
+// Helper of `conf_handler()`. Error out with a "no such section" error message.
 #define conf_no_such_section                                                   \
-  swprintf(errmsg, BS_SHORT, L"Config parse error: no such section '%s'",      \
-           section);                                                           \
+  swprintf(errmsg, BS_SHORT,                                                   \
+           L"Error in %s line %d: No such section '%ls'",                      \
+           path, line, section);                                               \
   winddown(ES_CONFIG_ERROR, errmsg);                                           \
-  return false;
+  return;
 
-// Helper of configure(), used as a handler function for init_parse()
-static int conf_handler(void *user, const char *section, const char *name,
-                        const char *value) {
+// Handler function for `eini()`
+void conf_handler(const wchar_t *section, const wchar_t *name,
+                  const wchar_t *value, const char *path, const unsigned line) {
   wchar_t errmsg[BS_SHORT]; // error message
 
 /*[[[cog
 
 for section, options in config_def.config_def.items():
-  cog.outl("  conf_section(\"" + section + "\") {")
+  cog.outl("  conf_section(L\"" + section + "\") {")
 
   for option, option_def in options.items():
     (type, default_value, in_config, comment) = option_def
@@ -430,19 +438,19 @@ for section, options in config_def.config_def.items():
 
     # Option is allowed in the config file
     if type[0] == "bool":
-      cog.outl("    conf_set_bool(\"" + option + "\", config." + section + "." + option + ");")
+      cog.outl("    conf_set_bool(L\"" + option + "\", config." + section + "." + option + ");")
     if type[0] == "trit":
-      cog.outl("    conf_set_trit(\"" + option + "\", config." + section + "." + option + ");")
+      cog.outl("    conf_set_trit(L\"" + option + "\", config." + section + "." + option + ");")
     elif type[0] == "int":
-      cog.outl("    conf_set_int(\"" + option + "\", config." + section + "." + option + ", " + str(type[1]) + ", " + str(type[2]) + ");")
+      cog.outl("    conf_set_int(L\"" + option + "\", config." + section + "." + option + ", " + str(type[1]) + ", " + str(type[2]) + ");")
     elif type[0] == "string":
-      cog.outl("    conf_set_string(\"" + option + "\", config." + section + "." + option + ");")
+      cog.outl("    conf_set_string(L\"" + option + "\", config." + section + "." + option + ");")
     elif type[0] == "wstring":
-      cog.outl("    conf_set_wstring(\"" + option + "\", config." + section + "." + option + ");")
+      cog.outl("    conf_set_wstring(L\"" + option + "\", config." + section + "." + option + ");")
     elif type[0] == "colour":
-      cog.outl("    conf_set_colour(\"" + option + "\", config." + section + "." + option + ");")
+      cog.outl("    conf_set_colour(L\"" + option + "\", config." + section + "." + option + ");")
     elif type[0] == "key":
-      cog.outl("    conf_set_key(\"" + option + "\", config." + section + "[PA_" + option.upper() + "]);")
+      cog.outl("    conf_set_key(L\"" + option + "\", config." + section + "[PA_" + option.upper() + "]);")
 
   cog.outl("    conf_no_such_option;")
   cog.outl("  }")
@@ -455,7 +463,18 @@ for section, options in config_def.config_def.items():
   conf_no_such_section;
 }
 
-// Helper of configure(). Initialize configuration in sections [chars] and
+// Error function for `eini()`
+void error_handler(const wchar_t *error, const char *path,
+                   const unsigned line) {
+  wchar_t errmsg[BS_SHORT]; // error message
+
+  swprintf(errmsg, BS_SHORT,
+           L"Error in %s line %d: %ls",
+           path, line, error);
+  winddown(ES_CONFIG_ERROR, errmsg);
+}
+
+// Helper of `configure()`. Initialize configuration in sections [chars] and
 // [colours] to sane defaults.
 void conf_init_chars_colours() {
 /*[[[cog
@@ -473,11 +492,11 @@ for section, options in config_def.config_def.items():
         cog.outl("  // Default value for: config." + section + "." + option)
 
       if type[0] == "bool":
-        cog.outl("  config." + section + "." + option + " = str2bool(\"" + default_value[0] + "\");")
+        cog.outl("  config." + section + "." + option + " = wcs2bool(L\"" + default_value[0] + "\");")
       elif type[0] == "trit":
-        cog.outl("  config." + section + "." + option + " = str2trit(\"" + default_value[0] + "\");")
+        cog.outl("  config." + section + "." + option + " = wcs2trit(L\"" + default_value[0] + "\");")
       elif type[0] == "int":
-        cog.outl("  config." + section + "." + option + " = str2int(\"" + default_value[0] + "\");")
+        cog.outl("  config." + section + "." + option + " = wcs2int(L\"" + default_value[0] + "\");")
       elif type[0] == "string":
         cog.outl("  if (NULL != config." + section + "." + option + ")")
         cog.outl("    free(config." + section + "." + option + ");")
@@ -493,15 +512,15 @@ for section, options in config_def.config_def.items():
         else:
           cog.outl("  config." + section + "." + option + " = xwcsdup(L\"" + default_value[0] + "\");")
       elif type[0] == "colour":
-        cog.outl("  config." + section + "." + option + ".fg = str2colour(\"" + default_value[0] + "\");")
-        cog.outl("  config." + section + "." + option + ".bg = str2colour(\"" + default_value[1] + "\");")
-        cog.outl("  config." + section + "." + option + ".bold = str2bool(\"" + default_value[2] + "\");")
+        cog.outl("  config." + section + "." + option + ".fg = wcs2colour(L\"" + default_value[0] + "\");")
+        cog.outl("  config." + section + "." + option + ".bg = wcs2colour(L\"" + default_value[1] + "\");")
+        cog.outl("  config." + section + "." + option + ".bold = wcs2bool(L\"" + default_value[2] + "\");")
         cog.outl("  config." + section + "." + option + ".pair = " + str(pair) + ";")
         pair += 1
       elif type[0] == "key":
         for i in range(8):
           if i < len(default_value):
-            cog.outl("  config." + section + "[PA_" + option.upper() + "][" + str(i) + "] = str2ch(\"" + default_value[i] + "\");")
+            cog.outl("  config." + section + "[PA_" + option.upper() + "][" + str(i) + "] = wcs2ch(L\"" + default_value[i] + "\");")
           else:
             cog.outl("  config." + section + "[PA_" + option.upper() + "][" + str(i) + "] = 0;")
 
@@ -532,11 +551,11 @@ for section, options in config_def.config_def.items():
       cog.outl("  // Default value for: config." + section + "." + option)
 
     if type[0] == "bool":
-      cog.outl("  config." + section + "." + option + " = str2bool(\"" + default_value[0] + "\");")
+      cog.outl("  config." + section + "." + option + " = wcs2bool(L\"" + default_value[0] + "\");")
     elif type[0] == "trit":
-      cog.outl("  config." + section + "." + option + " = str2trit(\"" + default_value[0] + "\");")
+      cog.outl("  config." + section + "." + option + " = wcs2trit(L\"" + default_value[0] + "\");")
     elif type[0] == "int":
-      cog.outl("  config." + section + "." + option + " = str2int(\"" + default_value[0] + "\");")
+      cog.outl("  config." + section + "." + option + " = wcs2int(L\"" + default_value[0] + "\");")
     elif type[0] == "string":
       if None == default_value:
         cog.outl("  config." + section + "." + option + " = NULL;")
@@ -548,15 +567,15 @@ for section, options in config_def.config_def.items():
       else:
         cog.outl("  config." + section + "." + option + " = xwcsdup(L\"" + default_value[0] + "\");")
     elif type[0] == "colour":
-      cog.outl("  config." + section + "." + option + ".fg = str2colour(\"" + default_value[0] + "\");")
-      cog.outl("  config." + section + "." + option + ".bg = str2colour(\"" + default_value[1] + "\");")
-      cog.outl("  config." + section + "." + option + ".bold = str2bool(\"" + default_value[2] + "\");")
+      cog.outl("  config." + section + "." + option + ".fg = wcs2colour(L\"" + default_value[0] + "\");")
+      cog.outl("  config." + section + "." + option + ".bg = wcs2colour(L\"" + default_value[1] + "\");")
+      cog.outl("  config." + section + "." + option + ".bold = wcs2bool(L\"" + default_value[2] + "\");")
       cog.outl("  config." + section + "." + option + ".pair = " + str(pair) + ";")
       pair += 1
     elif type[0] == "key":
       for i in range(8):
         if i < len(default_value):
-          cog.outl("  config." + section + "[PA_" + option.upper() + "][" + str(i) + "] = str2ch(\"" + default_value[i] + "\");")
+          cog.outl("  config." + section + "[PA_" + option.upper() + "][" + str(i) + "] = wcs2ch(L\"" + default_value[i] + "\");")
         else:
           cog.outl("  config." + section + "[PA_" + option.upper() + "][" + str(i) + "] = 0;")
 
@@ -573,12 +592,13 @@ for section, options in config_def.config_def.items():
 
 void configure() {
   static bool ft = true;    // true if this is the first invocation of
-                            // configure()
-  FILE *fp = NULL;          // config file
+                            // `configure()`
+  char path[BS_LINE];       // path to config file
+  FILE *fp = NULL;          // file pointer to config file
   wchar_t errmsg[BS_SHORT]; // error message
 
-  // If this isn't the first invocation of configure(), call
-  // conf_init_chars_colours() to reset UI characters and colors to their
+  // If this isn't the first invocation of `configure()`, call
+  // `conf_init_chars_colours()` to reset UI characters and colors to their
   // default values
   if (ft)
     ft = false;
@@ -587,38 +607,36 @@ void configure() {
 
   // Find and open the config file
   if (NULL != config.misc.config_path) {
-    // -C option was used; try to open specified config file, and fail if not
+    // `-C` option was used; try to open specified config file, and fail if not
     // possible
-    fp = fopen(config.misc.config_path, "r");
+    strncpy(path, config.misc.config_path, BS_LINE);
+    fp = fopen(path, "r");
     if (NULL == fp) {
       swprintf(errmsg, BS_SHORT, L"Unable to open config file '%s'",
                config.misc.config_path);
       winddown(ES_CONFIG_ERROR, errmsg);
     }
   } else {
-    // No -C option; try to find and open a config file at the standard
+    // No `-C` option; try to find and open a config file at the standard
     // locations
-    char path[BS_LINE]; // candidate config file path
 
-    // ${XCD_CONFIG_HOME}/qman.conf
+    // ${XCD_CONFIG_HOME}/qman/qman.conf
     const char *xch = getenv("XDG_CONFIG_HOME");
     if (NULL != xch) {
-      snprintf(path, BS_LINE, "%s/qman.conf", xch);
-      // logprintf("xdg_config_home - %s", path);
+      snprintf(path, BS_LINE, "%s/qman/qman.conf", xch);
       fp = fopen(path, "r");
     }
 
-    // ${HOME}/.config/qman.conf
+    // ${HOME}/.config/qman/qman.conf
     if (NULL == fp) {
       const char *home = getenv("HOME");
       if (NULL != home) {
-        snprintf(path, BS_LINE, "%s/.config/qman.conf", home);
-        // logprintf("home - %s", path);
+        snprintf(path, BS_LINE, "%s/.config/qman/qman.conf", home);
         fp = fopen(path, "r");
       }
     }
 
-    // ${P}/qman.conf, where ${P} is a path in ${XDG_CONFIG_DIRS}
+    // ${P}/qman/qman.conf, where ${P} is a path in ${XDG_CONFIG_DIRS}
     if (NULL == fp) {
       const char *xcd = getenv("XDG_CONFIG_DIRS");
       if (NULL != xcd) {
@@ -626,8 +644,7 @@ void configure() {
         char **xcd_paths = xcalloc(BS_SHORT, sizeof(char *));
         unsigned xcd_count = split_path(&xcd_paths, BS_SHORT, xcd_dup);
         for (unsigned i = 0; i < xcd_count; i++) {
-          snprintf(path, BS_LINE, "%s/qman.conf", xcd_paths[i]);
-          // logprintf("xdg_config_dirs - %s", path);
+          snprintf(path, BS_LINE, "%s/qman/qman.conf", xcd_paths[i]);
           fp = fopen(path, "r");
           if (NULL != fp)
             break;
@@ -637,23 +654,25 @@ void configure() {
       }
     }
 
-    // /etc/xdg/qman.conf
+    // /etc/xdg/qman/qman.conf
     if (NULL == fp) {
-      // logprintf("fallback - /etc/xdg/qman.conf")
-      fp = fopen("/etc/xdg/qman.conf", "r");
+      strncpy(path, "/etc/xdg/qman/qman.conf", BS_LINE);
+      fp = fopen(path, "r");
     }
 
-    // /etc/qman.conf
+    // /etc/qman/qman.conf
     if (NULL == fp) {
-      // logprintf("fallback - /etc/qman.conf")
-      fp = fopen("/etc/qman.conf", "r");
+      strncpy(path, "/etc/qman/qman.conf", BS_LINE);
+      fp = fopen(path, "r");
     }
   }
 
   // If we have a config file, process it
   if (NULL != fp) {
-    ini_parse_file(fp, conf_handler, &config);
     fclose(fp);
+    eini_init();
+    eini(&conf_handler, &error_handler, path);
+    eini_winddown();
   }
   set_transition_colours;
 }

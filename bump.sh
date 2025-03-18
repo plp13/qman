@@ -16,6 +16,9 @@ then
 else
   echo "Setting version to ${1}"
 
+  cd "$( dirname "${BASH_SOURCE[0]}" )"
+  exit_on_error $?
+
   echo "- meson.build"
   sed -i "s/version: '[a-zA-Z0-9][\.\a-zA-Z0-9]*'/version: '${1}'/g" meson.build
   exit_on_error $?

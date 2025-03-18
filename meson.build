@@ -3,11 +3,14 @@
 # Project declaration
 project('qman', 'c',
   license: 'BSD-2-Clause',
-  version: '1.3.1-8-g3c4249b'
+  version: '1.3.1-21-ga099f15'
 )
 
 # Executable
 subdir('src')
+
+# Cofiguration
+subdir('config')
 
 # Manual page
 subdir('man')
