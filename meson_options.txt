@@ -3,7 +3,13 @@
 option('docdir',
   type: 'string',
   value: 'share/doc/qman',
-  description : 'Location of additional documentation'
+  description: 'Where to install additional documentation'
+)
+
+option('configdir',
+  type: 'string',
+  value: 'etc/xdg',
+  description: ' Where to install the configuration files'
 )
 
 option('man-pages',
@@ -16,6 +22,12 @@ option('docs',
   type: 'feature',
   value: 'auto',
   description: 'Install additional documentation'
+)
+
+option('config',
+  type: 'feature',
+  value: 'auto',
+  description: 'Install the configuration files'
 )
 
 option('gzip',

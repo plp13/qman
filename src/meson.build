@@ -69,7 +69,7 @@ executable('qman',
 )
 
 # Unit testing (executable and tests)
-if get_option('tests').enabled() or get_option('tests').auto()
+if get_option('tests').enabled()
   t_exe = executable('qman_tests',
     sources: src + ['qman_tests.c'],
     dependencies: deps + [cunit],
