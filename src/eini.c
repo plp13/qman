@@ -243,13 +243,20 @@ void eini(eini_handler_t hf, eini_error_t ef, const char *path) {
       }
       fclose(ifp);
       eini(hf, ef, ipath);
+      break;
     }
     case EINI_SECTION: {
       wcsncpy(sec, lne.value, BS_SHORT);
       break;
     }
     case EINI_VALUE: {
-      hf(sec, lne.key, lne.value, path, i);
+      if (0 == wcslen(sec)) {
+        wchar_t errmsg[BS_SHORT];
+        swprintf(errmsg, BS_SHORT, L"Option '%ls' does not have a section",
+                 lne.key);
+        ef(errmsg, path, i);
+      } else
+        hf(sec, lne.key, lne.value, path, i);
       break;
     }
     case EINI_ERROR: {
