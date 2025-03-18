@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.3.1-17-ge22774a
+footer: Qman 1.3.1-18-gefd2ccb
 date: December 15, 2023
 ---
 
@@ -187,13 +187,17 @@ The following locations are searched in sequence:
 
 The process stops once a configuration file has been found.
 
-**Qman** uses the [INI file format](https://en.wikipedia.org/wiki/INI_file).
+**Qman**'s configuration file uses the basic
+[INI file format](https://en.wikipedia.org/wiki/INI_file), extended with an
+**include** directive to allow for the configuration to be spread across
+multiple files.
+
 Different configuration options are grouped into sections. The paragraphs
 below summarize the sections and configuration options that are available:
 
-**Section [chars]**
-: Options in this section specify what characters will be used to draw the text
-  user interface:
+## Section [chars]
+Options in this section specify what characters will be used to draw the text
+user interface:
 
 | Option            | Description                                              |
 |-------------------|----------------------------------------------------------|
@@ -223,8 +227,8 @@ the Linux console, and with all fonts. Depending on the terminal's capabilities,
 specified in this section. This behavior can be overridden in the **[tcap]**
 section.
 
-**Section [colours]**
-: Options in this section specify the user interface colors:
+## Section [colours]
+Options in this section specify the user interface colors:
 
 | Option            | Description                                              |
 |-------------------|----------------------------------------------------------|
@@ -277,8 +281,8 @@ the Linux console. Depending on the terminal's capabilities, **Qman** may
 choose to revert to said defaults, and ignore any options you have specified in
 this section. This behavior can be overridden in the **[tcap]** section.
 
-**Section [keys]**
-: Options in this section specify which keys are mapped to each program action.
+## Section [keys]
+Options in this section specify which keys are mapped to each program action.
 
 The section contains 25 configuration options, each corresponding to one of the
 program actions described in the **USER INTERFACE** section of this manual page.
@@ -303,8 +307,8 @@ requires specifying both 'KEY_ENTER' and 'LF'. Similarly, mapping CTRL-C
 requires specifying both 'KEY_BREAK' and 'ETX', and mapping BACKSPACE requires
 specifying both 'KEY_BACKSPACE' and 'BS'.
 
-**Section [mouse]**
-: This section contains the following options that pertain to mouse support:
+## Section [mouse]
+This section contains the following options that pertain to mouse support:
 
 | Option   | Type         | Def. value | Description                           |
 |----------|--------------|------------|---------------------------------------|
@@ -312,9 +316,9 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 | left_handed | boolean   | false      | Swaps the left and right mouse buttons |
 | left_click_open | boolean | false    | Causes the left mouse button to invoke the OPEN action and/or act as the ENTER key |
 
-**Section [layout]**
-: This section contains various options that concern the layout of the text user
-  interface:
+## Section [layout]
+This section contains various options that concern the layout of the text user
+interface:
 
 | Option   | Type         | Def. value | Description                           |
 |----------|--------------|------------|---------------------------------------|
@@ -325,10 +329,10 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 | rmargin  | unsigned int | 2          | Size of margin between the page text and the scroll bar and/or the right side of the screen |
 | tabstop  | unsigned int | 8          | Number of characters in a tab stop (used by actions LEFT and RIGHT) |
 
-**Section [tcap]**
-: Normally, **Qman** detects the terminal's capabilities automatically. Options
-  in this section provide the ability to specify them explicitly, overriding
-  this behavior:
+## Section [tcap]
+Normally, **Qman** detects the terminal's capabilities automatically. Options in
+this section provide the ability to specify them explicitly, overriding this
+behavior:
 
 | Option   | Type         | Def. value | Description                           |
 |----------|--------------|------------|---------------------------------------|
@@ -344,8 +348,8 @@ the **[chars]** and **[colours]** sections mentioned above. Auto-detection
 should work correctly in most cases; it's therefore recommended to not modify
 any of the options in this section, except when discovering or reporting bugs.
 
-**Section [misc]**
-: This section contains various miscellaneous options:
+## Section [misc]
+This section contains various miscellaneous options:
 
 | Option       | Type         | Def. value | Description                       |
 |--------------|--------------|------------|-----------------------------------|
@@ -368,6 +372,15 @@ To avoid an annoying screen redraw, option _reset_after_http_ should be set to
 'false' when using a GUI web browser for handling http(s) links. Similarly,
 _reset_after_email_ should be set to 'false' when using a GUI email client for
 e-mail links.
+
+## Include directive
+Supplemental configuration files can be included using:
+
+**include** _path_
+
+Where _path_ is either an absolute path to the supplemental, or a path relative
+to the directory component of the configuration file that performs the
+inclusion.
 
 # ENVIRONMENT
 Users should take care setting their **TERM** environment variable to match
