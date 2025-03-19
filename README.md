@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.3.1-27-g583c3c7 -- [see what's new](#new-in-this-version)
+Version 1.3.1-28-g8f3804c -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -76,7 +76,7 @@ page.
 > **:warning: Caution**
 > This version changes the location of Qman's system-wide config file to
 > `/etc/xdg/qman/qman.conf`, and the location of the user-specific config file
-> to `/${HOME}/.config/qman/qman.conf`.
+> to `/${HOME}/.config/qman/qman.conf`
 
 > **:bulb: Note**
 >
@@ -142,7 +142,8 @@ By default, all the above features are enabled.
 
 ### Packages
 Arch Linux: packages [qman](https://aur.archlinux.org/packages/qman) and
-[qman-devel](https://aur.archlinux.org/packages/qman) are available on AUR
+[qman-git](https://aur.archlinux.org/packages/qman-git) (which follows
+[devel](https://github.com/plp13/qman/tree/devel) are available on AUR
 
 Gentoo Linux: package
 [app-misc/qman](https://gitweb.gentoo.org/repo/proj/guru.git/tree/app-misc/qman)
@@ -160,13 +161,13 @@ Always make sure you are up-to-date with the
 $ qman qman
 ```
 
-> :question: What is the location of the configuration file?
+> ***:question: What is the location of the configuration file?***
 
 `~/.config/qman/qman.conf` (user-specific) or `/etc/xdg/qman/qman.conf`
 (system-wide).
 
-> :question: Calling `qman` without any parameters fails with message
-> `Apropos '': nothing appropriate`
+> ***:question: Calling `qman` without any parameters fails with message
+> `Apropos '': nothing appropriate`***
 
 Your system does not have a manual page index cache. This can be fixed by
 running (as root):
@@ -175,8 +176,8 @@ running (as root):
 # mandb
 ```
 
-> :question: I'm unable to copy text to the clipboard using the mouse, and/or my
-> mouse behaves erratically
+> ***:question: I'm unable to copy text to the clipboard using the mouse, and/or
+> my mouse behaves erratically***
 
 Mouse support is experimental, and depends on features that are not fully
 implemented by all terminals. If you are having trouble with the mouse,
@@ -188,8 +189,8 @@ config file:
 ; enable=true
 ```
 
-> :question: Trying to open an HTTP or e-mail link causes the program to
-> terminate (or does nothing)
+> ***:question: Trying to open an HTTP or e-mail link causes the program to
+> terminate (or does nothing)***
 
 By default, Qman uses `xdg-open` to open such links. On desktop Linux systems,
 this is sufficient to open them using the default browser / email client. On
@@ -206,7 +207,7 @@ mailer_path=/usr/bin/mutt
 To avoid opening such links altogether, set both options to a command that does
 nothing, e.g. `/usr/bin/false`.
 
-> :question: I don't like the way Qman looks
+> ***:question: I don't like the way Qman looks***
 
 Use a different one of supplied
 [themes](https://github.com/plp13/qman/config/themes). Or build your own (and

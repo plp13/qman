@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.3.1-27-g583c3c7
+footer: Qman 1.3.1-28-g8f3804c
 date: December 15, 2023
 ---
 
@@ -57,31 +57,31 @@ keyboard mappings:
 
 | Action name     | Description                           | Key mappings       |
 |-----------------|---------------------------------------|--------------------|
-| UP              | Scroll up one line and/or focus on the previous link | UP, 'y', 'k' |
-| DOWN            | Scroll down one line and/or focus on the next link | DOWN, 'e', 'j' |
-| LEFT            | Scroll left one tab stop              | LEFT, '<'          |
-| RIGHT           | Scroll right one tab stop             | RIGHT, '>'         |
-| PGUP            | Scroll up one page                    | PGUP, 'b'          |
-| PGDN            | Scroll down one page                  | PGDN, 'f'          |
-| HOME            | Go to page top                        | HOME, 'g'          |
-| END             | Go to page bottom                     | END, 'G'           |
-| OPEN            | Open focused link                     | ENTER, 'o'         |
-| OPEN_APROPOS    | Perform apropos on focused link       | 'a'                |
-| OPEN_WHATIS     | Perform whatis on focused link        | 'w'                |
-| SP_OPEN         | Open a manual page using a dialog     | 'O'                |
-| SP_APROPOS      | Perform apropos on a manual page using a dialog | 'A'      |
-| SP_WHATIS       | Perform whatis on a manual page using a dialog  | 'W'      |
-| INDEX           | Go to index (home) page               | 'i', 'I'           |
-| BACK            | Go back one step in history           | BACKSPACE, '['     |
-| FWRD            | Go forward one step in history        | ']'                |
-| HISTORY         | Show history menu                     | 's', 'S'           |
-| TOC             | Show table of contents                | 't', 'T'           |
-| SEARCH          | (Free text) search forward            | '/'                |
-| SEARCH_BACK     | (Free text) search backward           | '?'                |
-| SEARCH_NEXT     | Go to next search result              | 'n'                |
-| SEARCH_PREV     | Go to previous search result          | 'N'                |
-| HELP            | Show the help dialog                  | 'h', 'H'           |
-| QUIT            | Exit the program                      | 'q', 'Q'           |
+| UP              | Scroll up one line and/or focus on the previous link | **UP**, **y**, **k** |
+| DOWN            | Scroll down one line and/or focus on the next link | **DOWN**, **e**, **j** |
+| LEFT            | Scroll left one tab stop              | **LEFT**, **<**    |
+| RIGHT           | Scroll right one tab stop             | **RIGHT**, **>**   |
+| PGUP            | Scroll up one page                    | **PGUP**, **b**    |
+| PGDN            | Scroll down one page                  | **PGDN**, **f**    |
+| HOME            | Go to page top                        | **HOME**, **g**    |
+| END             | Go to page bottom                     | **END**, **G**     |
+| OPEN            | Open focused link                     | **ENTER**, **o**   |
+| OPEN_APROPOS    | Perform apropos on focused link       | **a**              |
+| OPEN_WHATIS     | Perform whatis on focused link        | **w**              |
+| SP_OPEN         | Open a manual page using a dialog     | **O**              |
+| SP_APROPOS      | Perform apropos on a manual page using a dialog | **A**    |
+| SP_WHATIS       | Perform whatis on a manual page using a dialog  | **W**    |
+| INDEX           | Go to index (home) page               | **i**, **I**       |
+| BACK            | Go back one step in history           | **BACKSPACE**, **[** |
+| FWRD            | Go forward one step in history        | **]**              |
+| HISTORY         | Show history menu                     | **s**, **S**       |
+| TOC             | Show table of contents                | **t**, **T**       |
+| SEARCH          | (Free text) search forward            | **/**              |
+| SEARCH_BACK     | (Free text) search backward           | **?**              |
+| SEARCH_NEXT     | Go to next search result              | **n**              |
+| SEARCH_PREV     | Go to previous search result          | **N**              |
+| HELP            | Show the help dialog                  | **h**, **H**       |
+| QUIT            | Exit the program                      | **q**, **Q**       |
 
 All of the aforementioned keyboard mappings are customizable. For more
 information, see **CONFIGURATION**.
@@ -266,9 +266,9 @@ Each color is defined using three words separated by whitespace:
 
 _foreground_ _background_ _bold_
 
-_foreground_ and _background_ can be one of 'black', 'red', 'green',
-'yellow', 'blue', 'magenta', 'cyan', or 'white'. Alternatively, they can be a
-number between 0 and 255, or a hexadecimal RGB value using the #RRGGBB
+_foreground_ and _background_ can be one of **black**, **red**, **green**,
+**yellow**, **blue**, **magenta**, **cyan**, or **white**. Alternatively, they
+can be a number between 0 and 255, or a hexadecimal RGB value using the #RRGGBB
 notation. Users should beware that not all terminals support numeric color
 values higher than 7 and/or RGB values.
 
@@ -292,20 +292,20 @@ _key_1_ _key_2_ _key_3_ _key_4_ _key_5_ _key_6_ _key_7_ _key_8_
 
 The value of each _key_i_ can take one of the following values:
 
-- Any character, surch as 'a', 'b', 'c', etc.
-- Any ncurses(3x) keycode, such as 'KEY_UP' or 'KEY_HOME'
-- 'F1' to 'F12' (for the function keys)
-- 'ESC' (for the ESC key)
-- 'EXT' (for CTRL-C)
-- 'LF' (for the ENTER key)
-- 'BS' (for the BACKSPACE key)
-- 'HT' (for the TAB key)
-- 'SPACE' (for the spacebar)
+- Any character, surch as **a**, **b**, **c**, etc.
+- Any ncurses(3x) keycode, such as **KEY_UP** or **KEY_HOME**
+- **F1** to **F12** (for the function keys)
+- **ESC** (for the ESC key)
+- **EXT** (for CTRL-C)
+- **LF** (for the ENTER key)
+- **BS** (for the BACKSPACE key)
+- **HT** (for the TAB key)
+- **SPACE** (for the spacebar)
 
 For reasons of compatibility with various terminals, mapping the ENTER key
-requires specifying both 'KEY_ENTER' and 'LF'. Similarly, mapping CTRL-C
-requires specifying both 'KEY_BREAK' and 'ETX', and mapping BACKSPACE requires
-specifying both 'KEY_BACKSPACE' and 'BS'.
+requires specifying both **KEY_ENTER** and **LF**. Similarly, mapping CTRL-C
+requires specifying both **KEY_BREAK** and **ETX**, and mapping BACKSPACE
+requires specifying both **KEY_BACKSPACE** and **BS**.
 
 ## Section [mouse]
 This section contains the following options that pertain to mouse support:
@@ -365,12 +365,12 @@ This section contains various miscellaneous options:
 | hyphenate    | boolean      | true       | Whether to hyphenate long words in manual pages |
 | justify      | boolean      | true       | Whether to justify manual pages text |
 
-When using a horizontally narrow terminal, setting _hyphenate_ to 'true' and/or
-_justify_ to 'false' can improve the program's output.
+When using a horizontally narrow terminal, setting _hyphenate_ to **true**
+and/or _justify_ to **false** can improve the program's output.
 
 To avoid an annoying screen redraw, option _reset_after_http_ should be set to
-'false' when using a GUI web browser for handling http(s) links. Similarly,
-_reset_after_email_ should be set to 'false' when using a GUI email client for
+**false** when using a GUI web browser for handling http(s) links. Similarly,
+_reset_after_email_ should be set to **false** when using a GUI email client for
 e-mail links.
 
 ## Include directive
@@ -381,6 +381,19 @@ Supplemental configuration files can be included using:
 Where _path_ is either an absolute path to the supplemental, or a path relative
 to the directory component of the configuration file that performs the
 inclusion.
+
+## Notes on syntax
+Include paths and option values may optionally be placed inside single or double
+quotes. They can include the following escape sequences:
+
+- **\\a**, **\\b**, **\\t**, **\\n**, **\\v**, **\\f**, and **\\r** are
+  interpreted according to ASCII
+- **\\e** is interpreted as an escape (0x1b) character
+- **\\\\** is interpreted as a backslash
+- **\\'** and **\\"** are interpreted as a single and double quotes respectively
+
+All text following a **;** until the end of the line is considered a comment and
+is discarded.
 
 # ENVIRONMENT
 Users should take care setting their **TERM** environment variable to match
