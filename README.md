@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.3.1-26-gdae22f5 -- [see what's new](#new-in-this-version)
+Version 1.3.1-27-g583c3c7 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -53,7 +53,7 @@ plain C and has only minimal dependencies.
 - Mouse support
 - Navigation history
 - On-line help
-- Fully configurable using an INI-style config file
+- Fully configurable using INI-style config files
 - Manual page
 
 ## Project status 
@@ -63,32 +63,27 @@ and should be reported using the [issues](https://github.com/plp13/qman/issues)
 page.
 
 ## New in this version
-New features in v1.3.0:
-- Improved navigation using the table of contents
-- Support for manual pages compressed using Bzip2
-- Support for `groff`'s legacy typewriter sequences (GROFF_NO_SGR)
-- Support for embedded HTTP links (for example, `named(8)` uses these to
-  provide links to several RFC documents)
-- New light RGB theme [catppuccin_latte.conf](config/catppuccin_latte.conf)
-- Automated versioning
-- Installation instructions for different distributions have been brought up to
-  date and moved to [PACKAGING.md](PACKAGING.md)
+- A new configuration subsystem that provides an `include` directive, allowing
+  Qman's configuration to be broken into multiple files
+- A basic config file, `qman.conf`, together with a number of 'theme' config
+  files, are now installed by default at `/etc/xdg/qman`. This gives Qman a
+  handsome default look and feel.
+- `hinit` is no longer a dependency
+- Support for manual pages compressed using `xz`
+- Improved clipboard support when using the `ghostty` terminal
 - Miscellaneous bug fixes and documentation enhancements
 
-
-New features in v1.3.1:
-- Search process for the configuration file now follows the
-  [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/latest/)
-- Minor bug fixes, necessary for building on openSUSE Tumbleweed
-- Minor updates to manual page and documentation
+> **:warning: Caution**
+> This version changes the location of Qman's system-wide config file to
+> `/etc/xdg/qman/qman.conf`, and the location of the user-specific config file
+> to `/${HOME}/.config/qman/qman.conf`.
 
 > **:bulb: Note**
 >
 > Users using custom config files might need to update them when a new version
-> version of Qman comes out. Please refer to the manual page,
-> [modernity.conf](https://github.com/plp13/qman/blob/main/config/modernity.conf)
-> and [modernity_gui.conf](https://github.com/plp13/qman/blob/main/config/modernity_gui.conf)
-> for more info.
+> version of Qman comes out. For more information, please refer to Qman's manual
+> page and the documentation in
+> [config](https://github.com/plp13/qman/blob/main/config].
 
 ## Downloading
 Clone the [main](https://github.com/plp13/qman/tree/main) branch, which contains
@@ -103,8 +98,8 @@ available, starting with version 1.2.1.
 
 ## Dependencies
 Qman is written in plain C, and thus requires a compiler such as `gcc` or
-`clang`. Its only required library dependencies are `glibc`, `ncurses`, and
-`hinit`. It uses the `meson` build system.
+`clang`. Its only required library dependencies are `glibc` and `ncurses`. It
+uses the `meson` build system.
 
 There are also a number of optional dependencies:
 - `zlib`: suport for manual pages compressed with `gzip`
@@ -138,7 +133,7 @@ passed to `meson setup`, to disable certain program features:
 - `-Dbzip2=disabled`: disable support for manual pages compressed with `bzip2`
 - `-Dlzma=disabled`: disable support for manual pages compressed with `xz`
 
-By default, all features are enabled.
+By default, all the above features are enabled.
 
 > **:bulb: Note**
 >
@@ -146,8 +141,8 @@ By default, all features are enabled.
 > aforementioned `meson compile` command with `ninja`
 
 ### Packages
-Arch Linux: package [qman](https://aur.archlinux.org/packages/qman) is available
-on AUR
+Arch Linux: packages [qman](https://aur.archlinux.org/packages/qman) and
+[qman-devel](https://aur.archlinux.org/packages/qman) are available on AUR
 
 Gentoo Linux: package
 [app-misc/qman](https://gitweb.gentoo.org/repo/proj/guru.git/tree/app-misc/qman)
@@ -158,8 +153,8 @@ look at [PACKAGING.md](PACKAGING.md), which provides guidance on how to build
 Qman on some popular Linux distributions.
 
 ## Troubleshooting
-Always make sure you are up-to-date with the `main` branch. And, of course,
-RTFM:
+Always make sure you are up-to-date with the
+[main](https://github.com/plp13/qman/tree/main) branch. And, of course, RTFM:
 
 ```
 $ qman qman
@@ -167,7 +162,8 @@ $ qman qman
 
 > :question: What is the location of the configuration file?
 
-`~/.config/qman.conf` (user-specific) or `/etc/xdg/qman.conf` (system-wide).
+`~/.config/qman/qman.conf` (user-specific) or `/etc/xdg/qman/qman.conf`
+(system-wide).
 
 > :question: Calling `qman` without any parameters fails with message
 > `Apropos '': nothing appropriate`
@@ -179,28 +175,42 @@ running (as root):
 # mandb
 ```
 
-> :question: I have enabled mouse support by adding `enable=true` to the
-> `[mouse]` section of my configuration file, but now I'm unable to copy text to
-> the clipboard using the mouse, and/or my mouse behaves erratically
+> :question: I'm unable to copy text to the clipboard using the mouse, and/or my
+> mouse behaves erratically
 
 Mouse support is experimental, and depends on features that are not fully
-implemented by all terminals. See Qman's manual page for more information.
+implemented by all terminals. If you are having trouble with the mouse,
+you can disable mouse support by commenting out the following lines in your
+config file:
+
+```
+; [mouse]
+; enable=true
+```
 
 > :question: Trying to open an HTTP or e-mail link causes the program to
 > terminate (or does nothing)
 
 By default, Qman uses `xdg-open` to open such links. On desktop Linux systems,
 this is sufficient to open them using the default browser / email client. On
-other systems, you may need to specify alternative programs with the
-`browser_path` and `mailer_path` options in the `misc` section of Qman's
-configuration file. To avoid opening such links altogether, set both options to
-a command that does nothing, e.g. `/usr/bin/false`.
+other systems, you may need to specify alternative programs using the
+`browser_path` and `mailer_path` options in the `misc` section your config file,
+for example:
 
-> :question: Qman does not look as pretty on my system as in the screenshots
+```
+[misc]
+browser_path=/usr/bin/links
+mailer_path=/usr/bin/mutt
+```
 
-A modern look and feel can be achieved by using one of the configuration files
-supplied in [config](/config/). (For the screenshots, we used 
-[modernity.conf](/config/modernity.conf).)
+To avoid opening such links altogether, set both options to a command that does
+nothing, e.g. `/usr/bin/false`.
+
+> :question: I don't like the way Qman looks
+
+Use a different one of supplied
+[themes](https://github.com/plp13/qman/config/themes). Or build your own (and
+open a pull request to to add it to the repository).
 
 ## Contributing
 If you wish to contribute to the program's development, clone the
