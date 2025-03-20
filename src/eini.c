@@ -230,10 +230,16 @@ void eini(eini_handler_t hf, eini_error_t ef, const char *path) {
         wcstombs(ipath, lne.value, BS_LINE);
       } else {
         char apath[BS_LINE];
-        wcstombs(apath, lne.value, BS_LINE);
-        strncpy(ipath, xdirname(path), BS_LINE);
+        if (wcstombs(apath, lne.value, BS_LINE) != -1) {
+          apath[BS_LINE - 1] = '\0';
+        } else {
+          apath[0] = '\0';
+        }
+        strncpy(ipath, xdirname(path), BS_LINE - 1);
+        ipath[BS_LINE - 1] = '\0';
         strncat(ipath, "/", BS_LINE - strlen(ipath) - 1);
         strncat(ipath, apath, BS_LINE - strlen(ipath) - 1);
+        ipath[BS_LINE - 1] = '\0';
       }
       ifp = fopen(ipath, "r");
       if (NULL == ifp) {
