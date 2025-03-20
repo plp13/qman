@@ -216,14 +216,16 @@ size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
 char *xbasename(const char *path) {
   static char pathc[BS_LINE];
 
-  strncpy(pathc, path, BS_LINE);
+  strncpy(pathc, path, BS_LINE - 1);
+  pathc[BS_LINE-1] = '\0';
   return basename(pathc);
 }
 
 char *xdirname(const char *path) {
   static char pathc[BS_LINE];
 
-  strncpy(pathc, path, BS_LINE);
+  strncpy(pathc, path, BS_LINE - 1);
+  pathc[BS_LINE-1] = '\0';
   return dirname(pathc);
 }
 
