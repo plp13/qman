@@ -231,6 +231,23 @@ extern char *xstrdup(const char *s);
 // Safely call `wcsdup()`
 extern wchar_t *xwcsdup(const wchar_t *s);
 
+// `xwcstombs()`, `xmbstowcs()`, `xwcsncpy()` and `xstrncpy()` will always
+// terminate the string in `dest`, even when the length of `n` is exceeded. If
+// you don't want this (e.g. because you're converting/copying parts of
+// strings), use their vanilla counterparts instead.
+
+// Safely call wcstombs()
+extern size_t xwcstombs(char *dest, const wchar_t *src, size_t n);
+
+// Safely call mbstowcs()
+size_t xmbstowcs(wchar_t *dest, const char *src, size_t n);
+
+// Safely call wcsncpy()
+wchar_t *xwcsncpy(wchar_t *dest, const wchar_t *src, size_t n);
+
+// Safely call strncpy()
+char *xstrncpy(char *dest, const char *src, size_t n);
+
 // Safely call `system(cmd)`, to execute `cmd` in a new shell. If `fail` is
 // true, and the return value of `system()` is non-zero, terminate.
 extern void xsystem(const char *cmd, bool fail);

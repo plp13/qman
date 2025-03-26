@@ -19,13 +19,13 @@ regex_t eini_re_include, eini_re_section, eini_re_value;
   if (NULL == mykey)                                                           \
     ret.key = NULL;                                                            \
   else {                                                                       \
-    wcsncpy(ret_key, wnnl(mykey), BS_SHORT);                                   \
+    xwcsncpy(ret_key, wnnl(mykey), BS_SHORT);                                  \
     ret.key = ret_key;                                                         \
   }                                                                            \
   if (NULL == myvalue)                                                         \
     ret.value = NULL;                                                          \
   else {                                                                       \
-    wcsncpy(ret_value, wnnl(myvalue), BS_LINE);                                \
+    xwcsncpy(ret_value, wnnl(myvalue), BS_LINE);                               \
     wunescape(ret_value);                                                      \
     ret.value = ret_value;                                                     \
   }
@@ -160,9 +160,10 @@ eini_t eini_parse(char *src) {
     set_ret(EINI_ERROR, NULL, L"Non-string data");
     return ret;
   }
+  wsrc[BS_LINE - 1] = L'\0';
 
   decomment(wsrc);
-  wcstombs(csrc, wsrc, BS_LINE);
+  xwcstombs(csrc, wsrc, BS_LINE);
 
   loc = match(eini_re_include, csrc);
   if (0 == loc.beg && loc.end > loc.beg) {
@@ -228,11 +229,11 @@ void eini(eini_handler_t hf, eini_error_t ef, const char *path) {
       char ipath[BS_LINE]; // include file path
       FILE *ifp;           // include file pointer
       if (L'/' == lne.value[0]) {
-        wcstombs(ipath, lne.value, BS_LINE);
+        xwcstombs(ipath, lne.value, BS_LINE);
       } else {
         char apath[BS_LINE];
-        wcstombs(apath, lne.value, BS_LINE);
-        strncpy(ipath, xdirname(path), BS_LINE);
+        xwcstombs(apath, lne.value, BS_LINE);
+        xstrncpy(ipath, xdirname(path), BS_LINE);
         strncat(ipath, "/", BS_LINE - strlen(ipath) - 1);
         strncat(ipath, apath, BS_LINE - strlen(ipath) - 1);
       }
@@ -247,7 +248,7 @@ void eini(eini_handler_t hf, eini_error_t ef, const char *path) {
       break;
     }
     case EINI_SECTION: {
-      wcsncpy(sec, lne.value, BS_SHORT);
+      xwcsncpy(sec, lne.value, BS_SHORT);
       break;
     }
     case EINI_VALUE: {

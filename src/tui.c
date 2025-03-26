@@ -1211,7 +1211,7 @@ void entitle(wchar_t *src) {
   // char* version of src
   unsigned srcs_len = 3 * wcslen(src); // length
   char *srcs = salloca(srcs_len);      // actual string
-  wcstombs(srcs, src, srcs_len);
+  xwcstombs(srcs, src, srcs_len);
 
   char *seq = salloca(7 + strlen(srcs));
   sprintf(seq, "]0;%s\07", srcs);
@@ -1222,7 +1222,7 @@ void editcopy(wchar_t *src) {
   // char* version of src
   unsigned srcs_len = 3 * wcslen(src); // length
   char *srcs = salloca(srcs_len);      // actual string
-  wcstombs(srcs, src, srcs_len);
+  xwcstombs(srcs, src, srcs_len);
 
   // Base64-encoded version of src
   size_t src64_len; // length

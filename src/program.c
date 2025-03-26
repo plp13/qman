@@ -421,7 +421,7 @@ void tocgroff(toc_entry_t *toc, unsigned toc_len) {
   xfputs(".ll 1024m\n", fp);
   for (i = 0; i < toc_len; i++)
     if (NULL != toc[i].text) {
-      wcstombs(texts, toc[i].text, BS_LINE);
+      xwcstombs(texts, toc[i].text, BS_LINE);
       xfputs(texts, fp);
       xfputs("\n.br 0\n", fp);
     }
@@ -434,7 +434,7 @@ void tocgroff(toc_entry_t *toc, unsigned toc_len) {
   xfgets(texts, BS_LINE, pp); // discarded
   for (i = 0; i < toc_len;) {
     xfgets(texts, BS_LINE, pp);
-    mbstowcs(toc[i].text, texts, BS_LINE);
+    xmbstowcs(toc[i].text, texts, BS_LINE);
     wbs(toc[i].text);
     wmargtrim(toc[i].text, L"\n");
 
@@ -482,7 +482,7 @@ void secgroff(wchar_t **sections, unsigned sections_len) {
   xfputs(".ll 1024m\n", fp);
   for (i = 0; i < sections_len; i++)
     if (NULL != sections[i]) {
-      wcstombs(texts, sections[i], BS_LINE);
+      xwcstombs(texts, sections[i], BS_LINE);
       xfputs(texts, fp);
       xfputs("\n.br 0\n", fp);
     }
@@ -495,7 +495,7 @@ void secgroff(wchar_t **sections, unsigned sections_len) {
   xfgets(texts, BS_LINE, pp); // discarded
   for (i = 0; i < sections_len;) {
     xfgets(texts, BS_LINE, pp);
-    mbstowcs(sections[i], texts, BS_LINE);
+    xmbstowcs(sections[i], texts, BS_LINE);
     wbs(sections[i]);
     wmargtrim(sections[i], L"\n");
 
@@ -889,14 +889,14 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
 
     // Populate the `i`th element of `res` (allocating when necessary)
     res[i].page = walloc(page_len);
-    mbstowcs(res[i].page, page, page_len);
+    xmbstowcs(res[i].page, page, page_len);
     res[i].section = walloc(section_len);
-    mbstowcs(res[i].section, section, section_len);
+    xmbstowcs(res[i].section, section, section_len);
     res[i].ident = walloc(page_len + section_len + 3);
     swprintf(res[i].ident, page_len + section_len + 3, L"%s(%s)", page,
              section);
     res[i].descr = walloc(descr_len);
-    mbstowcs(res[i].descr, descr, descr_len);
+    xmbstowcs(res[i].descr, descr, descr_len);
   }
 
   xfclose(fp);
@@ -1181,7 +1181,7 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
   // For each line in `gpath`, `gline`...
   argets(gp, tmp, BS_LINE);
   while (!areof(gp)) {
-    glen = mbstowcs(gline, tmp, BS_LINE);
+    glen = xmbstowcs(gline, tmp, BS_LINE);
 
     if (-1 == glen)
       winddown(ES_OPER_ERROR, L"Failed to read manual page source");
@@ -1306,10 +1306,10 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // Discard any empty lines on top, and read the first non-empty line into
   // `tmps`/`tmpw`
   xfgets(tmps, BS_LINE, pp);
-  len = mbstowcs(tmpw, tmps, BS_LINE);
+  len = xmbstowcs(tmpw, tmps, BS_LINE);
   while (0 == len || L'\n' == tmpw[wmargend(tmpw, L"\n")]) {
     xfgets(tmps, BS_LINE, pp);
-    len = mbstowcs(tmpw, tmps, BS_LINE);
+    len = xmbstowcs(tmpw, tmps, BS_LINE);
   }
 
   // For each line of `man`'s output...
@@ -1363,7 +1363,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
       inc_ln;
 
       wafree(sc, sc_len);
-      len = mbstowcs(tmpw, tmps, BS_LINE);
+      len = xmbstowcs(tmpw, tmps, BS_LINE);
     }
 
     if (-1 == len)
@@ -1474,7 +1474,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 
     // Read next line of `man` output into `tmps`/`tmpw`
     xfgets(tmps, BS_LINE, pp);
-    len = mbstowcs(tmpw, tmps, BS_LINE);
+    len = xmbstowcs(tmpw, tmps, BS_LINE);
 
     inc_ln;
   }
@@ -1548,7 +1548,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   // For each line in `gpath`, `gline`...
   argets(gp, tmp, BS_LINE);
   while (!areof(gp)) {
-    glen = mbstowcs(gline, tmp, BS_LINE);
+    glen = xmbstowcs(gline, tmp, BS_LINE);
 
     if (-1 == glen)
       winddown(ES_OPER_ERROR, L"Failed to read manual page source");
@@ -1579,7 +1579,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       // Tagged paragraph
       argets(gp, tmp, BS_LINE);
       if (!areof(gp)) {
-        glen = mbstowcs(gline, tmp, BS_LINE);
+        glen = xmbstowcs(gline, tmp, BS_LINE);
         {
           // Edge case: the tag line contains only a comment or a line that must
           // otherwise be skipped; skip to next line
@@ -1587,7 +1587,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
             argets(gp, tmp, BS_LINE);
             if (areof(gp))
               break;
-            glen = mbstowcs(gline, tmp, BS_LINE);
+            glen = xmbstowcs(gline, tmp, BS_LINE);
           }
         }
         {
@@ -1597,7 +1597,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
             argets(gp, tmp, BS_LINE);
             if (areof(gp))
               break;
-            glen = mbstowcs(gline, tmp, BS_LINE);
+            glen = xmbstowcs(gline, tmp, BS_LINE);
           }
           if (areof(gp))
             break;

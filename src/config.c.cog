@@ -298,7 +298,7 @@ int wcs2ch(const wchar_t *src) {
       trgt = NULL;                                                             \
     else {                                                                     \
       trgt = walloc(value_len * 4);                                            \
-      wcstombs(trgt, value, value_len);                                        \
+      xwcstombs(trgt, value, value_len);                                       \
     }                                                                          \
     return;                                                                    \
   }
@@ -609,7 +609,7 @@ void configure() {
   if (NULL != config.misc.config_path) {
     // `-C` option was used; try to open specified config file, and fail if not
     // possible
-    strncpy(path, config.misc.config_path, BS_LINE);
+    xstrncpy(path, config.misc.config_path, BS_LINE);
     fp = fopen(path, "r");
     if (NULL == fp) {
       swprintf(errmsg, BS_SHORT, L"Unable to open config file '%s'",
@@ -656,13 +656,13 @@ void configure() {
 
     // /etc/xdg/qman/qman.conf
     if (NULL == fp) {
-      strncpy(path, "/etc/xdg/qman/qman.conf", BS_LINE);
+      xstrncpy(path, "/etc/xdg/qman/qman.conf", BS_LINE);
       fp = fopen(path, "r");
     }
 
     // /etc/qman/qman.conf
     if (NULL == fp) {
-      strncpy(path, "/etc/qman/qman.conf", BS_LINE);
+      xstrncpy(path, "/etc/qman/qman.conf", BS_LINE);
       fp = fopen(path, "r");
     }
   }

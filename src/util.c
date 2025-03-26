@@ -216,14 +216,14 @@ size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
 char *xbasename(const char *path) {
   static char pathc[BS_LINE];
 
-  strncpy(pathc, path, BS_LINE);
+  xstrncpy(pathc, path, BS_LINE);
   return basename(pathc);
 }
 
 char *xdirname(const char *path) {
   static char pathc[BS_LINE];
 
-  strncpy(pathc, path, BS_LINE);
+  xstrncpy(pathc, path, BS_LINE);
   return dirname(pathc);
 }
 
@@ -247,6 +247,53 @@ wchar_t *xwcsdup(const wchar_t *s) {
     serror(errmsg, L"Unable to strdup()");
     winddown(ES_OPER_ERROR, errmsg);
   }
+
+  return res;
+}
+
+size_t xwcstombs(char *dest, const wchar_t *src, size_t n) {
+  if (NULL == dest)
+    return wcstombs(dest, src, n);
+
+  size_t res = wcstombs(dest, src, n);
+
+  if (-1 == res)
+    winddown(ES_OPER_ERROR, L"Unable to wcstombs()");
+  else if (n == res)
+    res--;
+
+  dest[res] = '\0';
+
+  return res;
+}
+
+size_t xmbstowcs(wchar_t *dest, const char *src, size_t n) {
+  if (NULL == dest)
+    return mbstowcs(dest, src, n);
+
+  size_t res = mbstowcs(dest, src, n);
+
+  if (-1 == res)
+    winddown(ES_OPER_ERROR, L"Unable to mbstowcs()");
+  else if (n == res)
+    res--;
+
+  dest[res] = L'\0';
+
+  return res;
+}
+
+wchar_t *xwcsncpy(wchar_t *dest, const wchar_t *src, size_t n) {
+  wchar_t *res = wcsncpy(dest, src, n);
+  dest[n - 1] = L'\0';
+
+  return res;
+}
+
+char *xstrncpy(char *dest, const char *src, size_t n) {
+  char *res = strncpy(dest, src, n);
+  if (strlen(src) >= n)
+    dest[n - 1] = '\0';
 
   return res;
 }
@@ -952,7 +999,7 @@ range_t fr_search(const full_regex_t *re, const wchar_t *src) {
   }
 
   // Convert `src` to `ssrc` and try to find a match in it
-  wcstombs(ssrc, src, BS_LINE);
+  xwcstombs(ssrc, src, BS_LINE);
   int err = regexec(&re->re, ssrc, 1, pmatch, 0);
 
   if (0 == err) {
@@ -961,7 +1008,7 @@ range_t fr_search(const full_regex_t *re, const wchar_t *src) {
     regoff_t send = pmatch[0].rm_eo; // match end offset (in `ssrc`)
     regoff_t slen = send - sbeg;     // match length (in `ssrc`)
     wchar_t *wmatch = walloca(slen); // the match as a `wchar_t*`
-    unsigned wlen = mbstowcs(wmatch, &ssrc[sbeg], slen); // `wmatch` length
+    unsigned wlen = xmbstowcs(wmatch, &ssrc[sbeg], slen + 1); // `wmatch` length
     wmatch[wlen] = L'\0';
     wchar_t *wptr =
         wcsstr(src, wmatch); // match begin memory location (in `src`)
