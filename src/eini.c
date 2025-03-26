@@ -38,7 +38,7 @@ regex_t eini_re_include, eini_re_section, eini_re_value;
   if (L'"' == wsrc[0]) {                                                       \
     /* wsrc begins with a `"` */                                               \
     if (wlen < 2) {                                                            \
-      /* wsrc equals `"`; accept it  as it is */                               \
+      /* wsrc equals `"`; accept it as it is */                                \
     } else if (L'"' == wsrc[wlen - 1]) {                                       \
       /* wsrc ends in '"' */                                                   \
       if (wescaped(wsrc, wlen - 1)) {                                          \
@@ -51,14 +51,14 @@ regex_t eini_re_include, eini_re_section, eini_re_value;
         wsrc = &wsrc[1];                                                       \
       }                                                                        \
     } else {                                                                   \
-      /* wsrc does not end in '"'; reject it */                                \
+      /* wsrc does not end in `"`; reject it */                                \
       set_ret(EINI_ERROR, NULL, L"Non-terminated quote");                      \
       return ret;                                                              \
     }                                                                          \
   } else if (L'\'' == wsrc[0]) {                                               \
     /* wsrc begins with a `'` */                                               \
     if (wlen < 2) {                                                            \
-      /* wsrc equals `'`; accept it  as it is */                               \
+      /* wsrc equals `'`; accept it as it is */                                \
     } else if (L'\'' == wsrc[wlen - 1]) {                                      \
       /* wsrc ends in `'` */                                                   \
       if (wescaped(wsrc, wlen - 1)) {                                          \
@@ -77,7 +77,7 @@ regex_t eini_re_include, eini_re_section, eini_re_value;
     }                                                                          \
   }
 
-// Helper of `eini_parse()`. Discard all comments in src.
+// Helper of `eini_parse()`. Discard all comments in `src`.
 void decomment(wchar_t *src) {
   unsigned i = 0;   // iterator
   bool inq = false; // true if we are inside a quoted string
@@ -88,17 +88,17 @@ void decomment(wchar_t *src) {
     if (inq) {
       // we are inside a quoted string
       if (qtype == src[i] && !wescaped(src, i)) {
-        // src[i] is an unescaped `"` or `'`, thus the quoted string ends
+        // `src[i]` is an unescaped `"` or `'`, thus the quoted string ends
         inq = false;
       }
     } else {
       // we are not inside a quoted string
       if (L';' == src[i]) {
-        // src[i] is `;`, thus we have a comment to the end of line
+        // `src[i]` is `;`, thus we have a comment to the end of line
         src[i] = L'\0';
         return;
       } else if (L'"' == src[i] && !wescaped(src, i)) {
-        // src[i] is an unescaped `"`, thus a double-quoted string begins
+        // `src[i]` is an unescaped `"`, thus a double-quoted string begins
         inq = true;
         qtype = L'"';
       } else if (L'\'' == src[i] && !wescaped(src, i)) {
@@ -117,7 +117,7 @@ range_t match(regex_t re, char *src) {
   regmatch_t pmatch[1]; // regex match
   range_t res;          // return value
 
-  // Try to match src
+  // Try to match `src`
   int err = regexec(&re, src, 1, pmatch, 0);
 
   if (0 == err) {
@@ -125,7 +125,7 @@ range_t match(regex_t re, char *src) {
     res.beg = pmatch[0].rm_so;
     res.end = pmatch[0].rm_eo;
   } else {
-    // No match found, or an error has occured; return {0, 0}
+    // No match found, or an error has occured; return `{0, 0}`
     res.beg = 0;
     res.end = 0;
   }
@@ -145,17 +145,18 @@ void eini_init() {
 }
 
 eini_t eini_parse(char *src) {
-  wchar_t *wsrc = walloca(BS_LINE); // wchar_t* version of `src`
-  char *csrc = salloca(BS_LINE); // char* version of `src` (after modification)
-  int wlen;                      // length of `wsrc`
-  range_t loc;                   // location of regex match in `wsrc`
-  eini_t ret;                    // return value
+  wchar_t *wsrc = walloca(BS_LINE); // `wchar_t*` version of `src`
+  char *csrc =
+      salloca(BS_LINE); // `char*` version of `src` (after modification)
+  int wlen;             // length of `wsrc`
+  range_t loc;          // location of regex match in `wsrc`
+  eini_t ret;           // return value
   static wchar_t ret_key[BS_SHORT];  // `key` contents of `ret`
   static wchar_t ret_value[BS_LINE]; // `value` contents of `ret`
 
   wlen = mbstowcs(wsrc, src, BS_LINE);
   if (-1 == wlen) {
-    // Couldn't convert src
+    // Couldn't convert `src`
     set_ret(EINI_ERROR, NULL, L"Non-string data");
     return ret;
   }

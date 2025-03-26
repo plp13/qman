@@ -22,10 +22,11 @@ typedef enum {
 // Contents of an INI line
 typedef struct {
   eini_type_t type; // line type
-  wchar_t *key;     // key name if type is EINI_VALUE, NULL otherwise
-  wchar_t *value;   // error message if type is EINI_ERROR, file to include if
-                  // type is EINI_INCLUDE, section name if type is EINI_SECTION,
-                  // value if type is EINI_VALUE, NULL otherwise
+  wchar_t *key;     // key name if type is `EINI_VALUE`, NULL otherwise
+  wchar_t
+      *value; // error message if type is `EINI_ERROR`, file to include if
+              // type is `EINI_INCLUDE`, section name if type is `EINI_SECTION`,
+              // value if type is `EINI_VALUE`, NULL otherwise
 } eini_t;
 
 // Handler function

@@ -23,7 +23,7 @@ typedef char *bitarr_t;
 // a `regex_t`
 typedef struct {
   char *str;     // string version
-  regex_t re;    // regex_t version
+  regex_t re;    // `regex_t` version
   wchar_t *snpt; // a snippet of text that's always contained in matches
 } full_regex_t;
 
@@ -41,7 +41,7 @@ typedef enum {
   AR_LZMA   // xz
 } archive_type_t;
 
-// A "fat" file pointer to a compressed archive, that supports multiple
+// A 'fat' file pointer to a compressed archive, that supports multiple
 // compression types
 typedef struct {
   archive_type_t type; // archive type
@@ -69,15 +69,15 @@ typedef struct {
 // Macros
 //
 
-// Swap two numerical values `a` and `b` (without using a third variable)
+// Swap two integer values `a` and `b` (without using a third variable)
 #define swap(a, b)                                                             \
   a = a ^ b;                                                                   \
   b = a ^ b;                                                                   \
   a = a ^ b;
 
-// If you get spurious gcc warnings about NULL string arguments being passed to
-// functions that require them to be non-NULL, wrap said strings in `nnl()` or
-// `wnnl()` to suppress them
+// If you get spurious `gcc` warnings about NULL string arguments being passed
+// to functions that require them to be non-NULL, wrap said strings in `nnl()`
+// or `wnnl()` to suppress them
 
 // If string `s` is NULL, replace it with ""
 #define nnl(s) ((s) ? (s) : "")
@@ -146,7 +146,7 @@ typedef struct {
 
 // Log a message, together with a timestamp, into `F_LOG`. Use this function
 // like you would `printf()`, i.e. specifying a template followed by zero or
-// more values. And only temporarily for debugging, not in production.
+// more values. To be used only temporarily for debugging, not in production.
 #define logprintf(...)                                                         \
   {                                                                            \
     char ___[64 * BS_LINE];                                                    \
@@ -160,8 +160,8 @@ typedef struct {
 
 // Many functions call `winddown()` to fail gracefully in case of error
 
-// Perform the same function as perror() but, rather than printing the error
-// message, place it in dst
+// Perform the same function as `perror()` but, rather than printing the error
+// message, place it in `dst`
 void serror(wchar_t *dst, const wchar_t *s);
 
 // The purpose of all of all `x...()` functions is to fail gracefully using
@@ -231,8 +231,8 @@ extern char *xstrdup(const char *s);
 // Safely call `wcsdup()`
 extern wchar_t *xwcsdup(const wchar_t *s);
 
-// Safely call `system(cmd)`, to execute cmd in a new shell. If fail is true,
-// and the return value of `system()` is non-zero, terminate.
+// Safely call `system(cmd)`, to execute `cmd` in a new shell. If `fail` is
+// true, and the return value of `system()` is non-zero, terminate.
 extern void xsystem(const char *cmd, bool fail);
 
 // A safe version of `tempnam()`, that also creates the temporary file whose
@@ -273,7 +273,7 @@ extern archive_t aropen(const char *pathname);
 // `len` being the length of `buf`
 extern void argets(archive_t ap, char *buf, int len);
 
-// Return true if "fat" file pointer `ap` has reached EOF, false otherwise
+// Return true if "fat" file pointer `ap` has reached `EOF`, false otherwise
 extern bool areof(archive_t ap);
 
 // Close "fat" pointer `ap`
@@ -353,7 +353,7 @@ extern unsigned wbs(wchar_t *trgt);
 // Case-insensitive version of `wcsstr()`
 extern wchar_t *wcscasestr(const wchar_t *haystack, const wchar_t *needle);
 
-// Copy all data in `source` into `trgt`, line by line. Both `source` and
+// Copy all data in `source` into `target`, line by line. Both `source` and
 // `target` must be text files. Return the number of lines copied.
 extern unsigned scopylines(FILE *source, FILE *target);
 

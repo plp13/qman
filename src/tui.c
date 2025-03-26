@@ -24,9 +24,9 @@ mouse_t mouse_status = MS_EMPTY;
 // Helper macros and functions
 //
 
-// Helper of draw_page(). Set col to the appropriate color for link no. linkno
-// of line number lineno. Consider the type of the link, and also query flink to
-// check whether it's focused.
+// Helper of `draw_page()`. Set `col` to the appropriate color for link number
+// `linkno` of line number `lineno`. Consider the `type` of the link, and also
+// query `flink` to check whether it's focused.
 #define set_link_col(lineno, linkno, type)                                     \
   if (flink.ok && flink.line == lineno && flink.link == linkno) {              \
     switch (type) {                                                            \
@@ -60,7 +60,7 @@ mouse_t mouse_status = MS_EMPTY;
     }                                                                          \
   }
 
-// Helper of tui_open(). Re-initialize ncurses after shelling out.
+// Helper of `tui_open()`. Re-initialize ncurses after shelling out.
 #define tui_reset                                                              \
   {                                                                            \
     winddown_tui();                                                            \
@@ -79,8 +79,8 @@ mouse_t mouse_status = MS_EMPTY;
     doupdate();                                                                \
   }
 
-// Helper of tui_open(), tui_open_apropos() and tui_open_whatis(). If page_flink
-// isn't valid, error out and return false.
+// Helper of `tui_open()`, `tui_open_apropos()` and `tui_open_whatis()`. If
+// `page_flink` isn't valid, error out and return false.
 #define error_on_invalid_flink                                                 \
   if (!page_flink.ok || page_flink.line < page_top ||                          \
       page_flink.line >= page_top + config.layout.main_height ||               \
@@ -90,8 +90,8 @@ mouse_t mouse_status = MS_EMPTY;
     return false;                                                              \
   }
 
-// Helper of tui_toc(). Search the current page for a line whose text matches
-// the text of the focus'ed entry in toc.
+// Helper of `tui_toc()`. Search the current page for a line whose text matches
+// the text of the `focus`ed entry in `toc`.
 #define toc_jump(toc, focus)                                                   \
   int prev;                                                                    \
   for (prev = MAX(0, focus - 1); prev >= 0; prev--)                            \
@@ -99,10 +99,10 @@ mouse_t mouse_status = MS_EMPTY;
       break;                                                                   \
   ls_jump(toc[focus].text, toc[prev].text);
 
-// Helper of tui_open() and toc_jump(), i.e. tui_toc(). Search the current page
-// for a line whose text matches trgt, and jump to said line. (But if trgt_prev
-// is not NULL, make sure that the matched line is preceded by a line whose text
-// matches trgt_prev.)
+// Helper of `tui_open()` and `toc_jump()`, i.e. `tui_toc()`. Search the current
+// page for a line whose text matches `trgt`, and jump to said line. (But if
+// `trgt_prev` is not NULL, make sure that the matched line is preceded by a
+// line whose text matches `trgt_prev`.)
 #define ls_jump(trgt, trgt_prev)                                               \
   {                                                                            \
     wchar_t trgt_clone[BS_LINE];                                               \
@@ -129,9 +129,9 @@ mouse_t mouse_status = MS_EMPTY;
     }                                                                          \
   }
 
-// Helper of ls_jump(), i.e. of tui_open() and tui_toc(). Return the line number
-// that best matches local searh link target trgt, or -1 if error. Start
-// searching at line number sln.
+// Helper of `ls_jump()`, i.e. of `tui_open()` and `tui_toc()`. Return the line
+// number that best matches local searh link target `trgt`, or -1 if error.
+// Start searching at line number `sln`.
 int ls_discover(wchar_t *trgt, unsigned sln) {
   wchar_t **trgt_words = alloca(BS_SHORT * sizeof(wchar_t *)); // words in trgt
   unsigned trgt_words_len; // no. of words in trgt
@@ -159,13 +159,13 @@ int ls_discover(wchar_t *trgt, unsigned sln) {
     wcscpy(text, page[ln].text);
     if (wcsstr(text, trgt_words[0]) == &text[wmargend(text, NULL)]) {
       // In order for a line to be a candidate, it must begin with the first
-      // word in trgt
+      // word in `trgt`
       line_nos[j] = ln;
       line_scores[j] = 0;
       // Candidate line score is calculated as 2x the number of its words that
-      // exactly match the words in trgt. An extra point is added to said score
-      // if the last word in trgt matches just the beginning of its
-      // corresponding word in cand
+      // exactly match the words in `trgt`. An extra point is added to said
+      // score if the last word in `trgt` matches just the beginning of its
+      // corresponding word in `cand`
       cand_words_len = wsplit(&cand_words, BS_SHORT, text, NULL);
       for (i = 0; i < MIN(trgt_words_len, cand_words_len); i++)
         if (0 == wcscmp(cand_words[i], trgt_words[i]))
@@ -198,34 +198,35 @@ int ls_discover(wchar_t *trgt, unsigned sln) {
   return max_no;
 }
 
-// Helper of tui_sp_open(). Print quick search results in wimm as the user
+// Helper of `tui_sp_open()`. Print quick search results in `wimm` as the user
 // types. If the user has selected a result using arrow keys or the mouse,
-// highlight it and return its ident (if qident is true) or page (if quident is
-// false). Otherwise return NULL. The string typed so far is provided in needle.
-// last contains the last return value get_str_next().
+// highlight it and return its `ident` (if `qident` is true) or `page` (if
+// `quident` is false). Otherwise return NULL. The string typed so far is
+// provided in `needle`. `last` contains the last return value of
+// `get_str_next()`.
 wchar_t *aw_quick_search(wchar_t *needle, int last, bool qident) {
-  // Search aw_all for needle and store the results in res;
+  // Search `aw_all` for `needle` and store the results in `res`
   unsigned lines =
       config.layout.imm_height_long - 7; // maximum no. of lines to display
   static int focus = -1;                 // focused line
-  unsigned needle_len = wcslen(needle);  // length of needle
-  static unsigned last_needle_len = 0;   // length of last needle encountered
+  unsigned needle_len = wcslen(needle);  // length of `needle`
+  static unsigned last_needle_len = 0;   // length of last `needle` encountered
   unsigned *res =
-      aalloca(lines, unsigned); // search results as positions in aw_all
-  unsigned pos = 0;             // current position in aw_all
+      aalloca(lines, unsigned); // search results as positions in `aw_all`
+  unsigned pos = 0;             // current position in `aw_all`
   unsigned ln = 0;              // current line
   wchar_t *ret = NULL;
 
-  // Search aw_all for needle
+  // Search `aw_all` for `needle`
   pos = aprowhat_search(needle, aw_all, aw_all_len, pos);
   while (-1 != pos && ln < lines) {
     res[ln] = pos;
     pos = aprowhat_search(needle, aw_all, aw_all_len, ++pos);
     ln++;
   }
-  lines = ln; // lines becomes exact no. of lines to display
+  lines = ln; // `lines` becomes exact no. of lines to display
 
-  // Update focus, if the user has used the arrow keys or mouse to highlight a
+  // Update `focus`, if the user has used the arrow keys or mouse to highlight a
   // line
   if (0 == needle_len || last_needle_len != needle_len) {
     focus = -1;
@@ -253,11 +254,11 @@ wchar_t *aw_quick_search(wchar_t *needle, int last, bool qident) {
   const unsigned width =
       config.layout.imm_width_wide - 4; // immediate window width
   wchar_t *tmp = walloca(width - 4);    // temporary
-  unsigned ident_len = 0;               // space dedicated to ident column
+  unsigned ident_len = 0;               // space dedicated to `ident` column
   for (ln = 0; ln < lines; ln++)
     ident_len = MAX(ident_len, wcslen(aw_all[res[ln]].ident));
   const unsigned descr_len =
-      width - ident_len - 5; // space left for descr column
+      width - ident_len - 5; // space left for `descr` column
   swprintf(tmp, width - 3, L"%-*ls", width - 4, L"");
   mvwaddnwstr(wimm, 2, 2 + needle_len, tmp, width - 4 - needle_len);
   for (ln = 0; ln < lines; ln++) {
@@ -288,11 +289,11 @@ wchar_t *aw_quick_search(wchar_t *needle, int last, bool qident) {
   return ret;
 }
 
-// Helper of tui_help(). Draw the help menu into wimm. keys_names contains the
-// string representations of key character mappings corresponding to all program
-// actions, keys_names_max is the length of the longest string in keys_names,
-// top is the first action to print help for, and focus is the action to focus
-// on.
+// Helper of `tui_help()`. Draw the help menu into `wimm`. `keys_names` contains
+// the string representations of key character mappings corresponding to all
+// program actions, `keys_names_max` is the length of the longest string in
+// `keys_names`, `top` is the first action to print help for, and `focus` is the
+// action to focus on.
 void draw_help(const wchar_t *const *keys_names, unsigned keys_names_max,
                unsigned top, unsigned focus) {
   const unsigned width = getmaxx(wimm);  // help window width
@@ -328,10 +329,10 @@ void draw_help(const wchar_t *const *keys_names, unsigned keys_names_max,
   wnoutrefresh(wimm);
 }
 
-// Helper for tui_history(). Draw the history menu into wimm. history,
-// history_cur, and history_top have the same meanings as the history,
-// history_cur, and history_top globals respectively. top is the first history
-// entry to print, and focus indicates the entry to focus on.
+// Helper for `tui_history()`. Draw the history menu into `wimm`. `history`,
+// `history_cur`, and `history_top` have the same meanings as the `history`,
+// `history_cur`, and `history_top` globals respectively. `top` is the first
+// history entry to print, and `focus` indicates the entry to focus on.
 void draw_history(request_t *history, unsigned history_cur,
                   unsigned history_top, unsigned top, unsigned focus) {
   const unsigned width = getmaxx(wimm);  // history window width
@@ -368,9 +369,9 @@ void draw_history(request_t *history, unsigned history_cur,
   wnoutrefresh(wimm);
 }
 
-// Helper for tui_toc(). Draw a table of contents into wimm. toc contains the
-// table of contents entries, toc_len is the number of entries in toc, top is
-// the first entry to print. and focus the entry to focus on.
+// Helper for `tui_toc()`. Draw a table of contents into `wimm`. `toc` contains
+// the table of contents entries, `toc_len` is the number of entries in `toc`,
+// `top` is the first entry to print, and `focus` the entry to focus on.
 void draw_toc(toc_entry_t *toc, unsigned toc_len, unsigned top,
               unsigned focus) {
   const unsigned width = getmaxx(wimm);  // TOC window width
@@ -833,7 +834,7 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
 
     // If some text is marked, apply the appropriate color to it
     if (mark.enabled) {
-      unsigned cx = 0, cn = 0; // x and n parameters for apply_colour()
+      unsigned cx = 0, cn = 0; // `x` and `n` parameters for `apply_colour()`
       if (ly == mark.start_line && ly == mark.end_line) {
         cx = MAX(0, (int)mark.start_char - (int)page_left);
         cn = MAX(0, (int)mark.end_char - (int)mark.start_char + 1);
@@ -998,16 +999,16 @@ bool get_str(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
 
 int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
                  unsigned trgt_len) {
-  static wchar_t *res;     // copy of trgt
-  static unsigned res_len; // copy of trgt_len
-  static unsigned pos;     // position in res/trgt
+  static wchar_t *res;     // copy of `trgt`
+  static unsigned res_len; // copy of `trgt_len`
+  static unsigned pos;     // position in `res`/`trgt`
   int ret;                 // next return value
   int chr = '\0';          // user character input
-  int wget_stat;           // mvwget_wch() return value
-  mouse_t ms = MS_EMPTY;   // mouse status corresponding to wget_stat
+  int wget_stat;           // `mvwget_wch()` return value
+  mouse_t ms = MS_EMPTY;   // mouse status corresponding to `wget_stat`
 
   if (NULL != trgt) {
-    // First call; initialize res, res_len, and pos
+    // First call; initialize `res`, `res_len`, and `pos`
     res = trgt;
     res_len = trgt_len;
     pos = 0;
@@ -1020,10 +1021,10 @@ int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
   ms = get_mouse_status(chr);
 
   if (WH_UP == ms.wheel) {
-    // User scrolled mouse wheel up; return -GSN_WH_DOWN
+    // User scrolled mouse wheel up; return `-GSN_WH_DOWN`
     return -GSN_WH_DOWN;
   } else if (WH_DOWN == ms.wheel) {
-    // User scrolled mouse wheel down; return -GSN_WH_UP
+    // User scrolled mouse wheel down; return `-GSN_WH_UP`
     return -GSN_WH_UP;
   } else if (BT_RIGHT == ms.button && ms.up) {
     // User pressed right mouse button; act as if she hit ESC or CTRL-C
@@ -1032,7 +1033,7 @@ int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
     return 0;
   } else if (BT_LEFT == ms.button && ms.up) {
     // User clicked the left mouse button; act if she hit ENTER if the
-    // left_click_open config option is true, otherwise return -GSN_BT_LEFT
+    // `left_click_open` config option is true, otherwise return `-GSN_BT_LEFT`
     if (config.mouse.left_click_open) {
       res[pos] = L'\0';
       wnoutrefresh(w);
@@ -1080,7 +1081,7 @@ int get_str_next(WINDOW *w, unsigned y, unsigned x, wchar_t *trgt,
     case KEY_NPAGE:
     case KEY_HOME:
     case KEY_END:
-      // Key hit UP, DOWN, PGUP, PGDN, HOME, or END
+      // User hit UP, DOWN, PGUP, PGDN, HOME, or END
       ret = -chr;
       break;
     default:
@@ -1311,11 +1312,11 @@ void tui_error(wchar_t *em) {
 
 bool tui_up() {
   const link_loc_t pl =
-      prev_link(page, page_len, page_flink); // link right before page_flink
+      prev_link(page, page_len, page_flink); // link right before `page_flink`
 
   if (pl.ok && pl.line >= page_top &&
       pl.line < page_top + config.layout.main_height) {
-    // pl exists and is in visible portion; focus on pl
+    // `pl` exists and is in visible portion; focus on `pl`
     page_flink = pl;
   } else if (page_top > 0) {
     // Visible portion isn't already at the beginning of page; scroll up one
@@ -1337,11 +1338,11 @@ bool tui_up() {
 
 bool tui_down() {
   const link_loc_t nl =
-      next_link(page, page_len, page_flink); // link right after page_flink
+      next_link(page, page_len, page_flink); // link right after `page_flink`
 
   if (nl.ok && nl.line >= page_top &&
       nl.line < page_top + config.layout.main_height) {
-    // nl exists and is in visible portion; focus on nl
+    // `nl` exists and is in visible portion; focus on `nl`
     page_flink = nl;
   } else if (page_top + config.layout.main_height < page_len) {
     // Visible portion isn't at the very end of page; scroll down one line
@@ -1613,13 +1614,13 @@ bool tui_open_whatis() {
 bool tui_sp_open(request_type_t rt) {
   wchar_t inpt[BS_SHORT - 2] = L""; // string typed by user
   wchar_t trgt[BS_SHORT]; // final string that specifies the page to be opened
-  wchar_t *awqsr;         // quick search result returned from aw_quick_search()
+  wchar_t *awqsr; // quick search result returned from `aw_quick_search()`
   wchar_t help[BS_SHORT]; // help message
   swprintf(help, BS_SHORT,
            L"%ls: query string   %ls/%ls/%ls: select   %ls/%ls: abort",
            ch2name(KEY_ENTER), ch2name(KEY_UP), ch2name(0x09),
            ch2name(KEY_DOWN), ch2name(KEY_BREAK), ch2name('\e'));
-  int got_inpt; // current return value of get_str_next()
+  int got_inpt; // current return value of `get_str_next()`
 
   // Draw immediate window and title bar
   if (RT_MAN == rt)
@@ -1736,13 +1737,13 @@ bool tui_history() {
            ch2name(config.keys[PA_UP][0]), ch2name(config.keys[PA_DOWN][0]),
            ch2name(config.keys[PA_OPEN][0]), ch2name(KEY_BREAK), ch2name('\e'));
   int hinput;                 // keyboard/mouse input from the user
-  mouse_t hms = MS_EMPTY;     // mouse status corresponding to hinput
-  action_t haction = PA_NULL; // program action corresponding to hinput
+  mouse_t hms = MS_EMPTY;     // mouse status corresponding to `hinput`
+  action_t haction = PA_NULL; // program action corresponding to `hinput`
   unsigned height;            // history window height
   unsigned top;               // first history entry to be printed
   int focus = history_cur;    // focused history entry
 
-  // Create the history window, retrieve height, and calculate top
+  // Create the history window, retrieve height, and calculate `top`
   draw_imm(true, false, config.colours.history_text, L"History", help);
   height = getmaxy(wimm);
   if (focus > height - 6)
@@ -1819,7 +1820,7 @@ bool tui_history() {
           if (iy > 1 && iy < ih - 3 && history_top >= top + iy - 2) {
             focus = top + iy - 2;
             if (config.mouse.left_click_open) {
-              // If the left_click_open option is set, go to the appropriate
+              // If the `left_click_open` option is set, go to the appropriate
               // history entry
               del_imm();
               if (history_jump(focus))
@@ -1841,7 +1842,7 @@ bool tui_history() {
       break;
     }
 
-    // Adjust top (in case the entire menu won't fit in the immediate window)
+    // Adjust `top` (in case the entire menu won't fit in the immediate window)
     if (focus < top)
       top = focus;
     else if (focus > top + height - 6)
@@ -1874,13 +1875,13 @@ bool tui_toc() {
            ch2name(config.keys[PA_UP][0]), ch2name(config.keys[PA_DOWN][0]),
            ch2name(config.keys[PA_OPEN][0]), ch2name(KEY_BREAK), ch2name('\e'));
   int hinput;                 // keyboard/mouse input from the user
-  mouse_t hms = MS_EMPTY;     // mouse status corresponding to hinput
-  action_t haction = PA_NULL; // program action corresponding to hinput
+  mouse_t hms = MS_EMPTY;     // mouse status corresponding to `hinput`
+  action_t haction = PA_NULL; // program action corresponding to `hinput`
   unsigned height;            // TOC window height
   unsigned top = 0;           // first TOC entry to be printed
   int focus = 0;              // focused TOC entry
 
-  // Perform late populateion of toc and toc_len, if necessary
+  // Populate `toc` and `toc_len`, if necessary
   populate_toc();
 
   // Create the TOC window, and retrieve height
@@ -1953,7 +1954,7 @@ bool tui_toc() {
           if (iy > 1 && iy < ih - 3 && toc_len > top + iy - 2) {
             focus = top + iy - 2;
             if (config.mouse.left_click_open) {
-              // If the left_click_open option is set, go to the appropriate
+              // If the `left_click_open` option is set, go to the appropriate
               // TOC entry
               del_imm();
               toc_jump(toc, focus);
@@ -1969,7 +1970,7 @@ bool tui_toc() {
       break;
     }
 
-    // Adjust top (in case the entire menu won't fit in the immediate window)
+    // Adjust `top` (in case the entire menu won't fit in the immediate window)
     if (focus < top)
       top = focus;
     else if (focus > top + height - 6)
@@ -2005,9 +2006,9 @@ bool tui_search(bool back) {
   wchar_t inpt[BS_SHORT - 2]; // search string
   wchar_t pout[BS_SHORT];     // search prompt and string printout
   const unsigned width = config.layout.width / 2 - 1; // search string width
-  int got_inpt; // current return value of get_str_next()
+  int got_inpt; // current return value of `get_str_next()`
   unsigned my_top =
-      page_top; // temporary page_top that will be set to the line noumber of
+      page_top; // temporary `page_top` that will be set to the line number of
                 // the first search result, as the user types
 
   // Get search string
@@ -2028,20 +2029,20 @@ bool tui_search(bool back) {
       doupdate();
     }
 
-    // Free previous results
+    // Free previous `results`
     if (NULL != results && results_len > 0)
       free(results);
 
-    // Populate results and results_len
+    // Populate `results` and `results_len`
     if (0 == wcslen(inpt)) {
-      // Input is empty; set results to NULL, results_len to 0, and my_top to
-      // page_top
+      // Input is empty; set `results` to NULL, `results_len` to 0, and `my_top`
+      // to `page_top`
       results = NULL;
       results_len = 0;
       my_top = page_top;
     } else {
-      // Input is not empty; populate results and results_len from input, and
-      // set my_top to the location of the first match
+      // Input is not empty; populate `results` and `results_len` from input,
+      // and set `my_top` to the location of the first match
       results_len = search(&results, inpt, page, page_len, true);
       if (back) {
         const int tmp = search_prev(results, results_len, my_top);
@@ -2058,7 +2059,7 @@ bool tui_search(bool back) {
       }
     }
 
-    // Redraw all windows, scrolling over to my_top
+    // Redraw all windows, scrolling over to `my_top`
     draw_page(page, page_len, my_top, page_flink);
     draw_sbar(page_len, my_top);
     swprintf(pout, BS_SHORT, L"%ls%ls", prompt, inpt);
@@ -2098,7 +2099,7 @@ bool tui_search(bool back) {
 bool tui_search_next(bool back) {
   unsigned my_top;
 
-  // Store the previous/next search result into my_top
+  // Store the previous/next search result into `my_top`
   if (back)
     my_top = search_prev(results, results_len, MAX(0, page_top - 1));
   else
@@ -2111,7 +2112,7 @@ bool tui_search_next(bool back) {
     return false;
   }
 
-  // Massage my_top to avoid scrolling out of page_len
+  // Massage `my_top` to avoid scrolling out of `page_len`
   if (my_top + config.layout.main_height > page_len) {
     if (page_len >= config.layout.main_height)
       my_top = MIN(my_top, page_len - config.layout.main_height);
@@ -2127,7 +2128,8 @@ bool tui_search_next(bool back) {
     return false;
   }
 
-  // Set page_top and page_flink to jump to the search result
+  // Set `page_top` and `page_flink` to the values necessary to jump to the
+  // search result
   page_top = my_top;
   const link_loc_t fl = first_link(page, page_len, page_top,
                                    page_top + config.layout.main_height - 1);
@@ -2141,7 +2143,7 @@ bool tui_help() {
   wchar_t *keys_names[PA_QUIT + 1]; // string representations of key character
                                     // mappings corresponding to all program
                                     // actions (as unified strings)
-  unsigned keys_names_max = 0;      // length of longest string in keys_names
+  unsigned keys_names_max = 0;      // length of longest string in `keys_names`
   wchar_t *cur_key_names[8] = {
       NULL, NULL, NULL, NULL, NULL,
       NULL, NULL, NULL};  // string representations of key character mappings
@@ -2154,15 +2156,15 @@ bool tui_help() {
            ch2name(config.keys[PA_UP][0]), ch2name(config.keys[PA_DOWN][0]),
            ch2name(config.keys[PA_OPEN][0]), ch2name(KEY_BREAK), ch2name('\e'));
   int hinput;                 // keyboard/mouse input from the user
-  mouse_t hms = MS_EMPTY;     // mouse status corresponding to hinput
-  action_t haction = PA_NULL; // program action corresponding to hinput
+  mouse_t hms = MS_EMPTY;     // mouse status corresponding to `hinput`
+  action_t haction = PA_NULL; // program action corresponding to `hinput`
   unsigned top = 1;           // first action to be printed
   int focus = 1;              // focused action
   unsigned height;            // help window height
 
   // For each action...
   for (i = 0; i <= PA_QUIT; i++) {
-    // Populate cur_key_names
+    // Populate `cur_key_names`
     k = 0;
     for (j = 0; j < 8 && 0 != config.keys[i][j]; j++) {
       tmp = ch2name(config.keys[i][j]);
@@ -2172,7 +2174,8 @@ bool tui_help() {
       }
     }
 
-    // Produce keys_names[i] and update keys_names_max, using cur_key_names
+    // Produce `keys_names[i]` and update `keys_names_max`, using
+    // `cur_key_names`
     keys_names[i] = walloca(BS_SHORT);
     wcscpy(keys_names[i], L"");
     for (j = 0; NULL != cur_key_names[j]; j++) {
@@ -2255,7 +2258,7 @@ bool tui_help() {
           if (iy > 1 && iy < ih - 3 && PA_QUIT >= top + iy - 2) {
             focus = top + iy - 2;
             if (config.mouse.left_click_open) {
-              // If the left_click_open option is set, execute the entry's
+              // If the `left_click_open` option is set, execute the entry's
               // program action
               del_imm();
               ungetch(config.keys[focus][0]);
@@ -2271,7 +2274,7 @@ bool tui_help() {
       break;
     }
 
-    // Adjust top (in case the entire menu won't fit in the immediate window)
+    // Adjust `top` (in case the entire menu won't fit in the immediate window)
     if (focus < top)
       top = focus;
     else if (focus > top + height - 6)
@@ -2300,10 +2303,10 @@ bool tui_help() {
 }
 
 bool tui_mouse_click(short y, short x) {
-  int my = y, mx = x; // locations in wmain that correspond to y and x
-  int sy = y, sx = x; // locations in wsbar that correspond to y and x
+  int my = y, mx = x; // locations in `wmain` that correspond to `y` and `x`
+  int sy = y, sx = x; // locations in `wsbar` that correspond to `y` and `x`
 
-  // If text was being marked with tui_mouse_dnd(), copy it to clipboard and
+  // If text was being marked with `tui_mouse_dnd()`, copy it to clipboard and
   // clear the selection
   if (mark.enabled) {
     wchar_t *mt;
@@ -2320,7 +2323,7 @@ bool tui_mouse_click(short y, short x) {
 
   // If the cursor is on a link, make it the focused link
   if (wmouse_trafo(wmain, &my, &mx, false)) {
-    unsigned ln = page_top + my; // line number that corresponds to my
+    unsigned ln = page_top + my; // line number that corresponds to `my`
     if (ln < page_len) {
       for (unsigned i = 0; i < page[ln].links_length; i++) {
         if (mx >= page[ln].links[i].start && mx < page[ln].links[i].end) {
@@ -2329,7 +2332,7 @@ bool tui_mouse_click(short y, short x) {
           page_flink.link = i;
 
           if (config.mouse.left_click_open && mouse_status.up) {
-            // If left_click_open is set, open the link as well
+            // If `left_click_open` is set, open the link as well
             return tui_open();
           } else
             return true;
@@ -2357,14 +2360,16 @@ bool tui_mouse_click(short y, short x) {
 }
 
 bool tui_mouse_dnd(short y, short x, short dy, short dx) {
-  int my = y, mx = x;     // locations in wmain that correspond to y and x
-  int sy = y;             // location in wsbar that corresponds to y
-  int mdy = dy, mdx = dx; // locations in wmain that correspond to dy and dx
-  int sdy = dy, sdx = dx; // locations in wsbar that correspond to dy and dx
+  int my = y, mx = x; // locations in `wmain` that correspond to `y` and `x`
+  int sy = y;         // location in `wsbar` that corresponds to `y`
+  int mdy = dy,
+      mdx = dx; // locations in `wmain` that correspond to `dy` and `dx`
+  int sdy = dy,
+      sdx = dx; // locations in `wsbar` that correspond to `dy` and `dx`
 
   // If dragging was initiated on the main window, mark text
   if (wmouse_trafo(wmain, &mdy, &mdx, false)) {
-    // Make sure my and mx are always within the confines of wmain
+    // Make sure `my` and `mx` are always within the confines of `wmain`
     if (my >= getmaxy(wmain)) {
       my = getmaxy(wmain) - 1;
       mx = getmaxx(wmain) - 1;
@@ -2377,8 +2382,8 @@ bool tui_mouse_dnd(short y, short x, short dy, short dx) {
     unsigned end_line = MIN(page_len - 1, page_top + my);
     unsigned end_char = MIN(page[end_line].length - 1, page_left + mx);
 
-    // If drag was right-to-left and/or bottom-to-top, swap start_char with
-    // end_char and/or start_line with end_line as needed
+    // If drag was right-to-left and/or bottom-to-top, swap `start_char` with
+    // `end_char` and/or `start_line` with `end_line` as needed
     if (start_line > end_line) {
       swap(start_line, end_line);
       swap(start_char, end_char);
@@ -2428,8 +2433,8 @@ void tui() {
   init_tui_tcap();
   if (-1 == config.tcap.colours || t_auto == config.tcap.rgb ||
       t_auto == config.tcap.unicode || t_auto == config.tcap.clipboard) {
-    // Options were defined in the [pcap] configuration section; we must run
-    // configure() again, to re-initialize configuration options whose final
+    // Options were defined in the `[pcap]` configuration section; we must run
+    // `configure()` again, to re-initialize configuration options whose final
     // value might depend on terminal capabilities
     configure();
   }
@@ -2438,7 +2443,8 @@ void tui() {
   termsize_changed();
   init_windows();
 
-  // Initialize page, page_len, ge_title, page_top, page_left, and page_flink
+  // Initialize `page`, `page_len`, `page_title`, `page_top`, `page_left`, and
+  // `page_flink`
   populate_page();
   if (err)
     winddown(ES_NOT_FOUND, err_msg);
@@ -2446,11 +2452,11 @@ void tui() {
   page_left = 0;
   page_flink = next_link(page, page_len, page_flink);
 
-  // Initialize action
+  // Initialize `action`
   action = PA_NULL;
 
   while (PA_QUIT != action) {
-    // If terminal size has changed, regenerate page and ask for a redraw
+    // If terminal size has changed, regenerate `page` and ask for a redraw
     if (termsize_changed()) {
       init_windows();
       populate_page();
@@ -2551,22 +2557,22 @@ void tui() {
     case PA_NULL:
     default:
       if (WH_UP == mouse_status.wheel) {
-        // Mouse wheel scroll up causes PA_UP
+        // Mouse wheel scroll up causes `PA_UP`
         redraw = tui_up();
       } else if (WH_DOWN == mouse_status.wheel) {
-        // Mouse wheel scroll down causes PA_DOWN
+        // Mouse wheel scroll down causes `PA_DOWN`
         redraw = tui_down();
       } else if (BT_WHEEL == mouse_status.button && mouse_status.up) {
-        // Mouse wheel click causes PA_OPEN
+        // Mouse wheel click causes `PA_OPEN`
         redraw = tui_open();
       } else if (BT_RIGHT == mouse_status.button && mouse_status.up) {
-        // Right mouse button click causes PA_HELP
+        // Right mouse button click causes `PA_HELP`
         redraw = tui_help();
       } else if (BT_LEFT == mouse_status.button && mouse_status.up) {
-        // On left mouse button release, call tui_mouse_click()
+        // On left mouse button release, call `tui_mouse_click()`
         redraw = tui_mouse_click(mouse_status.y, mouse_status.x);
       } else if (mouse_status.dnd) {
-        // On left mouse drag-and-drop, call tui_mouse_dnd()
+        // On left mouse drag-and-drop, call `tui_mouse_dnd()`
         redraw = tui_mouse_dnd(mouse_status.y, mouse_status.x,
                                mouse_status.dnd_y, mouse_status.dnd_x);
       } else

@@ -135,8 +135,8 @@ char *xgzgets(gzFile file, char *buf, int len) {
     if (NULL == res && !gzeof(file)) {
       // There has been an error
       if (EINTR == errno) {
-        // Sometimes ncurses rudely interrupts gzgets(). If that's the case, try
-        // calling gzgets() again
+        // Sometimes ncurses rudely interrupts I/O. If that's the case, try
+        // calling `gzgets()` again
         gzclearerr(file);
       } else {
         // Otherwise, fail gracefully
@@ -161,8 +161,8 @@ char *xfgets(char *s, int size, FILE *stream) {
     if (ferror(stream) && !feof(stream)) {
       // There has been an error
       if (EINTR == errno) {
-        // Sometimes ncurses rudely interrupts fgets(). If that's the case, try
-        // calling fgets() again
+        // Sometimes ncurses rudely interrupts I/O. If that's the case, try
+        // calling `fgets()` again
         clearerr(stream);
       } else {
         // Otherwise, fail gracefully
@@ -747,9 +747,9 @@ unsigned wsplit(wchar_t ***dst, unsigned dst_len, wchar_t *src,
                 const wchar_t *extras) {
   wchar_t **res = *dst; // results
   unsigned res_cnt = 0; // number of results
-  bool ws = true;       // whether current character is whitespace or in extras
-  bool pws;             // whether previous character is whitespace or in extras
-  unsigned i, j = 0;    // iterators
+  bool ws = true;    // whether current character is whitespace or in `extras`
+  bool pws;          // whether previous character is whitespace or in `extras`
+  unsigned i, j = 0; // iterators
 
   if (NULL == extras)
     extras = L"";
@@ -803,7 +803,7 @@ unsigned wmargend(const wchar_t *src, const wchar_t *extras) {
 unsigned wmargtrim(wchar_t *trgt, const wchar_t *extras) {
   int i;      // iterator
   unsigned j; // iterator
-  bool trim;  // true if we'll be trimming trgt[i]
+  bool trim;  // true if we'll be trimming `trgt[i]`
 
   if (NULL == extras)
     extras = L"";
@@ -940,41 +940,42 @@ void fr_init(full_regex_t *re, char *str, wchar_t *snpt) {
 }
 
 range_t fr_search(const full_regex_t *re, const wchar_t *src) {
-  char ssrc[BS_LINE];   // char* version of src
+  char ssrc[BS_LINE];   // `char*` version of `src`
   regmatch_t pmatch[1]; // regex match
   range_t res;          // return value
 
-  // If re->snpt isn't in src, return {0, 0}
+  // If `re->snpt` isn't in `src`, return `{0, 0}`
   if (NULL != re->snpt && NULL == wcsstr(src, re->snpt)) {
     res.beg = 0;
     res.end = 0;
     return res;
   }
 
-  // Convert src to ssrc and try to find a match in it
+  // Convert `src` to `ssrc` and try to find a match in it
   wcstombs(ssrc, src, BS_LINE);
   int err = regexec(&re->re, ssrc, 1, pmatch, 0);
 
   if (0 == err) {
     // A match was found in ssrc
-    regoff_t sbeg = pmatch[0].rm_so; // match begin offset (in ssrc)
-    regoff_t send = pmatch[0].rm_eo; // match end offset (in ssrc)
-    regoff_t slen = send - sbeg;     // match length (in ssrc)
-    wchar_t *wmatch = walloca(slen); // the match as a wchar_t*
-    unsigned wlen = mbstowcs(wmatch, &ssrc[sbeg], slen); // wmatch length
+    regoff_t sbeg = pmatch[0].rm_so; // match begin offset (in `ssrc`)
+    regoff_t send = pmatch[0].rm_eo; // match end offset (in `ssrc`)
+    regoff_t slen = send - sbeg;     // match length (in `ssrc`)
+    wchar_t *wmatch = walloca(slen); // the match as a `wchar_t*`
+    unsigned wlen = mbstowcs(wmatch, &ssrc[sbeg], slen); // `wmatch` length
     wmatch[wlen] = L'\0';
-    wchar_t *wptr = wcsstr(src, wmatch); // match begin memory location (in src)
+    wchar_t *wptr =
+        wcsstr(src, wmatch); // match begin memory location (in `src`)
     if (NULL == wptr) {
-      // Cannot replicate match in src; return {0, 0}
+      // Cannot replicate match in `src`; return `{0, 0}`
       res.beg = 0;
       res.end = 0;
     } else {
-      // Match found in src; return its location
+      // Match found in `src`; return its location
       res.beg = wptr - src;
       res.end = res.beg + wlen;
     }
   } else {
-    // No match found, or an error has occured; return {0, 0}
+    // No match found, or an error has occured; return `{0, 0}`
     res.beg = 0;
     res.end = 0;
   }

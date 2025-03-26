@@ -20,7 +20,7 @@ typedef enum {
 
 // The color of a text character. Unlike ncurses colors, which are short
 // integers that correspond to a color value, `colour_t` combines foreground
-// color, background, color, boldness, and a corresponding initialized ncurses
+// color, background color, boldness, and a corresponding initialized ncurses
 // color pair.
 typedef struct {
   short fg;   // foreground ncurses color no.

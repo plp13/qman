@@ -13,7 +13,7 @@
 // Initialize the terminal
 extern void init_cli();
 
-// Print the contents of lines (of length lines_len) to standard output
+// Print the contents of `lines` (of length `lines_len`) to standard output
 extern void print_page(const line_t *lines, unsigned lines_len);
 
 //

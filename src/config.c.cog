@@ -49,8 +49,8 @@ cog.outl("};")
       config.colours.stat_input_em.pair;
 
 // Helper of various `conf_...()` functions and methods. Return true if `src`
-// is equal to `true`, `yes`, or `1`. Return false if it's equal to `false`,
-// `no`, or `0`. Set `errno` to 0 if parsed successfully or to -1 if not.
+// is equal to 'true', 'yes', or '1'. Return false if it's equal to 'false',
+// 'no', or '0'. Set `errno` to 0 if parsed successfully or to -1 if not.
 bool wcs2bool(const wchar_t *src) {
   if (0 == wcscasecmp(src, L"TRUE") || 0 == wcscasecmp(src, L"YES") ||
       0 == wcscmp(src, L"1")) {
@@ -67,8 +67,8 @@ bool wcs2bool(const wchar_t *src) {
 }
 
 // Helper of various `conf_...()` functions and methods. Return `t_true` if
-// `src` is equal to `true`, `yes`, or `1`. Return `t_false` if it's equal to
-// `false`, 'no', or '0'. Return `t_auto` if it's equal to `auto` or `-`. Set
+// `src` is equal to 'true', 'yes', or '1'. Return `t_false` if it's equal to
+// 'false', 'no', or '0'. Return `t_auto` if it's equal to 'auto' or '-'. Set
 // `errno` to 0 if parsed successfully or to -1 if not.
 trit_t wcs2trit(const wchar_t *src) {
   if (0 == wcscasecmp(src, L"TRUE") || 0 == wcscasecmp(src, L"YES") ||
@@ -89,7 +89,7 @@ trit_t wcs2trit(const wchar_t *src) {
 }
 
 // Helper of various `conf_...()` functions and methods. Return the integer
-// value held into `src` as an integer, and set `errno` to 0. If src cannot be
+// value held into `src` as an integer, and set `errno` to 0. If `src` cannot be
 // parsed into an integer return `INT_MIN` and set `errno` to -1.
 int wcs2int(const wchar_t *src) {
   int val, vals_read;
@@ -104,9 +104,9 @@ int wcs2int(const wchar_t *src) {
 }
 
 // Helper of various `conf_...()` functions and methods. Return the ncurses
-// color that corresponds to `src`. Allowed values for `src` are `black`, `red`,
-// `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, a positive integer, or
-// `#rrggbb`. Return -1 in case of parse error, or -2 if the terminal cannot
+// color that corresponds to `src`. Allowed values for `src` are 'black', 'red',
+// 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', a positive integer, or
+// '#rrggbb'. Return -1 in case of parse error, or -2 if the terminal cannot
 // support such a color.
 short wcs2colour(const wchar_t *src) {
   // Try to parse `src` as integer. If successful, return it.
@@ -119,7 +119,7 @@ short wcs2colour(const wchar_t *src) {
     return srci;
   }
 
-  // If `src` matches a color name such as `black`, `red`, etc. return the
+  // If `src` matches a color name such as 'black', 'red', etc. return the
   // corresponding color.
   else if (0 == wcscasecmp(src, L"BLACK"))
     return COLOR_BLACK;
@@ -138,7 +138,7 @@ short wcs2colour(const wchar_t *src) {
   else if (0 == wcscasecmp(src, L"WHITE"))
     return COLOR_WHITE;
 
-  // Otherwise, try to parse `src` as ``#rrggbb`` and return the corresponding
+  // Otherwise, try to parse `src` as '#rrggbb' and return the corresponding
   // color
   else {
     static short ret = 255;
@@ -230,8 +230,8 @@ int wcs2ch(const wchar_t *src) {
   }
 }
 
-// Helper of `conf_handler()`. Return an if statement that matches if `section`
-// is equal to `s`.
+// Helper of `conf_handler()`. Return an if statement that becomes true if
+// `section` is equal to `s`.
 #define conf_section(s) if (0 == wcscmp(section, s))
 
 // Helper of `conf_handler()`. Set `trgt` to the boolean stored in `value`,
@@ -474,8 +474,8 @@ void error_handler(const wchar_t *error, const char *path,
   winddown(ES_CONFIG_ERROR, errmsg);
 }
 
-// Helper of `configure()`. Initialize configuration in sections [chars] and
-// [colours] to sane defaults.
+// Helper of `configure()`. Initialize configuration in sections `[chars]` and
+// `[colours]` to sane defaults.
 void conf_init_chars_colours() {
 /*[[[cog
 
