@@ -3,7 +3,7 @@
 # Project declaration
 project('qman', 'c',
   license: 'BSD-2-Clause',
-  version: '1.3.1-31-g378cb13'
+  version: '1.3.1-32-ga771e1f'
 )
 
 # Executable

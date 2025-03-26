@@ -889,14 +889,14 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
 
     // Populate the `i`th element of `res` (allocating when necessary)
     res[i].page = walloc(page_len);
-    xmbstowcs(res[i].page, page, page_len);
+    xmbstowcs(res[i].page, page, page_len + 1);
     res[i].section = walloc(section_len);
-    xmbstowcs(res[i].section, section, section_len);
+    xmbstowcs(res[i].section, section, section_len + 1);
     res[i].ident = walloc(page_len + section_len + 3);
     swprintf(res[i].ident, page_len + section_len + 3, L"%s(%s)", page,
              section);
     res[i].descr = walloc(descr_len);
-    xmbstowcs(res[i].descr, descr, descr_len);
+    xmbstowcs(res[i].descr, descr, descr_len + 1);
   }
 
   xfclose(fp);
