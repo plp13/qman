@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.3.1-33-g0dfe05b -- [see what's new](#new-in-this-version)
+Version 1.3.1-34-g7847da9 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -69,6 +69,8 @@ page.
   files, are now installed by default at `/etc/xdg/qman`. This gives Qman a
   handsome default look and feel.
 - `hinit` is no longer a dependency
+- Qman reconfigures itself on-the-fly upon receiving SIGUSR1. This is useful for
+  integrating with programs such as [darkman](https://darkman.whynothugo.nl/).
 - Support for manual pages compressed using `xz`
 - Improved clipboard support when using the `ghostty` terminal
 - Miscellaneous bug fixes and documentation enhancements
@@ -120,25 +122,31 @@ $ meson compile
 $ sudo meson install
 ```
 
-### Meson options
-
-Option `-Ddocdir=<path>` can be passed to `meson setup`, to set the directory
-where Qman's documentation will be installed.
-
-If building for an embedded system, the following optional arguments can be
-passed to `meson setup`, to disable certain program features:
-- `-Dman-pages=disabled`: do not install the manual page
-- `-Ddocs=disabled`: do not install documentation
-- `-Dgzip=disabled`: disable support for manual pages compressed with `gzip`
-- `-Dbzip2=disabled`: disable support for manual pages compressed with `bzip2`
-- `-Dlzma=disabled`: disable support for manual pages compressed with `xz`
-
-By default, all the above features are enabled.
-
 > **:bulb: Note**
 >
 > If using an older version of `meson`, you may need to substitute the
 > aforementioned `meson compile` command with `ninja`
+
+### Meson options
+
+If building for an embedded system, the following optional arguments can be
+passed to `meson setup`, to disable certain program features that are enabled by
+default:
+- `-Dman-pages=disabled`: do not install the manual page
+- `-Ddocs=disabled`: do not install any documentation
+- `-Dconfig=disabled`: do not install any configuration files
+- `-Dgzip=disabled`: disable support for manual pages compressed with `gzip`
+- `-Dbzip2=disabled`: disable support for manual pages compressed with `bzip2`
+- `-Dlzma=disabled`: disable support for manual pages compressed with `xz`
+
+Similarly, the arguments below can be used to enable features that are disabled
+by default:
+- `-Dtests=enabled`: enable unit testing
+
+Finally, the options below can be used to specify alternative installation
+paths:
+- `-Dconfigdir=...`: where to install configuration files
+- `-Ddocdir=...`: where to install documentation
 
 ### Packages
 Arch Linux: packages [qman](https://aur.archlinux.org/packages/qman) and
