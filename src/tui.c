@@ -129,6 +129,23 @@ mouse_t mouse_status = MS_EMPTY;
     }                                                                          \
   }
 
+// Re-configure the program. `init_tui()` makes sure this is called whenever
+// `SIGUSR1` is received.
+void sigusr1_handler() {
+  sendescseq("]104"); // reset color palette to terminal default
+  configure();
+  init_tui_tcap();
+  if (-1 == config.tcap.colours || t_auto == config.tcap.rgb ||
+      t_auto == config.tcap.unicode || t_auto == config.tcap.clipboard)
+    configure();
+  init_tui_colours();
+  init_tui_mouse();
+  doupdate();
+  // Cause `termsize_changed()` to succeed, thus forcing a redraw
+  config.layout.width = 0;
+  config.layout.height = 0;
+}
+
 // Helper of `ls_jump()`, i.e. of `tui_open()` and `tui_toc()`. Return the line
 // number that best matches local searh link target `trgt`, or -1 if error.
 // Start searching at line number `sln`.
@@ -421,6 +438,9 @@ void init_tui() {
   curs_set(0);
   timeout(2000);
   start_color();
+
+  // Set up on-the-fly reconfiguration
+  signal(SIGUSR1, sigusr1_handler);
 }
 
 void init_tui_tcap() {

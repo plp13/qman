@@ -108,7 +108,19 @@ int wcs2int(const wchar_t *src) {
 // 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', a positive integer, or
 // '#rrggbb'. Return -1 in case of parse error, or -2 if the terminal cannot
 // support such a color.
+//
+// NOTE: Setting `src` to a '#rrggbb' causes terminal colors to be re-defined.
+// `wcs2colour(NULL)` will reset the re-defined colors index and return 0. It
+// should be called at the beginning of `configure()`.
 short wcs2colour(const wchar_t *src) {
+  static short rgb_i = 255;    // index for re-defined terminal colors
+
+  // If `src` is NULL, reset `rgb_i`
+  if (NULL == src) {
+    rgb_i = 255;
+    return 0;
+  }
+
   // Try to parse `src` as integer. If successful, return it.
   const int srci = wcs2int(src);
   if (errno == 0 && srci >= 0) {
@@ -141,7 +153,6 @@ short wcs2colour(const wchar_t *src) {
   // Otherwise, try to parse `src` as '#rrggbb' and return the corresponding
   // color
   else {
-    static short ret = 255;
     unsigned red = 0, green = 0, blue = 0; // New color values
     if (3 != swscanf(src, L"#%2x%2x%2x", &red, &green, &blue)) {
       // Unable to parse src; return -1
@@ -155,8 +166,8 @@ short wcs2colour(const wchar_t *src) {
       red = (red * 1000) / 256;
       green = (green * 1000) / 256;
       blue = (blue * 1000) / 256;
-      init_color(ret, red, green, blue);
-      return ret--;
+      init_color(rgb_i, red, green, blue);
+      return rgb_i--;
     }
   }
 }
@@ -596,6 +607,8 @@ void configure() {
   char path[BS_LINE];       // path to config file
   FILE *fp = NULL;          // file pointer to config file
   wchar_t errmsg[BS_SHORT]; // error message
+
+  wcs2colour(NULL);
 
   // If this isn't the first invocation of `configure()`, call
   // `conf_init_chars_colours()` to reset UI characters and colors to their
