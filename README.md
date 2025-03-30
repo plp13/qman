@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.3.1-34-g7847da9 -- [see what's new](#new-in-this-version)
+Version 1.3.1-35-g21a36b8 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -183,6 +183,18 @@ running (as root):
 ```
 # mandb
 ```
+
+> **:question:: Some pages don't appear in the index page, or in the dialogs
+> used for opening pages or performing whatis/apropos**
+
+Again, this is probably a `mandb` issue. Qman uses the `apropos` command to
+build the array of manual pages that these features use, and `apropos` relies on
+`mandb` being correctly configured and up-to-date. If it isn't, the
+aforementioned array will be incomplete and/or inaccurate.
+
+Check your `man_db.conf` for correctness, and run `mandb` again as described
+above. You may also want build a script that automatically runs `mandb`
+after software updates, if your O/S distribution doesn't already do it.
 
 > **:question: I'm unable to copy text to the clipboard using the mouse, and/or
 > my mouse behaves erratically**

@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.3.1-34-g7847da9
+footer: Qman 1.3.1-35-g21a36b8
 date: December 15, 2023
 ---
 
@@ -403,6 +403,12 @@ When invoked using **-T**, the program tries to set its page width to the value
 of the **MANWIDTH** environment variable. If **MANWIDTH** hasn't been set, it
 tries to set it to the value of **COLUMNS** and, if that also fails, it sets
 it to the default value of 80.
+
+# SIGNALS
+
+Upon receiving **SIGUSR1**, the program interrupts its operation and attempts
+to locate parse a configuration file, using the process outlined in
+**CONFIGURATION**.
 
 # EXIT STATUS
 | Value | Description                                                          |
