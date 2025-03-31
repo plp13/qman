@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.3.1-36-g19bbbf4 -- [see what's new](#new-in-this-version)
+Version 1.3.1-37-gc474603 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -73,6 +73,8 @@ page.
   integrating with programs such as [darkman](https://darkman.whynothugo.nl/).
 - Support for manual pages compressed using `xz`
 - Improved clipboard support when using the `ghostty` terminal
+- Option `-A`/`--action` lets the user specify a program action to be performed
+  upon startup
 - Miscellaneous bug fixes and documentation enhancements
 
 > **:warning: Caution**

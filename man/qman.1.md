@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.3.1-36-g19bbbf4
+footer: Qman 1.3.1-37-gc474603
 date: December 15, 2023
 ---
 
@@ -163,6 +163,10 @@ The program accepts the following non-argument options:
 : Suppress the text user interface and output directly to the terminal. This
   option can be used to redirect the program's formatted output to a text file
   or to another command.
+
+**-A, \-\-action** _action_name_
+: Automatically perform program action _action_name_ upon startup. The list of
+  valid action names can be found under **USER INTERFACE**.
 
 **-C, \-\-config\-path** _file_
 : Use _file_ as the configuration file for **Qman**.
