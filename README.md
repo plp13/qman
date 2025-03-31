@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.3.1-37-gc474603 -- [see what's new](#new-in-this-version)
+Version 1.3.1-38-g428e3ab -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -78,6 +78,7 @@ page.
 - Miscellaneous bug fixes and documentation enhancements
 
 > **:warning: Caution**
+>
 > This version changes the location of Qman's system-wide config file to
 > `/etc/xdg/qman/qman.conf`, and the location of the user-specific config file
 > to `/${HOME}/.config/qman/qman.conf`
