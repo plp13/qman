@@ -2494,9 +2494,16 @@ void tui() {
     doupdate();
 
     // Get user input
-    input = cgetch();
-    action = get_action(input);
-    mouse_status = get_mouse_status(input);
+    if (PA_NULL != first_action) {
+      // Edge case: user used -A or --action to specify a program action to
+      // perform upon startup
+      action = first_action;
+      first_action = PA_NULL;
+    } else {
+      input = cgetch();
+      action = get_action(input);
+      mouse_status = get_mouse_status(input);
+    }
 
     // Perform the requested action
     switch (action) {

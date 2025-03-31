@@ -13,6 +13,18 @@ config_t config;
 import cog
 import config_def
 
+cog.outl("const char *keys_names[PA_QUIT + 1] = {")
+cog.outl("  \"null\",")
+
+for option, option_def in config_def.config_def["keys"].items():
+  if option == "quit":
+    comma = ""
+  else:
+    comma = ","
+  cog.outl("  \"" + option + "\"" + comma) 
+
+cog.outl("};\n")
+
 cog.outl("const wchar_t *keys_help[PA_QUIT + 1] = {")
 cog.outl("  L\"Do nothing\",")
 

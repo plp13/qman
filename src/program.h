@@ -149,6 +149,9 @@ typedef struct {
 // Program options
 extern option_t options[];
 
+// Program action to perform upon program startup
+extern action_t first_action;
+
 // History of page requests
 extern request_t *history;
 

@@ -28,11 +28,15 @@ option_t options[] = {
      OA_NONE, true},
     {"cli", 'T', L"Suppress the TUI and output directly to the terminal",
      OA_NONE, true},
+    {"action", 'A', L"Automatically perform program action ARG upon startup",
+     OA_REQUIRED, true},
     {"config-path", 'C', L"Use ARG as the configuration file path", OA_REQUIRED,
      true},
     {"version", 'V', L"Print program version", OA_NONE, true},
     {"help", 'h', L"Display this help message", OA_NONE, true},
     {0, 0, 0, 0, false}};
+
+action_t first_action = PA_NULL;
 
 request_t *history = NULL;
 
@@ -620,8 +624,23 @@ int parse_options(int argc, char *const *argv) {
       // -T or --cli was passed; do not launch the TUI
       config.layout.tui = false;
       break;
+    case 'A':
+      // -A or --action was passed; set `first_action` to the program action
+      // that corresponds `optarg`
+      for (unsigned j = 1; j < PA_QUIT; j++)
+        if (0 == strcasecmp(optarg, keys_names[j])) {
+          first_action = j;
+          break;
+        }
+      if (PA_NULL == first_action) {
+        // Error out if `optarg` doesn't match a program action name
+        wchar_t errmsg[BS_SHORT];
+        swprintf(errmsg, BS_SHORT, L"Unknown program action '%s'", optarg);
+        winddown(ES_USAGE_ERROR, errmsg);
+      }
+      break;
     case 'C':
-      // -C or --config-path was passed; read from a different config file
+      // -C or --config-path was passed; use `optarg` as config file
       if (NULL != config.misc.config_path)
         free(config.misc.config_path);
       config.misc.config_path = xstrdup(optarg);

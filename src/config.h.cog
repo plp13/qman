@@ -114,6 +114,9 @@ cog.outl("} config_t;");
 // Program configuration
 extern config_t config;
 
+// String representations for program actions
+extern const char *keys_names[PA_QUIT + 1];
+
 // Help text for program actions and their corresponding key character mappings
 extern const wchar_t *keys_help[PA_QUIT + 1];
 
