@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.3.1-41-g1512a90 -- [see what's new](#new-in-this-version)
+Version 1.3.1-42-g5d392ca -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -15,7 +15,7 @@ Viewing a manual page:
 ![Viewing a Manual Page](/screenshots/qman_man.png)
 
 Using the table of contents:
-![Searching incrementally](/screenshots/qman_toc.png)
+![Using the Table of Contents](/screenshots/qman_toc.png)
 
 Searching incrementally:
 ![Searching incrementally](/screenshots/qman_search.png)
@@ -24,7 +24,7 @@ Performing apropos:
 ![Performing Apropos](/screenshots/qman_apropos.png)
 
 Online help:
-![On-line Help](/screenshots/qman_help.png)
+![Online Help](/screenshots/qman_help.png)
 
 ## Rationale
 Linux manual pages are lovely. They are concise, well-written, complete, and
@@ -42,7 +42,7 @@ plain C and has only minimal dependencies.
   alphabetically and organised by section
 - Pages for apropos and whatis results
 - Hyperlinks to other manual pages
-- Hyperlinks for URLs and email addresses (handled with xdg-open by default)
+- Hyperlinks for URLs and email addresses
 - In-page hyperlinks
 - A table of contents for each manual page
 - Incremental search for manual pages
@@ -75,7 +75,7 @@ page.
 - Improved clipboard support when using the `ghostty` terminal
 - Option `-A`/`--action` lets the user specify a program action to be performed
   upon startup
-- Miscellaneous bug fixes and documentation enhancements
+- Miscellaneous bug fixes and documentation updates
 
 > **:warning: Caution**
 >
@@ -86,8 +86,8 @@ page.
 > **:bulb: Note**
 >
 > Users using custom config files might need to update them when a new version
-> version of Qman comes out. For more information, please refer to Qman's manual
-> page and the documentation in
+> of Qman comes out. For more information, please refer to Qman's manual page
+> and the documentation in
 > [config](https://github.com/plp13/qman/blob/main/config].
 
 ## Downloading
@@ -103,20 +103,23 @@ available, starting with version 1.2.1.
 
 ## Dependencies
 Qman is written in plain C, and thus requires a compiler such as `gcc` or
-`clang`. Its only required library dependencies are `glibc` and `ncurses`. It
-uses the `meson` build system.
+`clang`, together with the `meson` build system. `cog`, a Python program for
+generating C code, is also required.
 
-There are also a number of optional dependencies:
-- `zlib`: suport for manual pages compressed with `gzip`
+The program's minimum library dependencies are `glibc` and `ncurses`.
+
+There are also a number of optional library dependencies:
+- `zlib`: support for manual pages compressed with `gzip`
 - `bzip2`: support for manual pages compressed with `bzip2`
 - `liblzma`: support for manual pages compressed with `xz`
+- `cunit`: used for unit testing
 
-Note that Qman is a front-end to GNU `man`, and therefore requires `man` and
-`groff` to be installed. In order for it to make sense, a Unix manual pages
-database must also be present.
+Note that Qman is a front-end to GNU `man`, and therefore requires `man`,
+`apropos`, `whatis`, and `groff` to be installed. In order for it to make sense,
+a Unix manual pages database must also be present.
 
 ## Building and installing
-Make sure all of the above dependencies are installed, and do the following:
+Make sure that the minimum dependencies are installed, and do the following:
 
 ```
 $ meson setup build/
@@ -164,6 +167,8 @@ Packagers for other operating systems are always welcome. To get started, please
 look at [PACKAGING.md](PACKAGING.md), which provides guidance on how to build
 Qman on some popular Linux distributions.
 
+If you have created a package, let me know and I'll add it to this list.
+
 ## Troubleshooting
 Always make sure you are up-to-date with the
 [main](https://github.com/plp13/qman/tree/main) branch. And, of course, RTFM:
@@ -193,11 +198,11 @@ running (as root):
 Again, this is probably a `mandb` issue. Qman uses the `apropos` command to
 build the array of manual pages that these features use, and `apropos` relies on
 `mandb` being correctly configured and up-to-date. If it isn't, the
-aforementioned array will be incomplete and/or inaccurate.
+array will be incomplete and/or inaccurate.
 
 Check your `man_db.conf` for correctness, and run `mandb` again as described
 above. You may also want build a script that automatically runs `mandb`
-after software updates, if your O/S distribution doesn't already do it.
+after software updates, if your O/S distribution doesn't already do this.
 
 > **:question: I'm unable to copy text to the clipboard using the mouse, and/or
 > my mouse behaves erratically**
@@ -232,7 +237,7 @@ nothing, e.g. `/usr/bin/false`.
 
 > **:question: I don't like the way Qman looks**
 
-Use a different one of supplied
+Use a different one of the supplied
 [themes](https://github.com/plp13/qman/config/themes). Or build your own (and
 open a pull request to to add it to the repository).
 
