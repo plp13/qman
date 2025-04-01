@@ -117,9 +117,10 @@ full_regex_t re_man, re_http, re_email;
 void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
               unsigned start_next, unsigned end_next, link_type_t type,
               const wchar_t *trgt) {
-  link_t link;
-  int i;
+  link_t link; // new link
+  int i;       // iterator
 
+  // Populate new link
   link.start = start;
   link.end = end;
   link.type = type;
@@ -129,6 +130,33 @@ void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
   link.trgt = walloc(wcslen(trgt));
   wcscpy(link.trgt, trgt);
 
+  // Sanity check: new link's end must be after its start
+  if (link.end <= link.start) {
+    free(link.trgt);
+    return;
+  }
+  if (link.in_next)
+    if (link.end_next <= link.start_next) {
+      free(link.trgt);
+      return;
+    }
+
+  // Sanity check: new link can't overlap an existing link
+  for (i = 0; i < line->links_length; i++)
+    if (link.in_next) {
+      if (line->links[i].start <= link.end &&
+          line->links[i].end_next >= link.end_next) {
+        free(link.trgt);
+        return;
+      }
+    } else {
+      if (line->links[i].start <= link.end && line->links[i].end >= link.end) {
+        free(link.trgt);
+        return;
+      }
+    }
+
+  // Add new link to line
   line_realloc_link((*line));
   if (1 == line->links_length)
     i = 0;
@@ -1444,16 +1472,14 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
         if (ilink) {
           if (ilink_ln == ln) {
             ilink_end = j;
-            if (ilink_end > ilink_start)
-              add_link(&res[ln], ilink_start, j, false, 0, 0, LT_HTTP,
-                       ilink_trgt);
+            add_link(&res[ln], ilink_start, j, false, 0, 0, LT_HTTP,
+                     ilink_trgt);
           } else if (ln > 0) {
             ilink_end = res[ln - 1].length - 1;
             ilink_start_next = wmargend(res[ln].text, NULL);
             ilink_end_next = j;
-            if (ilink_end > ilink_start && ilink_end_next > ilink_start_next)
-              add_link(&res[ln - 1], ilink_start, ilink_end, true,
-                       ilink_start_next, ilink_end_next, LT_HTTP, ilink_trgt);
+            add_link(&res[ln - 1], ilink_start, ilink_end, true,
+                     ilink_start_next, ilink_end_next, LT_HTTP, ilink_trgt);
           }
           ilink = false;
         } else {
@@ -1899,8 +1925,8 @@ extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines,
   }
 
   wchar_t *res = walloc(BS_LINE * config.layout.height); // return value
-  wchar_t tmp[BS_LINE]; // temporary
-  unsigned ln;          // current line number
+  wchar_t tmp[BS_LINE];                                  // temporary
+  unsigned ln;                                           // current line number
 
   // Necessary to get rid of valgrind warnings
   memset(res, 0, sizeof(wchar_t) * BS_LINE * config.layout.height);
