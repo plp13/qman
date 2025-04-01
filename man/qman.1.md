@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.3.1-40-gdbcd28e
+footer: Qman 1.3.1-41-g1512a90
 date: December 15, 2023
 ---
 
@@ -228,8 +228,8 @@ The default values for this section have been chosen to allow **Qman** to work
 correctly with virtually all terminals, including the venerable **xterm(1)** and
 the Linux console, and with all fonts. Depending on the terminal's capabilities,
 **Qman** may choose to revert to said defaults, and ignore any options you have
-specified in this section. This behavior can be overridden in the **[tcap]**
-section.
+specified in this section. This behavior can be overridden by adding
+**unicode=true** to the **[tcap]** section.
 
 ## Section [colours]
 Options in this section specify the user interface colors:
@@ -283,7 +283,8 @@ The default values for this section have been chosen to allow **Qman** to work
 correctly with virtually all terminals, including the venerable **xterm(1)** and
 the Linux console. Depending on the terminal's capabilities, **Qman** may
 choose to revert to said defaults, and ignore any options you have specified in
-this section. This behavior can be overridden in the **[tcap]** section.
+this section. This behavior can be overridden by adding **colors=256** and/or
+**rgb=true** to the **[tcap]** section.
 
 ## Section [keys]
 Options in this section specify which keys are mapped to each program action.
@@ -367,7 +368,7 @@ This section contains various miscellaneous options:
 | reset_after_email| boolean  | true       | Re-initialize curses after opening an e-mail link |
 | history_size | unsigned int | 256k       | Maximum number of history entries |
 | hyphenate    | boolean      | true       | Whether to hyphenate long words in manual pages |
-| justify      | boolean      | true       | Whether to justify manual pages text |
+| justify      | boolean      | true       | Whether to justify text in manual pages |
 
 When using a horizontally narrow terminal, setting _hyphenate_ to **true**
 and/or _justify_ to **false** can improve the program's output.
@@ -391,7 +392,7 @@ Include paths and option values may optionally be placed inside single or double
 quotes. They can include the following escape sequences:
 
 - **\\a**, **\\b**, **\\t**, **\\n**, **\\v**, **\\f**, and **\\r** are
-  interpreted according to ASCII
+  interpreted according to the ASCII standard
 - **\\e** is interpreted as an escape (0x1b) character
 - **\\\\** is interpreted as a backslash
 - **\\'** and **\\"** are interpreted as a single and double quotes respectively
@@ -411,7 +412,7 @@ it to the default value of 80.
 # SIGNALS
 
 Upon receiving **SIGUSR1**, the program interrupts its operation and attempts
-to locate parse a configuration file, using the process outlined in
+to locate and parse a configuration file, using the process outlined in
 **CONFIGURATION**.
 
 # EXIT STATUS
