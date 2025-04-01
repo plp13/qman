@@ -1242,6 +1242,7 @@ void editcopy(wchar_t *src) {
   // char* version of src
   unsigned srcs_len = 3 * wcslen(src); // length
   char *srcs = salloca(srcs_len);      // actual string
+  memset(srcs, 0, sizeof(char) * srcs_len);
   xwcstombs(srcs, src, srcs_len);
 
   // Base64-encoded version of src
@@ -1249,6 +1250,7 @@ void editcopy(wchar_t *src) {
   char *src64 = base64_encode((unsigned char *)srcs, srcs_len,
                               &src64_len); // actual string
 
+  // Copy to clipboard
   if (tcap.clipboard) {
     // If supported, copy using escape code 52
     char *seq = salloca(7 + strlen(src64));
@@ -1267,6 +1269,9 @@ void editcopy(wchar_t *src) {
       xpclose(pp);
     }
   }
+
+  // Wind down
+  free(src64);
 }
 
 void winddown_tui() {

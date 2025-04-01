@@ -1899,9 +1899,12 @@ extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines,
   }
 
   wchar_t *res = walloc(BS_LINE * config.layout.height); // return value
-  memset(res, 0, sizeof(wchar_t) * BS_LINE * config.layout.height);
   wchar_t tmp[BS_LINE]; // temporary
   unsigned ln;          // current line number
+
+  // Necessary to get rid of valgrind warnings
+  memset(res, 0, sizeof(wchar_t) * BS_LINE * config.layout.height);
+  memset(tmp, 0, sizeof(wchar_t) * BS_LINE);
 
   // Generate return value
   if (mark.start_line == mark.end_line) {
