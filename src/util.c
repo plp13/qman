@@ -61,6 +61,7 @@ int xpclose(FILE *stream) {
   return status;
 }
 
+#ifdef QMAN_GZIP
 gzFile xgzopen(const char *path, const char *mode) {
   gzFile gzfp = gzopen(path, mode);
 
@@ -72,7 +73,9 @@ gzFile xgzopen(const char *path, const char *mode) {
 
   return gzfp;
 }
+#endif
 
+#ifdef QMAN_GZIP
 int xgzclose(gzFile file) {
   const int status = gzclose(file);
 
@@ -84,6 +87,7 @@ int xgzclose(gzFile file) {
 
   return status;
 }
+#endif
 
 FILE *xfopen(const char *pathname, const char *mode) {
   FILE *const file = fopen(pathname, mode);
@@ -121,6 +125,7 @@ FILE *xtmpfile() {
   return file;
 }
 
+#ifdef QMAN_GZIP
 char *xgzgets(gzFile file, char *buf, int len) {
   char *res;
 
@@ -130,8 +135,8 @@ char *xgzgets(gzFile file, char *buf, int len) {
     if (NULL == res && !gzeof(file)) {
       // There has been an error
       if (EINTR == errno) {
-        // Sometimes ncurses rudely interrupts gzgets(). If that's the case, try
-        // calling gzgets() again
+        // Sometimes ncurses rudely interrupts I/O. If that's the case, try
+        // calling `gzgets()` again
         gzclearerr(file);
       } else {
         // Otherwise, fail gracefully
@@ -145,6 +150,7 @@ char *xgzgets(gzFile file, char *buf, int len) {
     }
   }
 }
+#endif
 
 char *xfgets(char *s, int size, FILE *stream) {
   char *res;
@@ -155,8 +161,8 @@ char *xfgets(char *s, int size, FILE *stream) {
     if (ferror(stream) && !feof(stream)) {
       // There has been an error
       if (EINTR == errno) {
-        // Sometimes ncurses rudely interrupts fgets(). If that's the case, try
-        // calling fgets() again
+        // Sometimes ncurses rudely interrupts I/O. If that's the case, try
+        // calling `fgets()` again
         clearerr(stream);
       } else {
         // Otherwise, fail gracefully
@@ -183,6 +189,18 @@ int xfputs(const char *s, FILE *stream) {
   return res;
 }
 
+size_t xfread(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+  const size_t cnt = fread(ptr, size, nmemb, stream);
+
+  if (ferror(stream)) {
+    static wchar_t errmsg[BS_SHORT];
+    serror(errmsg, L"Unable to read()");
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+
+  return cnt;
+}
+
 size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
   const size_t cnt = fwrite(ptr, size, nmemb, stream);
 
@@ -193,6 +211,20 @@ size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
   }
 
   return cnt;
+}
+
+char *xbasename(const char *path) {
+  static char pathc[BS_LINE];
+
+  xstrncpy(pathc, path, BS_LINE);
+  return basename(pathc);
+}
+
+char *xdirname(const char *path) {
+  static char pathc[BS_LINE];
+
+  xstrncpy(pathc, path, BS_LINE);
+  return dirname(pathc);
 }
 
 char *xstrdup(const char *s) {
@@ -215,6 +247,53 @@ wchar_t *xwcsdup(const wchar_t *s) {
     serror(errmsg, L"Unable to strdup()");
     winddown(ES_OPER_ERROR, errmsg);
   }
+
+  return res;
+}
+
+size_t xwcstombs(char *dest, const wchar_t *src, size_t n) {
+  if (NULL == dest)
+    return wcstombs(dest, src, n);
+
+  size_t res = wcstombs(dest, src, n);
+
+  if (-1 == res)
+    winddown(ES_OPER_ERROR, L"Unable to wcstombs()");
+  else if (n == res)
+    res--;
+
+  dest[res] = '\0';
+
+  return res;
+}
+
+size_t xmbstowcs(wchar_t *dest, const char *src, size_t n) {
+  if (NULL == dest)
+    return mbstowcs(dest, src, n);
+
+  size_t res = mbstowcs(dest, src, n);
+
+  if (-1 == res)
+    winddown(ES_OPER_ERROR, L"Unable to mbstowcs()");
+  else if (n == res)
+    res--;
+
+  dest[res] = L'\0';
+
+  return res;
+}
+
+wchar_t *xwcsncpy(wchar_t *dest, const wchar_t *src, size_t n) {
+  wchar_t *res = wcsncpy(dest, src, n);
+  dest[n - 1] = L'\0';
+
+  return res;
+}
+
+char *xstrncpy(char *dest, const char *src, size_t n) {
+  char *res = strncpy(dest, src, n);
+  if (strlen(src) >= n)
+    dest[n - 1] = '\0';
 
   return res;
 }
@@ -295,7 +374,7 @@ void bclearall(bitarr_t ba, unsigned ba_len) {
     ba[i] = 0;
 }
 
-char *bz2_decompress(const char *bzpath) {
+char *bzip2_decompress(const char *bzpath) {
 #ifdef QMAN_BZIP2
   char *path;        // Decompressed file pathname
   FILE *fp;          // Decompressed file pointer
@@ -309,7 +388,7 @@ char *bz2_decompress(const char *bzpath) {
   bzhand = BZ2_bzReadOpen(&bzerror, bzfp, 0, 0, NULL, 0);
   if (BZ_OK != bzerror) {
     winddown(ES_OPER_ERROR,
-             L"Unable to bz2_decompress(): BZ2_bzReadOpen() failed");
+             L"Unable to decompress Bzip2 archive: BZ2_bzReadOpen() failed");
   }
 
   path = xtempnam(NULL, "qman");
@@ -342,12 +421,78 @@ char *bz2_decompress(const char *bzpath) {
 #endif
 }
 
+char *lzma_decompress(const char *pathname) {
+#ifdef QMAN_LZMA
+  char *path;                            // Decompressed file pathname
+  FILE *fp;                              // Decompressed file pointer
+  lzma_ret lzret;                        // Lzma return status
+  lzma_stream lzstrm = LZMA_STREAM_INIT; // Lzma stream
+  FILE *lzfp;                            // Compressed file pointer
+  uint8_t buf[BUFSIZ];                   // Decompressed data buffer
+  uint8_t lzbuf[BUFSIZ];                 // Compressed data buffer
+
+  lzfp = xfopen(pathname, "r");
+
+  lzret = lzma_stream_decoder(&lzstrm, UINT64_MAX, LZMA_CONCATENATED);
+  if (LZMA_OK != lzret) {
+    winddown(ES_OPER_ERROR,
+             L"Unable to decompress XZ archive: lzma_stream_decoder() failed");
+  }
+
+  path = xtempnam(NULL, "qman");
+  fp = xfopen(path, "w");
+
+  lzstrm.next_in = NULL;
+  lzstrm.avail_in = 0;
+  lzstrm.next_out = buf;
+  lzstrm.avail_out = sizeof(buf);
+
+  while (true) {
+
+    if (0 == lzstrm.avail_in && !feof(lzfp)) {
+      lzstrm.next_in = lzbuf;
+      lzstrm.avail_in = xfread(lzbuf, 1, sizeof(lzbuf), lzfp);
+    }
+
+    if (!feof(lzfp))
+      lzret = lzma_code(&lzstrm, LZMA_RUN);
+    else
+      lzret = lzma_code(&lzstrm, LZMA_FINISH);
+
+    if (0 == lzstrm.avail_out || LZMA_STREAM_END == lzret) {
+      xfwrite(buf, 1, sizeof(buf) - lzstrm.avail_out, fp);
+      lzstrm.next_out = buf;
+      lzstrm.avail_out = sizeof(buf);
+    }
+
+    if (LZMA_STREAM_END == lzret)
+      break;
+
+    if (LZMA_OK != lzret) {
+      winddown(ES_OPER_ERROR,
+               L"Unable to decompress XZ archive: lzma_code() failed");
+    }
+  }
+
+  xfclose(fp);
+  lzma_end(&lzstrm);
+  xfclose(lzfp);
+
+  return path;
+#else
+  winddown(ES_OPER_ERROR, L"XZ archives are not supported");
+  return NULL;
+#endif
+}
+
 archive_t aropen(const char *pathname) {
   archive_t a;
   char *pathext = strrchr(pathname, '.');
 
   if (NULL == pathext)
     a.type = AR_NONE;
+  else if (0 == strcasecmp(".xz", pathext))
+    a.type = AR_LZMA;
   else if (0 == strcasecmp(".bz2", pathext))
     a.type = AR_BZIP2;
   else if (0 == strcasecmp(".gz", pathext))
@@ -356,13 +501,21 @@ archive_t aropen(const char *pathname) {
     a.type = AR_NONE;
 
   switch (a.type) {
+  case AR_LZMA:
+    a.path = lzma_decompress(pathname);
+    a.fp_lzma = xfopen(a.path, "r");
+    break;
   case AR_BZIP2:
-    a.path = bz2_decompress(pathname);
+    a.path = bzip2_decompress(pathname);
     a.fp_bzip2 = xfopen(a.path, "r");
     break;
   case AR_GZIP:
+#ifdef QMAN_GZIP
     a.path = xstrdup(pathname);
     a.fp_gzip = xgzopen(a.path, "rb");
+#else
+    winddown(ES_OPER_ERROR, L"Gzip archives are not supported");
+#endif
     break;
   case AR_NONE:
   default:
@@ -376,11 +529,16 @@ archive_t aropen(const char *pathname) {
 
 void argets(archive_t ap, char *buf, int len) {
   switch (ap.type) {
+  case AR_LZMA:
+    xfgets(buf, len, ap.fp_lzma);
+    break;
   case AR_BZIP2:
     xfgets(buf, len, ap.fp_bzip2);
     break;
   case AR_GZIP:
+#ifdef QMAN_GZIP
     xgzgets(ap.fp_gzip, buf, len);
+#endif
     break;
   case AR_NONE:
   default:
@@ -390,11 +548,18 @@ void argets(archive_t ap, char *buf, int len) {
 
 bool areof(archive_t ap) {
   switch (ap.type) {
+  case AR_LZMA:
+    return feof(ap.fp_lzma);
+    break;
   case AR_BZIP2:
     return feof(ap.fp_bzip2);
     break;
   case AR_GZIP:
+#ifdef QMAN_GZIP
     return gzeof(ap.fp_gzip);
+#else
+    return false;
+#endif
     break;
   case AR_NONE:
   default:
@@ -404,12 +569,18 @@ bool areof(archive_t ap) {
 
 void arclose(archive_t ap) {
   switch (ap.type) {
+  case AR_LZMA:
+    xfclose(ap.fp_lzma);
+    unlink(ap.path);
+    break;
   case AR_BZIP2:
     xfclose(ap.fp_bzip2);
     unlink(ap.path);
     break;
   case AR_GZIP:
+#ifdef QMAN_GZIP
     xgzclose(ap.fp_gzip);
+#endif
     break;
   case AR_NONE:
   default:
@@ -436,6 +607,72 @@ void safree(char **buf, unsigned buf_len) {
     free(buf[i]);
 
   free(buf);
+}
+
+// Test whether the character at `src[pos]` is escaped
+bool wescaped(wchar_t *src, unsigned pos) {
+  int c = 0;   // number of '\'s before `pos`
+  int i = pos; // iterator
+
+  while (i > 0) {
+    i--;
+    if (L'\\' == src[i])
+      c++;
+    else
+      break;
+  }
+
+  return c % 2;
+}
+
+void wunescape(wchar_t *src) {
+  int i = 0, j = 0; // iterators
+
+  while (L'\0' != src[i]) {
+    if (L'\\' == src[i]) {
+      switch (src[i + 1]) {
+      case L'a':
+        src[j++] = L'\a';
+        break;
+      case L'b':
+        src[j++] = L'\b';
+        break;
+      case L't':
+        src[j++] = L'\t';
+        break;
+      case L'n':
+        src[j++] = L'\n';
+        break;
+      case L'v':
+        src[j++] = L'\v';
+        break;
+      case L'f':
+        src[j++] = L'\f';
+        break;
+      case L'r':
+        src[j++] = L'\r';
+        break;
+      case L'e':
+        src[j++] = L'\e';
+        break;
+      case L'\\':
+        src[j++] = L'\\';
+        break;
+      case L'"':
+        src[j++] = L'"';
+        break;
+      case L'\'':
+        src[j++] = L'\'';
+        break;
+      }
+      i += 2;
+    } else {
+      src[j++] = src[i];
+      i++;
+    }
+  }
+
+  src[j] = L'\0';
 }
 
 unsigned wccnt(const wchar_t *hayst, wchar_t needle) {
@@ -557,9 +794,9 @@ unsigned wsplit(wchar_t ***dst, unsigned dst_len, wchar_t *src,
                 const wchar_t *extras) {
   wchar_t **res = *dst; // results
   unsigned res_cnt = 0; // number of results
-  bool ws = true;       // whether current character is whitespace or in extras
-  bool pws;             // whether previous character is whitespace or in extras
-  unsigned i, j = 0;    // iterators
+  bool ws = true;    // whether current character is whitespace or in `extras`
+  bool pws;          // whether previous character is whitespace or in `extras`
+  unsigned i, j = 0; // iterators
 
   if (NULL == extras)
     extras = L"";
@@ -613,7 +850,7 @@ unsigned wmargend(const wchar_t *src, const wchar_t *extras) {
 unsigned wmargtrim(wchar_t *trgt, const wchar_t *extras) {
   int i;      // iterator
   unsigned j; // iterator
-  bool trim;  // true if we'll be trimming trgt[i]
+  bool trim;  // true if we'll be trimming `trgt[i]`
 
   if (NULL == extras)
     extras = L"";
@@ -714,10 +951,10 @@ int sreadline(char *str, unsigned size, FILE *fp) {
 }
 
 unsigned split_path(char ***dst, unsigned dst_len, char *src) {
-  char **res = *dst;           // results
-  unsigned res_cnt = 0;        // number of results
-  unsigned pos = 0;            // starting position of last path found
-  unsigned i;                  // iterator
+  char **res = *dst;    // results
+  unsigned res_cnt = 0; // number of results
+  unsigned pos = 0;     // starting position of last path found
+  unsigned i;           // iterator
 
   for (i = 0;; i++) {
     if (':' == src[i] || '\0' == src[i]) {
@@ -750,41 +987,42 @@ void fr_init(full_regex_t *re, char *str, wchar_t *snpt) {
 }
 
 range_t fr_search(const full_regex_t *re, const wchar_t *src) {
-  char ssrc[BS_LINE];   // char* version of src
+  char ssrc[BS_LINE];   // `char*` version of `src`
   regmatch_t pmatch[1]; // regex match
   range_t res;          // return value
 
-  // If re->snpt isn't in src, return {0, 0}
-  if (NULL == wcsstr(src, re->snpt)) {
+  // If `re->snpt` isn't in `src`, return `{0, 0}`
+  if (NULL != re->snpt && NULL == wcsstr(src, re->snpt)) {
     res.beg = 0;
     res.end = 0;
     return res;
   }
 
-  // Convert src to ssrc and try to find a match in it
-  wcstombs(ssrc, src, BS_LINE);
+  // Convert `src` to `ssrc` and try to find a match in it
+  xwcstombs(ssrc, src, BS_LINE);
   int err = regexec(&re->re, ssrc, 1, pmatch, 0);
 
   if (0 == err) {
     // A match was found in ssrc
-    regoff_t sbeg = pmatch[0].rm_so; // match begin offset (in ssrc)
-    regoff_t send = pmatch[0].rm_eo; // match end offset (in ssrc)
-    regoff_t slen = send - sbeg;     // match length (in ssrc)
-    wchar_t *wmatch = walloca(slen); // the match as a wchar_t*
-    unsigned wlen = mbstowcs(wmatch, &ssrc[sbeg], slen); // wmatch length
+    regoff_t sbeg = pmatch[0].rm_so; // match begin offset (in `ssrc`)
+    regoff_t send = pmatch[0].rm_eo; // match end offset (in `ssrc`)
+    regoff_t slen = send - sbeg;     // match length (in `ssrc`)
+    wchar_t *wmatch = walloca(slen); // the match as a `wchar_t*`
+    unsigned wlen = xmbstowcs(wmatch, &ssrc[sbeg], slen + 1); // `wmatch` length
     wmatch[wlen] = L'\0';
-    wchar_t *wptr = wcsstr(src, wmatch); // match begin memory location (in src)
+    wchar_t *wptr =
+        wcsstr(src, wmatch); // match begin memory location (in `src`)
     if (NULL == wptr) {
-      // Cannot replicate match in src; return {0, 0}
+      // Cannot replicate match in `src`; return `{0, 0}`
       res.beg = 0;
       res.end = 0;
     } else {
-      // Match found in src; return its location
+      // Match found in `src`; return its location
       res.beg = wptr - src;
       res.end = res.beg + wlen;
     }
   } else {
-    // No match found, or an error has occured; return {0, 0}
+    // No match found, or an error has occured; return `{0, 0}`
     res.beg = 0;
     res.end = 0;
   }

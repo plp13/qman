@@ -12,6 +12,9 @@ exit_on_error() {
   fi
 }
 
+cd "$( dirname "${BASH_SOURCE[0]}" )"
+exit_on_error $?
+
 echo "Removing old '${MAN_FILE}'"
 rm -f ${MAN_FILE}
 exit_on_error $?

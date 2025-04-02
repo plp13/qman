@@ -1,4 +1,4 @@
-// Main programs
+// Main program
 
 #include "lib.h"
 

@@ -9,14 +9,14 @@
 void init_cli() {
   unsigned cols; // terminal width according to the environment
 
-  // Set config.layout.main_width to the value indicated by the environment
+  // Set `config.layout.main_width` to the value indicated by the environment
   cols = getenvi("MANWIDTH");
   if (0 == cols)
     cols = getenvi("COLUMNS");
   if (0 != cols)
     config.layout.main_width = cols;
   else {
-    // Can't read anything from the environment; use ncurses to set main_width
+    // Can't read anything from the environment; use ncurses to set `main_width`
     newterm(NULL, stderr, stdin);
     config.layout.main_width = getmaxx(stdscr);
     endwin();

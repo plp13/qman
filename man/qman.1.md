@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.3.1
+footer: Qman 1.3.1-42-g5d392ca
 date: December 15, 2023
 ---
 
@@ -57,31 +57,31 @@ keyboard mappings:
 
 | Action name     | Description                           | Key mappings       |
 |-----------------|---------------------------------------|--------------------|
-| UP              | Scroll up one line and/or focus on the previous link | UP, 'y', 'k' |
-| DOWN            | Scroll down one line and/or focus on the next link | DOWN, 'e', 'j' |
-| LEFT            | Scroll left one tab stop              | LEFT, '<'          |
-| RIGHT           | Scroll right one tab stop             | RIGHT, '>'         |
-| PGUP            | Scroll up one page                    | PGUP, 'b'          |
-| PGDN            | Scroll down one page                  | PGDN, 'f'          |
-| HOME            | Go to page top                        | HOME, 'g'          |
-| END             | Go to page bottom                     | END, 'G'           |
-| OPEN            | Open focused link                     | ENTER, 'o'         |
-| OPEN_APROPOS    | Perform apropos on focused link       | 'a'                |
-| OPEN_WHATIS     | Perform whatis on focused link        | 'w'                |
-| SP_OPEN         | Open a manual page using a dialog     | 'O'                |
-| SP_APROPOS      | Perform apropos on a manual page using a dialog | 'A'      |
-| SP_WHATIS       | Perform whatis on a manual page using a dialog  | 'W'      |
-| INDEX           | Go to index (home) page               | 'i', 'I'           |
-| BACK            | Go back one step in history           | BACKSPACE, '['     |
-| FWRD            | Go forward one step in history        | ']'                |
-| HISTORY         | Show history menu                     | 's', 'S'           |
-| TOC             | Show table of contents                | 't', 'T'           |
-| SEARCH          | (Free text) search forward            | '/'                |
-| SEARCH_BACK     | (Free text) search backward           | '?'                |
-| SEARCH_NEXT     | Go to next search result              | 'n'                |
-| SEARCH_PREV     | Go to previous search result          | 'N'                |
-| HELP            | Show the help dialog                  | 'h', 'H'           |
-| QUIT            | Exit the program                      | 'q', 'Q'           |
+| UP              | Scroll up one line and/or focus on the previous link | **UP**, **y**, **k** |
+| DOWN            | Scroll down one line and/or focus on the next link | **DOWN**, **e**, **j** |
+| LEFT            | Scroll left one tab stop              | **LEFT**, **<**    |
+| RIGHT           | Scroll right one tab stop             | **RIGHT**, **>**   |
+| PGUP            | Scroll up one page                    | **PGUP**, **b**    |
+| PGDN            | Scroll down one page                  | **PGDN**, **f**    |
+| HOME            | Go to page top                        | **HOME**, **g**    |
+| END             | Go to page bottom                     | **END**, **G**     |
+| OPEN            | Open focused link                     | **ENTER**, **o**   |
+| OPEN_APROPOS    | Perform apropos on focused link       | **a**              |
+| OPEN_WHATIS     | Perform whatis on focused link        | **w**              |
+| SP_OPEN         | Open a manual page using a dialog     | **O**              |
+| SP_APROPOS      | Perform apropos on a manual page using a dialog | **A**    |
+| SP_WHATIS       | Perform whatis on a manual page using a dialog  | **W**    |
+| INDEX           | Go to index (home) page               | **i**, **I**       |
+| BACK            | Go back one step in history           | **BACKSPACE**, **[** |
+| FWRD            | Go forward one step in history        | **]**              |
+| HISTORY         | Show history menu                     | **s**, **S**       |
+| TOC             | Show table of contents                | **t**, **T**       |
+| SEARCH          | (Free text) search forward            | **/**              |
+| SEARCH_BACK     | (Free text) search backward           | **?**              |
+| SEARCH_NEXT     | Go to next search result              | **n**              |
+| SEARCH_PREV     | Go to previous search result          | **N**              |
+| HELP            | Show the help dialog                  | **h**, **H**       |
+| QUIT            | Exit the program                      | **q**, **Q**       |
 
 All of the aforementioned keyboard mappings are customizable. For more
 information, see **CONFIGURATION**.
@@ -118,12 +118,13 @@ The above behavior can be customized. For more information, see
 **NOTE 1**
 : There is no reliable method for terminal clients to copy data to the
   clipboard. An escape code (OSC 52) does exist but is only reliably supported
-  by **kitty(1)**. For all other terminals, **Qman** will try to use
-  **xclip(1)** and/or **wl-clipboard(1)**. However, this will only work when
-  running locally and within a desktop environment (not when using SSH).
+  by **kitty(1)** and **ghostty(1)**. For all other terminals, **Qman** will
+  default to using **xclip(1)** and/or **wl-clipboard(1)**. However, these will
+  only work when running locally and within a desktop environment (not when
+  using SSH).
 
 **NOTE 2**
-: Some terminals may report the cursor position inaccurately, causing
+: Some terminals may report mouse cursor position inaccurately, causing
   difficulties with clicking and dragging.
 
 # OPTIONS
@@ -163,6 +164,10 @@ The program accepts the following non-argument options:
   option can be used to redirect the program's formatted output to a text file
   or to another command.
 
+**-A, \-\-action** _action_name_
+: Automatically perform program action _action_name_ upon startup. The list of
+  valid action names can be found under **USER INTERFACE**.
+
 **-C, \-\-config\-path** _file_
 : Use _file_ as the configuration file for **Qman**.
 
@@ -178,21 +183,25 @@ defined by the [XDG Base Directory Specification](https://specifications.freedes
 The following locations are searched in sequence:
 
 - Any file specified using **-C** or **\-\-config\-path**
-- _\${XDG_CONFIG_HOME}/qman.conf_
-- _\${HOME}/.config/qman.conf_
-- _\${D}/qman.conf_ where _\${D}_ is an entry in _\${XDG_CONFIG_DIRS}_
-- _/etc/xdg/qman.conf_
-- _/etc/qman.conf_
+- _\${XDG_CONFIG_HOME}/qman/qman.conf_
+- _\${HOME}/.config/qman/qman.conf_
+- _\${D}/qman/qman.conf_ where _\${D}_ is an entry in _\${XDG_CONFIG_DIRS}_
+- _/etc/xdg/qman/qman.conf_
+- _/etc/qman/qman.conf_
 
 The process stops once a configuration file has been found.
 
-**Qman** uses the [INI file format](https://en.wikipedia.org/wiki/INI_file).
+**Qman**'s configuration file uses the basic
+[INI file format](https://en.wikipedia.org/wiki/INI_file), extended with an
+**include** directive to allow for the configuration to be spread across
+multiple files.
+
 Different configuration options are grouped into sections. The paragraphs
 below summarize the sections and configuration options that are available:
 
-**Section [chars]**
-: Options in this section specify what characters will be used to draw the text
-  user interface:
+## Section [chars]
+Options in this section specify what characters will be used to draw the text
+user interface:
 
 | Option            | Description                                              |
 |-------------------|----------------------------------------------------------|
@@ -219,11 +228,11 @@ The default values for this section have been chosen to allow **Qman** to work
 correctly with virtually all terminals, including the venerable **xterm(1)** and
 the Linux console, and with all fonts. Depending on the terminal's capabilities,
 **Qman** may choose to revert to said defaults, and ignore any options you have
-specified in this section. This behavior can be overridden in the **[tcap]**
-section.
+specified in this section. This behavior can be overridden by adding
+**unicode=true** to the **[tcap]** section.
 
-**Section [colours]**
-: Options in this section specify the user interface colors:
+## Section [colours]
+Options in this section specify the user interface colors:
 
 | Option            | Description                                              |
 |-------------------|----------------------------------------------------------|
@@ -261,9 +270,9 @@ Each color is defined using three words separated by whitespace:
 
 _foreground_ _background_ _bold_
 
-_foreground_ and _background_ can be one of 'black', 'red', 'green',
-'yellow', 'blue', 'magenta', 'cyan', or 'white'. Alternatively, they can be a
-number between 0 and 255, or a hexadecimal RGB value using the #RRGGBB
+_foreground_ and _background_ can be one of **black**, **red**, **green**,
+**yellow**, **blue**, **magenta**, **cyan**, or **white**. Alternatively, they
+can be a number between 0 and 255, or a hexadecimal RGB value using the #RRGGBB
 notation. Users should beware that not all terminals support numeric color
 values higher than 7 and/or RGB values.
 
@@ -274,10 +283,11 @@ The default values for this section have been chosen to allow **Qman** to work
 correctly with virtually all terminals, including the venerable **xterm(1)** and
 the Linux console. Depending on the terminal's capabilities, **Qman** may
 choose to revert to said defaults, and ignore any options you have specified in
-this section. This behavior can be overridden in the **[tcap]** section.
+this section. This behavior can be overridden by adding **colors=256** and/or
+**rgb=true** to the **[tcap]** section.
 
-**Section [keys]**
-: Options in this section specify which keys are mapped to each program action.
+## Section [keys]
+Options in this section specify which keys are mapped to each program action.
 
 The section contains 25 configuration options, each corresponding to one of the
 program actions described in the **USER INTERFACE** section of this manual page.
@@ -287,23 +297,23 @@ _key_1_ _key_2_ _key_3_ _key_4_ _key_5_ _key_6_ _key_7_ _key_8_
 
 The value of each _key_i_ can take one of the following values:
 
-- Any character, surch as 'a', 'b', 'c', etc.
-- Any ncurses(3x) keycode, such as 'KEY_UP' or 'KEY_HOME'
-- 'F1' to 'F12' (for the function keys)
-- 'ESC' (for the ESC key)
-- 'EXT' (for CTRL-C)
-- 'LF' (for the ENTER key)
-- 'BS' (for the BACKSPACE key)
-- 'HT' (for the TAB key)
-- 'SPACE' (for the spacebar)
+- Any character, surch as **a**, **b**, **c**, etc.
+- Any ncurses(3x) keycode, such as **KEY_UP** or **KEY_HOME**
+- **F1** to **F12** (for the function keys)
+- **ESC** (for the ESC key)
+- **EXT** (for CTRL-C)
+- **LF** (for the ENTER key)
+- **BS** (for the BACKSPACE key)
+- **HT** (for the TAB key)
+- **SPACE** (for the spacebar)
 
 For reasons of compatibility with various terminals, mapping the ENTER key
-requires specifying both 'KEY_ENTER' and 'LF'. Similarly, mapping CTRL-C
-requires specifying both 'KEY_BREAK' and 'ETX', and mapping BACKSPACE requires
-specifying both 'KEY_BACKSPACE' and 'BS'.
+requires specifying both **KEY_ENTER** and **LF**. Similarly, mapping CTRL-C
+requires specifying both **KEY_BREAK** and **ETX**, and mapping BACKSPACE
+requires specifying both **KEY_BACKSPACE** and **BS**.
 
-**Section [mouse]**
-: This section contains the following options that pertain to mouse support:
+## Section [mouse]
+This section contains the following options that pertain to mouse support:
 
 | Option   | Type         | Def. value | Description                           |
 |----------|--------------|------------|---------------------------------------|
@@ -311,9 +321,9 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 | left_handed | boolean   | false      | Swaps the left and right mouse buttons |
 | left_click_open | boolean | false    | Causes the left mouse button to invoke the OPEN action and/or act as the ENTER key |
 
-**Section [layout]**
-: This section contains various options that concern the layout of the text user
-  interface:
+## Section [layout]
+This section contains various options that concern the layout of the text user
+interface:
 
 | Option   | Type         | Def. value | Description                           |
 |----------|--------------|------------|---------------------------------------|
@@ -324,10 +334,10 @@ specifying both 'KEY_BACKSPACE' and 'BS'.
 | rmargin  | unsigned int | 2          | Size of margin between the page text and the scroll bar and/or the right side of the screen |
 | tabstop  | unsigned int | 8          | Number of characters in a tab stop (used by actions LEFT and RIGHT) |
 
-**Section [tcap]**
-: Normally, **Qman** detects the terminal's capabilities automatically. Options
-  in this section provide the ability to specify them explicitly, overriding
-  this behavior:
+## Section [tcap]
+Normally, **Qman** detects the terminal's capabilities automatically. Options in
+this section provide the ability to specify them explicitly, overriding this
+behavior:
 
 | Option   | Type         | Def. value | Description                           |
 |----------|--------------|------------|---------------------------------------|
@@ -343,8 +353,8 @@ the **[chars]** and **[colours]** sections mentioned above. Auto-detection
 should work correctly in most cases; it's therefore recommended to not modify
 any of the options in this section, except when discovering or reporting bugs.
 
-**Section [misc]**
-: This section contains various miscellaneous options:
+## Section [misc]
+This section contains various miscellaneous options:
 
 | Option       | Type         | Def. value | Description                       |
 |--------------|--------------|------------|-----------------------------------|
@@ -358,15 +368,37 @@ any of the options in this section, except when discovering or reporting bugs.
 | reset_after_email| boolean  | true       | Re-initialize curses after opening an e-mail link |
 | history_size | unsigned int | 256k       | Maximum number of history entries |
 | hyphenate    | boolean      | true       | Whether to hyphenate long words in manual pages |
-| justify      | boolean      | true       | Whether to justify manual pages text |
+| justify      | boolean      | true       | Whether to justify text in manual pages |
 
-When using a horizontally narrow terminal, setting _hyphenate_ to 'true' and/or
-_justify_ to 'false' can improve the program's output.
+When using a horizontally narrow terminal, setting _hyphenate_ to **true**
+and/or _justify_ to **false** can improve the program's output.
 
 To avoid an annoying screen redraw, option _reset_after_http_ should be set to
-'false' when using a GUI web browser for handling http(s) links. Similarly,
-_reset_after_email_ should be set to 'false' when using a GUI email client for
+**false** when using a GUI web browser for handling http(s) links. Similarly,
+_reset_after_email_ should be set to **false** when using a GUI email client for
 e-mail links.
+
+## Include directive
+Supplemental configuration files can be included using:
+
+**include** _path_
+
+Where _path_ is either an absolute path to the supplemental, or a path relative
+to the directory component of the configuration file that performs the
+inclusion.
+
+## Notes on syntax
+Include paths and option values may optionally be placed inside single or double
+quotes. They can include the following escape sequences:
+
+- **\\a**, **\\b**, **\\t**, **\\n**, **\\v**, **\\f**, and **\\r** are
+  interpreted according to the ASCII standard
+- **\\e** is interpreted as an escape (0x1b) character
+- **\\\\** is interpreted as a backslash
+- **\\'** and **\\"** are interpreted as a single and double quotes respectively
+
+All text following a **;** until the end of the line is considered a comment and
+is discarded.
 
 # ENVIRONMENT
 Users should take care setting their **TERM** environment variable to match
@@ -376,6 +408,12 @@ When invoked using **-T**, the program tries to set its page width to the value
 of the **MANWIDTH** environment variable. If **MANWIDTH** hasn't been set, it
 tries to set it to the value of **COLUMNS** and, if that also fails, it sets
 it to the default value of 80.
+
+# SIGNALS
+
+Upon receiving **SIGUSR1**, the program interrupts its operation and attempts
+to locate and parse a configuration file, using the process outlined in
+**CONFIGURATION**.
 
 # EXIT STATUS
 | Value | Description                                                          |

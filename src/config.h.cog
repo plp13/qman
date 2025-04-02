@@ -10,7 +10,8 @@
 // Types
 //
 
-// A ternary bit, i.e. one that can take one of 3 values: true, false, or auto
+// A ternary bit, i.e. one that can take one of 3 values: `true`, `false`, or
+// `auto`
 typedef enum {
   t_false,
   t_true,
@@ -18,8 +19,8 @@ typedef enum {
 } trit_t;
 
 // The color of a text character. Unlike ncurses colors, which are short
-// integers that correspond to a color value, colour_t combines foreground
-// color, background, color, boldness, and a corresponding initialized ncurses
+// integers that correspond to a color value, `colour_t` combines foreground
+// color, background color, boldness, and a corresponding initialized ncurses
 // color pair.
 typedef struct {
   short fg;   // foreground ncurses color no.
@@ -35,7 +36,7 @@ import config_def
 
 cog.outl("// A program action")
 cog.outl("typedef enum {")
-cog.outl("  PA_NULL,                       // Do nothing (must be first member of action_t)")
+cog.outl("  PA_NULL,                       // Do nothing (must be first member of `action_t`)")
 
 for option, option_def in config_def.config_def["keys"].items():
   (type, default_value, in_config, comment) = option_def
@@ -50,7 +51,7 @@ cog.outl("} action_t;")
 cog.outl()
 
 for section, options in config_def.config_def.items():
-  cog.outl("// Configuration structure for section '" + section + "'")
+  cog.outl("// Configuration structure for section `" + section + "`")
 
   # Section "keys" is special and is defined as an array, not a structure
   if section == "keys":
@@ -113,6 +114,9 @@ cog.outl("} config_t;");
 // Program configuration
 extern config_t config;
 
+// String representations for program actions
+extern const char *keys_names[PA_QUIT + 1];
+
 // Help text for program actions and their corresponding key character mappings
 extern const wchar_t *keys_help[PA_QUIT + 1];
 
@@ -123,11 +127,8 @@ extern const wchar_t *keys_help[PA_QUIT + 1];
 // Initialize configuration to sane defaults
 extern void conf_init();
 
-// Parse the configuration file and set members of config appropriately. This
-// function tries to find the config file in the following locations:
-// (1) value of config.misc.config_path, set with '-C'
-// (2) ~/.config/qman.conf
-// (3) /etc/xdg/qman.conf
+// Locate and parse the configuration file, setting all members of `config`
+// appropriately
 extern void configure();
 
 #endif

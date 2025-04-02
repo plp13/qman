@@ -28,11 +28,15 @@ option_t options[] = {
      OA_NONE, true},
     {"cli", 'T', L"Suppress the TUI and output directly to the terminal",
      OA_NONE, true},
+    {"action", 'A', L"Automatically perform program action ARG upon startup",
+     OA_REQUIRED, true},
     {"config-path", 'C', L"Use ARG as the configuration file path", OA_REQUIRED,
      true},
-    {"version", 'v', L"Print program version", OA_NONE, true},
+    {"version", 'V', L"Print program version", OA_NONE, true},
     {"help", 'h', L"Display this help message", OA_NONE, true},
     {0, 0, 0, 0, false}};
+
+action_t first_action = PA_NULL;
 
 request_t *history = NULL;
 
@@ -80,8 +84,8 @@ full_regex_t re_man, re_http, re_email;
 // Helper macros and functions
 //
 
-// Helper of man() and aprowhat_render(). Increase ln, and reallocate res in
-// memory, if ln has exceeded its size.
+// Helper of `man()` and `aprowhat_render()`. Increase `ln`, and reallocate
+// `res` in memory, if `ln` has exceeded its previously allocated size.
 #define inc_ln                                                                 \
   ln++;                                                                        \
   if (ln == res_len) {                                                         \
@@ -89,8 +93,8 @@ full_regex_t re_man, re_http, re_email;
     res = xreallocarray(res, res_len, sizeof(line_t));                         \
   }
 
-// Helper of toc(). Increase en, and reallocate res in memory, if en has
-// exceeded its size
+// Helper of `toc()`. Increase `en`, and reallocate `res` in memory, if `en` has
+// exceeded its previously allocated size.
 #define inc_en                                                                 \
   en++;                                                                        \
   if (en == res_len) {                                                         \
@@ -98,8 +102,8 @@ full_regex_t re_man, re_http, re_email;
     res = xreallocarray(res, res_len, sizeof(toc_entry_t));                    \
   }
 
-// Helper of search(). Increase i, and reallocate res in memory, if i has
-// exceeded its size.
+// Helper of `search()`. Increase `i`, and reallocate `res` in memory, if `i`
+// has exceeded its previously allocated size.
 #define inc_i                                                                  \
   i++;                                                                         \
   if (i == res_len) {                                                          \
@@ -107,15 +111,16 @@ full_regex_t re_man, re_http, re_email;
     res = xreallocarray(res, res_len, sizeof(result_t));                       \
   }
 
-// Helper of man() and aprowhat_render(). Add a link to a line. Allocate memory
-// using line_realloc_link() to do so. Use start, end, link_next type, and trgt
-// to populate the new link's members.
+// Helper of `man()` and `aprowhat_render()`. Add a link to `line`. Allocate
+// memory using `line_realloc_link()` to do so. Use `start`, `end`, `link_next`,
+// `type`, and `trgt` to populate the new link's members.
 void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
               unsigned start_next, unsigned end_next, link_type_t type,
               const wchar_t *trgt) {
-  link_t link;
-  int i;
+  link_t link; // new link
+  int i;       // iterator
 
+  // Populate new link
   link.start = start;
   link.end = end;
   link.type = type;
@@ -125,6 +130,33 @@ void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
   link.trgt = walloc(wcslen(trgt));
   wcscpy(link.trgt, trgt);
 
+  // Sanity check: new link's end must be after its start
+  if (link.end <= link.start) {
+    free(link.trgt);
+    return;
+  }
+  if (link.in_next)
+    if (link.end_next <= link.start_next) {
+      free(link.trgt);
+      return;
+    }
+
+  // Sanity check: new link can't overlap an existing link
+  for (i = 0; i < line->links_length; i++)
+    if (link.in_next) {
+      if (line->links[i].start <= link.end &&
+          line->links[i].end_next >= link.end_next) {
+        free(link.trgt);
+        return;
+      }
+    } else {
+      if (line->links[i].start <= link.end && line->links[i].end >= link.end) {
+        free(link.trgt);
+        return;
+      }
+    }
+
+  // Add new link to line
   line_realloc_link((*line));
   if (1 == line->links_length)
     i = 0;
@@ -139,29 +171,29 @@ void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
   line->links[i] = link;
 }
 
-// Helper of man(). Discover links that match re in the text of line, and add
-// them to said line. line_next is necessary to support hyphenated links. type
-// signifies the link type to add.
+// Helper of `man()`. Discover links that match `re` in the text of `line`,
+// and add them to said `line`. `line_next` is necessary to support hyphenated
+// links. `type` signifies the link type to add.
 void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
                     const link_type_t type) {
   // Ignore empty lines
   if (line->length < 2)
     return;
 
-  wchar_t ltext[BS_LINE * 2]; // text of line (or text of line merged with text
-                              // of line_next, if line is hyphenated)
+  wchar_t ltext[BS_LINE * 2]; // text of `line` (or text of `line` merged with
+                              // text of `line_next`, if `line` is hyphenated)
   memset(ltext, 0, sizeof(wchar_t) * BS_LINE * 2);
   const bool lhyph =
-      line->text[line->length - 2] == L'‐'; // whether line is hyphenated
-  unsigned loff = 0;     // offset (in ltext) to start searching for links
-  range_t lrng;          // location of link in ltext
+      line->text[line->length - 2] == L'‐'; // whether `line` is hyphenated
+  unsigned loff = 0;     // offset (in `ltext`) to start searching for links
+  range_t lrng;          // location of link in `ltext`
   wchar_t trgt[BS_LINE]; // link target
 
-  // Prepare ltext
+  // Prepare `ltext`
   wcsncpy(ltext, line->text, line->length - 1);
   if (lhyph) {
     unsigned lnme =
-        wmargend(line_next->text, NULL); // left margin end of line_next
+        wmargend(line_next->text, NULL); // left margin end of `line_next`
     wcsncpy(&ltext[line->length - 2], &line_next->text[lnme],
             line_next->length - lnme);
   }
@@ -169,7 +201,7 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
   // While a link has been found...
   lrng = fr_search(re, &ltext[loff]);
   while (lrng.beg != lrng.end) {
-    // Extract link target from line
+    // Extract link target from line text
     wcsncpy(trgt, &ltext[loff + lrng.beg], lrng.end - lrng.beg);
     trgt[lrng.end - lrng.beg] = L'\0';
 
@@ -179,13 +211,13 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
 
       const unsigned lnme = wmargend(
           line_next->text, NULL); // position where actual text (without
-                                  // margin) of line_next starts
-      const unsigned lstart = loff + lrng.beg; // starting pos. in line
-      const unsigned lend = line->length - 2;  // ending pos. in line
-      const unsigned nlstart = lnme;           // starting pos in next line
+                                  // margin) of `line_next` starts
+      const unsigned lstart = loff + lrng.beg; // starting pos. in `line`
+      const unsigned lend = line->length - 2;  // ending pos. in `line`
+      const unsigned nlstart = lnme;           // starting pos. in `line_next`
       const unsigned nlend = lnme + (lrng.end - lrng.beg) -
-                             (lend - lstart); // ending pos in next line
-      // Add the link to line
+                             (lend - lstart); // ending pos. in `line_next`
+      // Add the link to `line`
       if (LT_MAN == type) {
         if (aprowhat_has(trgt, aw_all, aw_all_len))
           add_link(line, lstart, lend, true, nlstart, nlend, type, trgt);
@@ -194,7 +226,7 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
     } else if (loff + lrng.end < line->length) {
       // Link is not broken by a hyphen
 
-      // Add the link to line
+      // Add the link to `line`
       if (LT_MAN == type) {
         if (aprowhat_has(trgt, aw_all, aw_all_len))
           add_link(line, loff + lrng.beg, loff + lrng.end, //
@@ -207,27 +239,27 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
     // Calculate next offset
     loff += lrng.end;
     if (loff < line->length) {
-      // Offset is not beyond the end of line; look for another link
+      // Offset is not beyond the end of `line`; look for another link
       lrng = fr_search(re, &ltext[loff]);
     } else {
-      // Offset is beyond the end of line; exit the loop
+      // Offset is beyond the end of `line`; exit the loop
       lrng.beg = 0;
       lrng.end = 0;
     }
   }
 }
 
-// Helper of man(). If line is a section header, return its level. Otherwise,
-// return -1. This function must initially be called with a NULL argument, every
-// time man() is invoked.
+// Helper of `man()`. If `line` is a section header, return its level.
+// Otherwise, return -1. This function must initially be called with a NULL
+// argument, every time `man()` is invoked.
 bool section_header_level(line_t *line) {
   static unsigned lnme_set[] = {
-      0, 0, 0, 0,
-      0, 0, 0, 0}; // unique and (hopefully) ordered lnme values for all section
-                   // headers encountered so far
-  unsigned i;      // iterator
+      0, 0, 0, 0, 0,
+      0, 0, 0}; // unique and (hopefully) ordered `lnme` values for all section
+                // headers encountered so far
+  unsigned i;   // iterator
 
-  // Line is NULL; re-initialize lnme_set and return -1
+  // `line` is NULL; re-initialize `lnme_set` and return -1
   if (NULL == line) {
     for (i = 0; i < 8; i++)
       lnme_set[i] = 0;
@@ -235,11 +267,13 @@ bool section_header_level(line_t *line) {
     return -1;
   }
 
-  unsigned lnme = wmargend(
-      line->text, NULL); // position in line's text where margin whitespace ends
+  unsigned lnme =
+      wmargend(line->text,
+               NULL); // position in `line`'s text where margin whitespace ends
 
   if (bget(line->bold, lnme) && bget(line->reg, line->length - 1)) {
-    // Line is a section header; return the level that corresponds to its lnme
+    // `line` is a section header; return the level that corresponds to its
+    // `lnme`
     for (i = 0; i < 8; i++) {
       if (0 == lnme_set[i])
         lnme_set[i] = lnme;
@@ -253,92 +287,92 @@ bool section_header_level(line_t *line) {
   }
 }
 
-// The following are helpers of man()
+// The following are helpers of `man()`
 
-// true if tmpw[i] contains a 'bold' terminal escape sequence
+// true if `tmpw[i]` contains a 'bold' terminal escape sequence
 #define got_bold                                                               \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'1') && (tmpw[i + 3] == L'm'))
 
-// true if tmpw[i] contains a 'bold' typewriter (NO_SGR) sequence
+// true if `tmpw[i]` contains a 'bold' typewriter (NO_SGR) sequence
 #define got_bold_nosgr                                                         \
   ((i + 3 < len) && (tmpw[i] == tmpw[i + 2]) && (tmpw[i + 1] == L'\b'))
 
-// true if tmpw[i] contains a 'not bold' terminal escape sequence
+// true if `tmpw[i]` contains a 'not bold' terminal escape sequence
 #define got_not_bold                                                           \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'0') && (tmpw[i + 3] == L'm'))
 
-// true if tmpw[i] contains a 'italic' terminal escape sequence
+// true if `tmpw[i]` contains a 'italic' terminal escape sequence
 #define got_italic                                                             \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'3') && (tmpw[i + 3] == L'm'))
 
-// true if tmpw[i] contains a 'not italic' terminal escape sequence
+// true if `tmpw[i]` contains a 'not italic' terminal escape sequence
 #define got_not_italic                                                         \
   ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'3') && (tmpw[i + 4] == L'm'))
 
-// true if tmpw[i] contains a 'underline' terminal escape sequence
+// true if `tmpw[i]` contains a 'underline' terminal escape sequence
 #define got_uline                                                              \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'4') && (tmpw[i + 3] == L'm'))
 
-// true if tmpw[i] contains a 'underline' typewriter (NO_SGR) sequence
+// true if `tmpw[i]` contains a 'underline' typewriter (NO_SGR) sequence
 #define got_uline_nosgr                                                        \
   ((i + 3 < len) && (tmpw[i] == L'_') && (tmpw[i + 1] == L'\b'))
 
-// true if tmpw[i] contains a 'not underline' terminal escape sequence
+// true if `tmpw[i]` contains a 'not underline' terminal escape sequence
 #define got_not_uline                                                          \
   ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'4') && (tmpw[i + 4] == L'm'))
 
-// true if tmpw[i] contains a 'normal / not dim' terminal escape sequence
+// true if `tmpw[i]` contains a 'normal / not dim' terminal escape sequence
 #define got_normal                                                             \
   ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'2') && (tmpw[i + 4] == L'm'))
 
-// true if tmpw[i] contains any single-digit terminal formatting sequence
+// true if `tmpw[i]` contains any single-digit terminal formatting sequence
 #define got_any_1                                                              \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 3] == L'm'))
 
-// true if tmpw[i] contains any two-digit terminal formatting sequence
+// true if `tmpw[i]` contains any two-digit terminal formatting sequence
 #define got_any_2                                                              \
   ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 4] == L'm'))
 
-// true if tmpw[i] contains any single-digit terminal formatting sequence
+// true if `tmpw[i]` contains any three-digit terminal formatting sequence
 #define got_any_3                                                              \
   ((i + 6 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 5] == L'm'))
 
-// true if tmpw[i] contains an esape-]8 (link embedding) sequence
+// true if `tmpw[i]` contains an esape-]8 (link embedding) sequence
 #define got_esc8                                                               \
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L']') &&             \
    (tmpw[i + 2] == L'8') && (tmpw[i + 3] == L';'))
 
-// The following are helpers of man_toc()
+// The following are helpers of `man_toc()` and `man_sections()`
 
-// true if gline is a section header
+// true if `gline` is a section header
 #define got_sh                                                                 \
   ((glen >= 3) && (L'.' == gline[0]) &&                                        \
    (L'S' == gline[1] || L's' == gline[1]) &&                                   \
    (L'H' == gline[2] || L'h' == gline[2]))
 
-// true if gline is a sub-section header
+// true if `gline` is a sub-section header
 #define got_ss                                                                 \
   ((glen >= 3) && (L'.' == gline[0]) &&                                        \
    (L'S' == gline[1] || L's' == gline[1]) &&                                   \
    (L'S' == gline[2] || L's' == gline[2]))
 
-// true if gline is a tagged paragraph
+// true if `gline` is a tagged paragraph
 #define got_tp                                                                 \
   ((glen >= 3) && (L'.' == gline[0]) &&                                        \
    (L'T' == gline[1] || L't' == gline[1]) &&                                   \
    (L'P' == gline[2] || L'p' == gline[2]))
 
-// true if gline is a command to output delayed text
+// true if `gline` is a command to output delayed text
 #define got_pd                                                                 \
   ((glen >= 3) && (L'.' == gline[0]) &&                                        \
    (L'P' == gline[1] || L'p' == gline[1]) &&                                   \
@@ -349,7 +383,7 @@ bool section_header_level(line_t *line) {
   ((glen > 2) && (gline[0] == L'.') && (gline[1] == L'\\') &&                  \
    ((gline[2] == L'\"' || gline[2] == L'#')))
 
-// Components of got_trap and got_ok
+// Components of `got_trap` and `got_ok`
 #define got_b                                                                  \
   ((glen > 1) && (L'.' == gline[0]) && (L'B' == gline[1] || L'b' == gline[1]))
 #define got_i                                                                  \
@@ -390,48 +424,49 @@ bool section_header_level(line_t *line) {
 // true if a tag line starts with a formatting command that sets a trap
 #define got_trap (got_b || got_i || got_sm || got_sb)
 
-// true if a tag line atarts with an allowed formatting command
+// true if a tag line starts with an allowed formatting command
 #define got_ok                                                                 \
   (got_b || got_i || got_sm || got_sb || got_bi || got_br || got_ib ||         \
    got_ir || got_rb || got_ri)
 
-// Helper of man_toc(). Massage text member of every entry in toc (of size
-// toc_len) with the groff command, in order to remove escaped characters, etc.
+// Helper of `man_toc()`. Massage the `text` of every entry in `toc` (of size
+// `toc_len`) with the `groff` command, in order to remove escaped characters,
+// etc.
 void tocgroff(toc_entry_t *toc, unsigned toc_len) {
   char *tpath;               // temporary file path
   char cmdstr[BS_LINE] = ""; // groff 'massage' command
-  char texts[BS_LINE];       // 8-bit version of current toc text
+  char texts[BS_LINE];       // 8-bit version of current `toc` text
   unsigned i;                // iterator
 
-  // Prepare tpath and cmdstr
+  // Prepare `tpath` and `cmdstr`
   tpath = xtempnam(NULL, "qman");
-  snprintf(cmdstr, BS_LINE, "%s -man -rLL=1024m -Tutf8 %s 2>>/dev/null",
+  snprintf(cmdstr, BS_LINE, "%s -man -rLL=1024m -Tutf8 -k %s 2>>/dev/null",
            config.misc.groff_path, tpath);
 
   // Prepare the environment
   unsetenv("GROFF_SGR");
   setenv("GROFF_NO_SGR", "1", true);
 
-  // Write all texts of toc into temporary file
+  // Write all `text`s of `toc` into temporary file
   FILE *fp = xfopen(tpath, "w");
   xfputs(".TH A A A A A", fp);
   xfputs(".ll 1024m\n", fp);
   for (i = 0; i < toc_len; i++)
     if (NULL != toc[i].text) {
-      wcstombs(texts, toc[i].text, BS_LINE);
+      xwcstombs(texts, toc[i].text, BS_LINE);
       xfputs(texts, fp);
       xfputs("\n.br 0\n", fp);
     }
   xfclose(fp);
 
-  // Massage temporary file with groff and put the results back into the texts
-  // of toc
+  // Massage temporary file with `grof` and put the results back into the
+  // `text`s of `toc`
   FILE *pp = xpopen(cmdstr, "r");
   xfgets(texts, BS_LINE, pp); // discarded
   xfgets(texts, BS_LINE, pp); // discarded
   for (i = 0; i < toc_len;) {
     xfgets(texts, BS_LINE, pp);
-    mbstowcs(toc[i].text, texts, BS_LINE);
+    xmbstowcs(toc[i].text, texts, BS_LINE);
     wbs(toc[i].text);
     wmargtrim(toc[i].text, L"\n");
 
@@ -455,18 +490,18 @@ void tocgroff(toc_entry_t *toc, unsigned toc_len) {
   free(tpath);
 }
 
-// Helper of man_sections(). Massage every entry in sections (of size
-// sections_len) with the groff command, in order to remove escaped characters,
-// etc.
+// Helper of `man_sections()`. Massage every entry in `sections` (of size
+// `sections_len`) with the `groff` command, in order to remove escaped
+// characters, etc.
 void secgroff(wchar_t **sections, unsigned sections_len) {
   char *tpath;               // temporary file path
-  char cmdstr[BS_LINE] = ""; // groff 'massage' command
-  char texts[BS_LINE];       // 8-bit version of current toc text
+  char cmdstr[BS_LINE] = ""; // the massage command
+  char texts[BS_LINE];       // 8-bit version of current `toc` text
   unsigned i;                // iterator
 
-  // Prepare tpath and cmdstr
+  // Prepare `tpath` and `cmdstr`
   tpath = xtempnam(NULL, "qman");
-  snprintf(cmdstr, BS_LINE, "%s -man -rLL=1024m -Tutf8 %s 2>>/dev/null",
+  snprintf(cmdstr, BS_LINE, "%s -man -rLL=1024m -Tutf8 -k %s 2>>/dev/null",
            config.misc.groff_path, tpath);
 
   // Prepare the environment
@@ -479,20 +514,20 @@ void secgroff(wchar_t **sections, unsigned sections_len) {
   xfputs(".ll 1024m\n", fp);
   for (i = 0; i < sections_len; i++)
     if (NULL != sections[i]) {
-      wcstombs(texts, sections[i], BS_LINE);
+      xwcstombs(texts, sections[i], BS_LINE);
       xfputs(texts, fp);
       xfputs("\n.br 0\n", fp);
     }
   xfclose(fp);
 
-  // Massage temporary file with groff and put the results back into the texts
-  // of toc
+  // Massage temporary file with `groff` and put the results back into the
+  // `text`s of `toc`
   FILE *pp = xpopen(cmdstr, "r");
   xfgets(texts, BS_LINE, pp); // discarded
   xfgets(texts, BS_LINE, pp); // discarded
   for (i = 0; i < sections_len;) {
     xfgets(texts, BS_LINE, pp);
-    mbstowcs(sections[i], texts, BS_LINE);
+    xmbstowcs(sections[i], texts, BS_LINE);
     wbs(sections[i]);
     wmargtrim(sections[i], L"\n");
 
@@ -528,11 +563,11 @@ void init() {
   history = aalloc(config.misc.history_size, request_t);
   history_replace(RT_NONE, NULL);
 
-  // Initialize aw_all and sc_all
+  // Initialize `aw_all` and `sc_all`
   aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"''");
   sc_all_len = aprowhat_sections(&sc_all, aw_all, aw_all_len);
 
-  // Initialize page_title
+  // Initialize `page_title`
   wcscpy(page_title, L"");
 
   // initialize regular expressions
@@ -550,7 +585,7 @@ void init() {
 }
 
 int parse_options(int argc, char *const *argv) {
-  // Initialize opstring and longopts arguments of getopt()
+  // Initialize the `opstring` and `longopts` arguments of `getopt()`
   char optstring[3 * asizeof(options)];
   struct option *longopts = aalloc(1 + asizeof(options), struct option);
   unsigned i, optstring_i = 0;
@@ -579,7 +614,7 @@ int parse_options(int argc, char *const *argv) {
   optstring[optstring_i] = '\0';
   longopts[i] = (struct option){0, 0, 0, 0};
 
-  // Parse the options and modify config and history
+  // Parse the options and respond
   while (true) {
     int cur_i;
     int cur = getopt_long(argc, argv, optstring, longopts, &cur_i);
@@ -606,7 +641,7 @@ int parse_options(int argc, char *const *argv) {
       break;
     case 'K':
       // -k or --global-apropos was passed; make sure it will be passed on to
-      // man
+      // `man`
       config.misc.global_apropos = true;
       break;
     case 'a':
@@ -617,13 +652,28 @@ int parse_options(int argc, char *const *argv) {
       // -T or --cli was passed; do not launch the TUI
       config.layout.tui = false;
       break;
+    case 'A':
+      // -A or --action was passed; set `first_action` to the program action
+      // that corresponds `optarg`
+      for (unsigned j = 1; j < PA_QUIT; j++)
+        if (0 == strcasecmp(optarg, keys_names[j])) {
+          first_action = j;
+          break;
+        }
+      if (PA_NULL == first_action) {
+        // Error out if `optarg` doesn't match a program action name
+        wchar_t errmsg[BS_SHORT];
+        swprintf(errmsg, BS_SHORT, L"Unknown program action '%s'", optarg);
+        winddown(ES_USAGE_ERROR, errmsg);
+      }
+      break;
     case 'C':
-      // -C or --config-path was passed; read from a different config file
+      // -C or --config-path was passed; use `optarg` as config file
       if (NULL != config.misc.config_path)
         free(config.misc.config_path);
       config.misc.config_path = xstrdup(optarg);
       break;
-    case 'v':
+    case 'V':
       // -v or --version was passed; print program version and exit
       version();
       free(longopts);
@@ -647,7 +697,7 @@ int parse_options(int argc, char *const *argv) {
 void parse_args(int argc, char *const *argv) {
   unsigned i;                           // iterator
   wchar_t tmp[BS_LINE], tmp2[BS_SHORT]; // temporary
-  unsigned tmp_len; // length of tmp (used to guard against buffer overflows)
+  unsigned tmp_len; // length of `tmp` (used to guard against buffer overflows)
 
   // If the user hasn't asked for a specific request type...
   if (RT_NONE == history[history_cur].request_type) {
@@ -687,18 +737,18 @@ void parse_args(int argc, char *const *argv) {
     if (history[history_cur].request_type == RT_MAN && !config.layout.tui) {
       // If we are showing a manual page, we are in CLI mode...
       if (config.misc.global_apropos) {
-        // ...and the user has requested global apropos, add '-K' to tmp
+        // ...and the user has requested global apropos, add '-K' to `tmp`
         wcscpy(tmp, L"-K ");
         tmp_len = 3;
       } else if (config.misc.global_whatis) {
-        // ...and the user has requested global whatis, add '-a' to tmp
+        // ...and the user has requested global whatis, add '-a' to `tmp`
         wcscpy(tmp, L"-a ");
         tmp_len = 3;
       }
     }
 
-    // Surround all members of argv with single quotes, and flatten them into
-    // the tmp string
+    // Surround all members of `argv` with single quotes, and flatten them into
+    // `tmp`
     for (i = 0; i < argc; i++) {
       swprintf(tmp2, BS_SHORT, L"'%s'", argv[i]);
       if (tmp_len + wcslen(tmp2) < BS_LINE) {
@@ -711,7 +761,7 @@ void parse_args(int argc, char *const *argv) {
       }
     }
 
-    // Set history[history_cur].args to tmp
+    // Set `history[history_cur].args` to `tmp`
     history_replace(history[history_cur].request_type, tmp);
   }
 }
@@ -777,11 +827,11 @@ void history_push(request_type_t rt, const wchar_t *args) {
   history[history_cur].left = page_left;
   history[history_cur].flink = page_flink;
 
-  // Increase history_cur
+  // Increase `history_cur`
   history_cur++;
 
-  // If we're pushing in the middle of the history stack, all subsequent
-  // history entries are lost, and we must free any memory used by their args
+  // If we're pushing in the middle of the `history` stack, all subsequent
+  // history entries are lost, and we must free memory accordingly
   if (history_top > history_cur)
     for (i = history_cur + 1; i <= history_top; i++)
       if (NULL != history[i].args) {
@@ -789,11 +839,11 @@ void history_push(request_type_t rt, const wchar_t *args) {
         history[i].args = NULL;
       }
 
-  // Make history_top equal to history_cur
+  // Make `history_top` equal to `history_cur`
   history_top = history_cur;
 
-  // Failsafe: in the unlikely case history_top exceeds history size, free all
-  // memory used by history and start over
+  // Failsafe: in the unlikely case `history_top` exceeds history size, free all
+  // memory used by `history` and start over
   if (history_top >= config.misc.history_size) {
     requests_free(history, config.misc.history_size);
     history_top = 0;
@@ -836,7 +886,7 @@ void history_reset() {
 
 unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
                        const wchar_t *args) {
-  // Prepare apropos/whatis command
+  // Prepare `apropos`/`whatis` command
   char cmdstr[BS_LINE];
   if (AW_WHATIS == cmd)
     snprintf(cmdstr, BS_LINE, "%s -l %ls 2>>/dev/null", config.misc.whatis_path,
@@ -845,7 +895,7 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
     snprintf(cmdstr, BS_LINE, "%s -l %ls 2>>/dev/null",
              config.misc.apropos_path, args);
 
-  // Execute apropos, and enter its result into a temporary file. lines
+  // Execute the command, and enter its result into a temporary file. `lines`
   // becomes the total number of lines copied.
   FILE *pp = xpopen(cmdstr, "r");
   FILE *fp = xtmpfile();
@@ -859,17 +909,17 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   char line[BS_LINE];     // current line of text, as returned by the command
   char page[BS_SHORT];    // current manual page
   char section[BS_SHORT]; // current section
-  char *word;             // used by strtok() to compile descr
+  char *word;             // used by `strtok()` to compile `descr`
   char descr[BS_LINE];    // current page description
 
   unsigned page_len, section_len, descr_len, i;
 
-  // For each line returned by apropos/whatis...
+  // For each line returned by the command...
   for (i = 0; i < lines; i++) {
     if (-1 == sreadline(line, BS_LINE, fp))
       winddown(ES_OPER_ERROR, L"Malformed temporary apropos/whatis file");
 
-    // Extract page, section, and descr, together with their lengths
+    // Extract `page`, `section`, and `descr`, together with their lengths
     strcpy(page, strtok(line, " ("));
     page_len = strlen(page);
     strcpy(section, strtok(NULL, " ()"));
@@ -884,21 +934,21 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
     }
     descr_len = strlen(descr);
 
-    // Populate the i'th element of res (allocating when necessary)
+    // Populate the `i`th element of `res` (allocating when necessary)
     res[i].page = walloc(page_len);
-    mbstowcs(res[i].page, page, page_len);
+    xmbstowcs(res[i].page, page, page_len + 1);
     res[i].section = walloc(section_len);
-    mbstowcs(res[i].section, section, section_len);
+    xmbstowcs(res[i].section, section, section_len + 1);
     res[i].ident = walloc(page_len + section_len + 3);
     swprintf(res[i].ident, page_len + section_len + 3, L"%s(%s)", page,
              section);
     res[i].descr = walloc(descr_len);
-    mbstowcs(res[i].descr, descr, descr_len);
+    xmbstowcs(res[i].descr, descr, descr_len + 1);
   }
 
   xfclose(fp);
 
-  // If no results were returned by apropos/whatis, set err and err_msg
+  // If no results were returned by the command, set `err` and `err_msg`
   err = false;
   if (0 == lines) {
     err = true;
@@ -944,7 +994,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
   const unsigned text_width =
       line_width - lmargin_width - rmargin_width; // main text area
   const unsigned hfc_width =
-      text_width / 2 + text_width % 2; // header/footer centre area
+      text_width / 2 + text_width % 2; // header/footer center area
   const unsigned hfl_width =
       (text_width - hfc_width) / 2; // header/footer left area
   const unsigned hfr_width =
@@ -962,13 +1012,13 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
   line_alloc(res[ln], 0);
   inc_ln;
   line_alloc(res[ln], line_width);
-  const unsigned title_len = wcslen(title); // title length
-  const unsigned key_len = wcslen(key);     // key length
+  const unsigned title_len = wcslen(title); // `title` length
+  const unsigned key_len = wcslen(key);     // `key` length
   const unsigned lts_len =
       (hfc_width - title_len) / 2 +
-      (hfc_width - title_len) % 2; // length of space on the left of title
+      (hfc_width - title_len) % 2; // length of space on the left of `title`
   const unsigned rts_len =
-      (hfc_width - title_len) / 2; // length of space on the right of title
+      (hfc_width - title_len) / 2; // length of space on the right of `title`
   swprintf(res[ln].text, line_width + 1, L"%*s%-*ls%*s%ls%*s%*ls%*s", //
            lmargin_width, "",                                         //
            hfl_width, key,                                            //
@@ -1059,7 +1109,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
                     rmargin_width); // used in place of line_width; might be
                                     // longer, in which case we'll scroll
 
-        // Page name and section (ident)
+        // Page name and section (`ident`)
         inc_ln;
         line_alloc(res[ln], spcl_width);
         swprintf(res[ln].text, spcl_width + 1, L"%*s%-*ls", //
@@ -1148,10 +1198,10 @@ bool aprowhat_has(const wchar_t *needle, const aprowhat_t *hayst,
 }
 
 unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
-  char gpath[BS_LINE];    // path to Groff document for manual page
-  int glen;               // length of current line in Groff document
-  wchar_t gline[BS_LINE]; // current line in Groff document
-  unsigned en = 0;        // current entry in TOC
+  char gpath[BS_LINE];    // path to groff document for manual page
+  int glen;               // length of current line in groff document
+  wchar_t gline[BS_LINE]; // current line in groff document
+  unsigned en = 0;        // current entry in `res`
   char tmp[BS_LINE];      // temporary
 
   unsigned res_len = BS_SHORT;                // result buffer length
@@ -1172,18 +1222,18 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
     winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
   xpclose(pp);
 
-  // Open gpath
+  // Open `gpath`
   archive_t gp = aropen(gpath);
 
-  // For each line in gpath, gline...
+  // For each line in `gpath`, `gline`...
   argets(gp, tmp, BS_LINE);
   while (!areof(gp)) {
-    glen = mbstowcs(gline, tmp, BS_LINE);
+    glen = xmbstowcs(gline, tmp, BS_LINE);
 
     if (-1 == glen)
-      winddown(ES_OPER_ERROR, L"Failed to read compressed manual page source");
+      winddown(ES_OPER_ERROR, L"Failed to read manual page source");
 
-    // If line is a section heading, add the corresponding data to res
+    // If line is a section heading, add the corresponding data to `res`
     if (got_sh) {
       // Section heading
       unsigned textsp = wmargend(&gline[3], L"\"");
@@ -1272,7 +1322,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   unsigned res_len = BS_LINE;            // result buffer length
   line_t *res = aalloc(res_len, line_t); // result buffer
 
-  // Set up the environment for man to create its output as we want it
+  // Set up the environment for `man` to create its output as we want it
   char *old_term = getenv("TERM");
   setenv("TERM", "xterm", true);
   sprintf(tmps, "%d", 1 + text_width);
@@ -1285,7 +1335,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   setenv("GROFF_SGR", "1", true);
   unsetenv("GROFF_NO_SGR");
 
-  // Prepare man command
+  // Prepare `man` command
   char cmdstr[BS_LINE];
   if (local_file)
     snprintf(cmdstr, BS_LINE,
@@ -1295,21 +1345,21 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     snprintf(cmdstr, BS_LINE, "%s --warnings='!all' %ls 2>>/dev/null",
              config.misc.man_path, args);
 
-  // Execute man
+  // Execute `man`
   FILE *pp = xpopen(cmdstr, "r");
 
   section_header_level(NULL);
 
   // Discard any empty lines on top, and read the first non-empty line into
-  // tmps/tmpw
+  // `tmps`/`tmpw`
   xfgets(tmps, BS_LINE, pp);
-  len = mbstowcs(tmpw, tmps, BS_LINE);
+  len = xmbstowcs(tmpw, tmps, BS_LINE);
   while (0 == len || L'\n' == tmpw[wmargend(tmpw, L"\n")]) {
     xfgets(tmps, BS_LINE, pp);
-    len = mbstowcs(tmpw, tmps, BS_LINE);
+    len = xmbstowcs(tmpw, tmps, BS_LINE);
   }
 
-  // For each line of man's output (read into tmps/tmpw)...
+  // For each line of `man`'s output...
   while (!feof(pp)) {
     // At line 1, insert the list of sections (if enabled)
     if (config.layout.sections_on_top && 1 == ln) {
@@ -1360,21 +1410,21 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
       inc_ln;
 
       wafree(sc, sc_len);
-      len = mbstowcs(tmpw, tmps, BS_LINE);
+      len = xmbstowcs(tmpw, tmps, BS_LINE);
     }
 
     if (-1 == len)
       winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
 
-    // Allocate memory for a new line in res
+    // Allocate memory for a new line in `res`
     line_alloc(res[ln], config.layout.lmargin + len + 1);
 
     // Add spaces for left margin
     for (j = 0; j < config.layout.lmargin; j++)
       res[ln].text[j] = L' ';
 
-    // Read the contents of tmpw one character at a time, and build the line's
-    // text, reg, bold, italic, and uline members
+    // Read the contents of `tmpw` one character at a time, and build the line's
+    // `text`, `reg`, `bold`, `italic`, and `uline` members
     bool bold_nosgr = false;  // a 'bold' typewriter sequence has been seen
     bool uline_nosgr = false; // a 'underline' typewriter sequence has been seen
     for (i = 0; i < len; i++) {
@@ -1422,16 +1472,14 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
         if (ilink) {
           if (ilink_ln == ln) {
             ilink_end = j;
-            if (ilink_end > ilink_start)
-              add_link(&res[ln], ilink_start, j, false, 0, 0, LT_HTTP,
-                       ilink_trgt);
+            add_link(&res[ln], ilink_start, j, false, 0, 0, LT_HTTP,
+                     ilink_trgt);
           } else if (ln > 0) {
             ilink_end = res[ln - 1].length - 1;
             ilink_start_next = wmargend(res[ln].text, NULL);
             ilink_end_next = j;
-            if (ilink_end > ilink_start && ilink_end_next > ilink_start_next)
-              add_link(&res[ln - 1], ilink_start, ilink_end, true,
-                       ilink_start_next, ilink_end_next, LT_HTTP, ilink_trgt);
+            add_link(&res[ln - 1], ilink_start, ilink_end, true,
+                     ilink_start_next, ilink_end_next, LT_HTTP, ilink_trgt);
           }
           ilink = false;
         } else {
@@ -1469,9 +1517,9 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     res[ln].text[j] = L'\0';
     res[ln].length = j + 1;
 
-    // Read next line of man output into tmps/tmpw
+    // Read next line of `man` output into `tmps`/`tmpw`
     xfgets(tmps, BS_LINE, pp);
-    len = mbstowcs(tmpw, tmps, BS_LINE);
+    len = xmbstowcs(tmpw, tmps, BS_LINE);
 
     inc_ln;
   }
@@ -1493,7 +1541,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     }
   }
 
-  // If no results were returned by man, set err and err_msg
+  // If no results were returned by `man`, set `err` and `err_msg`
   err = false;
   if (0 == ln) {
     err = true;
@@ -1505,13 +1553,13 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 }
 
 unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
-  char gpath[BS_LINE];    // path to Groff document for manual page
-  int glen;               // length of current line in Groff document
-  wchar_t gline[BS_LINE]; // current line in Groff document
-  unsigned en = 0;        // current entry in TOC
+  char gpath[BS_LINE];    // path to groff document for manual page
+  int glen;               // length of current line in groff document
+  wchar_t gline[BS_LINE]; // current line in groff document
+  unsigned en = 0;        // current entry in `res`
   bool sh_seen = false;   // whether a section header has been seen
   char tmp[BS_LINE];      // temporary
-  unsigned textsp; // real beginning of gline's text (ignoring whitespace)
+  unsigned textsp; // real beginning of `gline`'s text (ignoring whitespace)
 
   unsigned res_len = BS_LINE;                      // result buffer length
   toc_entry_t *res = aalloc(res_len, toc_entry_t); // result buffer
@@ -1524,7 +1572,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
     inc_en;
   }
 
-  // Use GNU man to figure out gpath
+  // Use `man` to figure out `gpath`
   char cmdstr[BS_LINE];
   if (local_file)
     snprintf(cmdstr, BS_LINE,
@@ -1539,18 +1587,18 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
     winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
   xpclose(pp);
 
-  // Open gpath
+  // Open `gpath`
   archive_t gp = aropen(gpath);
 
-  // For each line in gpath, gline...
+  // For each line in `gpath`, `gline`...
   argets(gp, tmp, BS_LINE);
   while (!areof(gp)) {
-    glen = mbstowcs(gline, tmp, BS_LINE);
+    glen = xmbstowcs(gline, tmp, BS_LINE);
 
     if (-1 == glen)
-      winddown(ES_OPER_ERROR, L"Failed to read compressed manual page source");
+      winddown(ES_OPER_ERROR, L"Failed to read manual page source");
 
-    // If line can be a TOC entry, add the corresponding data to res
+    // If line can be a TOC entry, add the corresponding data to `res`
     if (got_sh) {
       // Section heading
       res[en].type = TT_HEAD;
@@ -1576,7 +1624,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       // Tagged paragraph
       argets(gp, tmp, BS_LINE);
       if (!areof(gp)) {
-        glen = mbstowcs(gline, tmp, BS_LINE);
+        glen = xmbstowcs(gline, tmp, BS_LINE);
         {
           // Edge case: the tag line contains only a comment or a line that must
           // otherwise be skipped; skip to next line
@@ -1584,7 +1632,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
             argets(gp, tmp, BS_LINE);
             if (areof(gp))
               break;
-            glen = mbstowcs(gline, tmp, BS_LINE);
+            glen = xmbstowcs(gline, tmp, BS_LINE);
           }
         }
         {
@@ -1594,7 +1642,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
             argets(gp, tmp, BS_LINE);
             if (areof(gp))
               break;
-            glen = mbstowcs(gline, tmp, BS_LINE);
+            glen = xmbstowcs(gline, tmp, BS_LINE);
           }
           if (areof(gp))
             break;
@@ -1673,13 +1721,13 @@ link_loc_t prev_link(const line_t *lines, unsigned lines_len,
   unsigned i;
   link_loc_t res;
 
-  // If start was not found, return not found
+  // If `start` was not found, return not found
   if (!start.ok) {
     res.ok = false;
     return res;
   }
 
-  // If line no. start.line has a link before start.link, return that link
+  // If line no. `start.line` has a link before `start.link`, return that link
   if (start.link > 0) {
     res.ok = true;
     res.line = start.line;
@@ -1688,7 +1736,7 @@ link_loc_t prev_link(const line_t *lines, unsigned lines_len,
   }
 
   // Otherwise, return the last link of the first line before line no.
-  // start.line that has links
+  // `start.line` that has links
   for (i = start.line - 1; i > 0; i--) {
     if (lines[i].links_length > 0) {
       res.ok = true;
@@ -1714,13 +1762,13 @@ link_loc_t next_link(const line_t *lines, unsigned lines_len,
     return res;
   }
 
-  // If start.line is larger than lines_len, return not found
+  // If `start.line` is larger than `lines_len`, return not found
   if (start.line >= lines_len) {
     res.ok = false;
     return res;
   }
 
-  // If line no. start.line has a link after start.link, return that link
+  // If line no. `start.line` has a link after `start.link`, return that link
   if (lines[start.line].links_length > start.link + 1) {
     res.ok = true;
     res.line = start.line;
@@ -1729,7 +1777,7 @@ link_loc_t next_link(const line_t *lines, unsigned lines_len,
   }
 
   // Otherwise, return the first link of the first line after line no.
-  // start.line that has links
+  // `start.line` that has links
   for (i = start.line + 1; i < lines_len; i++) {
     if (lines[i].links_length > 0) {
       res.ok = true;
@@ -1804,9 +1852,9 @@ unsigned search(result_t **dst, const wchar_t *needle, const line_t *lines,
                 unsigned lines_len, bool cs) {
   unsigned ln;                                // current line no.
   unsigned i = 0;                             // current result no.
-  const unsigned needle_len = wcslen(needle); // length of needle
+  const unsigned needle_len = wcslen(needle); // length of `needle`
   wchar_t *cur_hayst;         // current haystuck (i.e. text of current line)
-  wchar_t *hit = NULL;        // current return value of wcscasestr()
+  wchar_t *hit = NULL;        // current return value of `wcscasestr()`
   unsigned res_len = BS_LINE; // result buffer length
   result_t *res = aalloc(res_len, result_t); // result buffer
 
@@ -1814,20 +1862,20 @@ unsigned search(result_t **dst, const wchar_t *needle, const line_t *lines,
   for (ln = 0; ln < lines_len; ln++) {
     // Start at the beginning of the line's text
     cur_hayst = lines[ln].text;
-    // Search for needle
+    // Search for `needle`
     if (cs)
       hit = wcscasestr(cur_hayst, needle);
     else
       hit = wcsstr(cur_hayst, needle);
-    // While needle has been found...
+    // While `needle` has been found...
     while (NULL != hit) {
-      // Add the search result to res[i]
+      // Add the search result to `res[i]`
       res[i].line = ln;
       res[i].start = hit - lines[ln].text;
       res[i].end = res[i].start + needle_len;
-      // Go to the part of the line's text that follows needle
+      // Go to the part of the line's text that follows `needle`
       cur_hayst = hit + needle_len;
-      // And search for needle again (except in case of overflow)
+      // And search for `needle` again
       if (cur_hayst - lines[ln].text < lines[ln].length)
         if (cs)
           hit = wcscasestr(cur_hayst, needle);
@@ -1835,7 +1883,7 @@ unsigned search(result_t **dst, const wchar_t *needle, const line_t *lines,
           hit = wcsstr(cur_hayst, needle);
       else
         hit = NULL;
-      // Increment i (and reallocate memory if necessary)
+      // Increment `i` (and reallocate memory if necessary)
       inc_i;
     }
   }
@@ -1877,9 +1925,12 @@ extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines,
   }
 
   wchar_t *res = walloc(BS_LINE * config.layout.height); // return value
+  wchar_t tmp[BS_LINE];                                  // temporary
+  unsigned ln;                                           // current line number
+
+  // Necessary to get rid of valgrind warnings
   memset(res, 0, sizeof(wchar_t) * BS_LINE * config.layout.height);
-  wchar_t tmp[BS_LINE]; // temporary
-  unsigned ln;          // current line number
+  memset(tmp, 0, sizeof(wchar_t) * BS_LINE);
 
   // Generate return value
   if (mark.start_line == mark.end_line) {
@@ -1890,10 +1941,10 @@ extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines,
     // Marked text is in multiple lines
     for (ln = mark.start_line; ln <= mark.end_line; ln++) {
       if (ln == mark.start_line) {
-        // First line; append text from start_char to end of line
+        // First line; append text from `start_char` to end of line
         wcscat(res, &lines[ln].text[mark.start_char]);
       } else if (ln == mark.end_line) {
-        // Last line; append text from beginning of line to end_char
+        // Last line; append text from beginning of line to `end_char`
         wcsncpy(tmp, lines[ln].text, 1 + mark.end_char);
         tmp[1 + mark.end_char] = L'\0';
         wcscat(res, tmp);
@@ -1909,20 +1960,20 @@ extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines,
 }
 
 void populate_page() {
-  // If page is already populated, free its allocated memory
+  // If `page` is already populated, free its allocated memory
   if (NULL != page && page_len > 0) {
     lines_free(page, page_len);
     page = NULL;
     page_len = 0;
   }
 
-  // Reset TOC
+  // Reset `toc`
   if (NULL != toc && toc_len > 0)
     toc_free(toc, toc_len);
   toc = NULL;
   toc_len = 0;
 
-  // Populate page according to the request type of history[history_cur]
+  // Populate page according to the request type of `history[history_cur]`
   switch (history[history_cur].request_type) {
   case RT_INDEX:
     wcscpy(page_title, L"All Manual Pages");
@@ -1959,7 +2010,7 @@ void populate_page() {
     winddown(ES_OPER_ERROR, L"Unexpected program request");
   }
 
-  // Reset search results
+  // Reset search `results`
   if (NULL != results && results_len > 0)
     free(results);
   results = NULL;
@@ -1967,7 +2018,8 @@ void populate_page() {
 }
 
 void populate_toc() {
-  // If the TOC doesn't exist yet, use man_toc() or sc_toc() to generate it now
+  // If the TOC doesn't exist yet, use `man_toc()` or `sc_toc()` to generate it
+  // now
   if (NULL == toc || 0 == toc_len) {
     request_type_t rt =
         history[history_cur].request_type;     // current request type
@@ -2068,7 +2120,7 @@ void winddown(int ec, const wchar_t *em) {
   // Deallocate memory used by base64
   base64_cleanup();
 
-  // Deallocate memory used by config global
+  // Deallocate memory used by `config` global
   if (NULL != config.chars.sbar_top)
     free(config.chars.sbar_top);
   if (NULL != config.chars.sbar_vline)
@@ -2118,35 +2170,35 @@ void winddown(int ec, const wchar_t *em) {
   if (NULL != config.misc.mailer_path)
     free(config.misc.mailer_path);
 
-  // Deallocate memory used by history global
+  // Deallocate memory used by `history` global
   requests_free(history, config.misc.history_size);
 
-  // Deallocate memory used by aw_all global
+  // Deallocate memory used by `aw_all` global
   if (NULL != aw_all && aw_all_len > 0)
     aprowhat_free(aw_all, aw_all_len);
 
-  // Deallocate memory used by sc_all global
+  // Deallocate memory used by `sc_all` global
   if (NULL != sc_all && sc_all_len > 0)
     wafree(sc_all, sc_all_len);
 
-  // Deallocate memory used by page global
+  // Deallocate memory used by `page` global
   if (NULL != page && page_len > 0)
     lines_free(page, page_len);
 
-  // Deallocate memory used by the TOC
+  // Deallocate memory used by `toc` global
   if (NULL != toc && toc_len > 0)
     toc_free(toc, toc_len);
 
-  // Deallocate memory used by results
+  // Deallocate memory used by `results` global
   if (NULL != results && results_len > 0)
     free(results);
 
-  // Deallocate memory used by re_... regular expression globals
+  // Deallocate memory used by `re_...` regular expression globals
   regfree(&re_man.re);
   regfree(&re_http.re);
   regfree(&re_email.re);
 
-  // (Optionally) print em and exit
+  // (Optionally print `em` and) exit
   if (NULL != em)
     fwprintf(stderr, L"%ls\n", em);
   exit(ec);
