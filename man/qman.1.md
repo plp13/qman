@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.4.0
+footer: Qman 1.4.0-1-g4950ebc
 date: December 15, 2023
 ---
 
@@ -414,6 +414,9 @@ it to the default value of 80.
 Upon receiving **SIGUSR1**, the program interrupts its operation and attempts
 to locate and parse a configuration file, using the process outlined in
 **CONFIGURATION**.
+
+This feature fails to work with certain terminals, and should be considered
+experimental.
 
 # EXIT STATUS
 | Value | Description                                                          |

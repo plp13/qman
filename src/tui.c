@@ -132,7 +132,22 @@ mouse_t mouse_status = MS_EMPTY;
 // Re-configure the program. `init_tui()` makes sure this is called whenever
 // `SIGUSR1` is received.
 void sigusr1_handler() {
-  sendescseq("]104"); // reset color palette to terminal default
+  // Reset RGB color values to their defaults
+  if (tcap.colours < 256 || tcap.term == strstr(tcap.term, "rxvt")) {
+    // We shouldn't attempt to reconfigure on ancient terminals
+    return;
+  } else if (0 == strcmp(tcap.term, "xterm-ghostty")) {
+    // Ghostty can reset its color palette using an escape code
+    sendescseq("]104");
+  } else {
+    // All other terminals require `tput reset` (very ugly hack; perhaps one day
+    // we'll learn how to do this by sending the appropriate escape sequences)
+    system("tput reset");
+    raw();
+    noecho();
+  }
+
+  // Reconfigure
   configure();
   init_tui_tcap();
   if (-1 == config.tcap.colours || t_auto == config.tcap.rgb ||
@@ -141,7 +156,8 @@ void sigusr1_handler() {
   init_tui_colours();
   init_tui_mouse();
   doupdate();
-  // Cause `termsize_changed()` to succeed, thus forcing a redraw
+
+  // Cause next `termsize_changed()` to succeed, thus forcing a redraw
   config.layout.width = 0;
   config.layout.height = 0;
 }
