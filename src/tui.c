@@ -129,6 +129,22 @@ mouse_t mouse_status = MS_EMPTY;
     }                                                                          \
   }
 
+void terminfo_reset() {
+  char *s;
+  if ((s = tigetstr("rs1")) != NULL) putp(s);
+  if ((s = tigetstr("rs2")) != NULL) putp(s);
+  if ((s = tigetstr("rs3")) != NULL) putp(s);
+
+  /* if we don't have access to ncurses we might want to use the
+   * following instead:
+   *
+   * printf("\033c");         // reset device (supported by vt100, i.e. all unix)
+   * printf("\033[0m");       // reset SGR (i.e. styles and colours)
+   * printf("\033]104\007");  // reset OSC palette
+   */
+  fflush(stdout);
+}
+
 // Re-configure the program. `init_tui()` makes sure this is called whenever
 // `SIGUSR1` is received.
 void sigusr1_handler() {
@@ -142,7 +158,7 @@ void sigusr1_handler() {
   } else {
     // All other terminals require `tput reset` (very ugly hack; perhaps one day
     // we'll learn how to do this by sending the appropriate escape sequences)
-    system("tput reset");
+    terminfo_reset();
     raw();
     noecho();
   }
