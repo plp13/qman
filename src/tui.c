@@ -6,6 +6,11 @@
 // Global variables
 //
 
+// Set by `sigusr1_reset()` to true if terminfo reset strings were sent to the
+// terminal. `winddown()` needs to be aware of this, in order to perform
+// additional cleanups.
+bool _terminfo_reset = false;
+
 tcap_t tcap;
 
 WINDOW *wmain = NULL;
@@ -131,7 +136,7 @@ mouse_t mouse_status = MS_EMPTY;
 
 // Helper of `sigusr1_handler()`. Reset terminal RGB color values to their
 // defaults.
-void terminfo_reset() {
+void sigusr1_reset() {
   if (0 == strcmp(tcap.term, "xterm-ghostty")) {
     // To reset its color palette, ghostty needs a special escape code
     sendescseq("]104");
@@ -146,6 +151,7 @@ void terminfo_reset() {
     if ((s = tigetstr("rs3")) != NULL)
       putp(s);
     fflush(stdout);
+    _terminfo_reset = true;
     // The above might put the terminal in cooked mode and/or enable echo
     raw();
     noecho();
@@ -160,7 +166,7 @@ void sigusr1_handler() {
     return;
   }
 
-  terminfo_reset();
+  sigusr1_reset();
 
   // Reconfigure
   configure();
@@ -1327,6 +1333,16 @@ void winddown_tui() {
   }
 
   endwin();
+  if (_terminfo_reset) {
+    char *s;
+    if ((s = tigetstr("rs1")) != NULL)
+      putp(s);
+    if ((s = tigetstr("rs2")) != NULL)
+      putp(s);
+    if ((s = tigetstr("rs3")) != NULL)
+      putp(s);
+    fflush(stdout);
+  }
 }
 
 //
