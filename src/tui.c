@@ -129,39 +129,38 @@ mouse_t mouse_status = MS_EMPTY;
     }                                                                          \
   }
 
+// Helper of `sigusr1_handler()`. Reset terminal RGB color values to their
+// defaults.
 void terminfo_reset() {
-  char *s;
-  if ((s = tigetstr("rs1")) != NULL) putp(s);
-  if ((s = tigetstr("rs2")) != NULL) putp(s);
-  if ((s = tigetstr("rs3")) != NULL) putp(s);
-
-  /* if we don't have access to ncurses we might want to use the
-   * following instead:
-   *
-   * printf("\033c");         // reset device (supported by vt100, i.e. all unix)
-   * printf("\033[0m");       // reset SGR (i.e. styles and colours)
-   * printf("\033]104\007");  // reset OSC palette
-   */
-  fflush(stdout);
+  if (0 == strcmp(tcap.term, "xterm-ghostty")) {
+    // To reset its color palette, ghostty needs a special escape code
+    sendescseq("]104");
+  } else {
+    // For all other terminals, we use their reset strings, as provided by
+    // terminfo
+    char *s;
+    if ((s = tigetstr("rs1")) != NULL)
+      putp(s);
+    if ((s = tigetstr("rs2")) != NULL)
+      putp(s);
+    if ((s = tigetstr("rs3")) != NULL)
+      putp(s);
+    fflush(stdout);
+    // The above might put the terminal in cooked mode and/or enable echo
+    raw();
+    noecho();
+  }
 }
 
 // Re-configure the program. `init_tui()` makes sure this is called whenever
 // `SIGUSR1` is received.
 void sigusr1_handler() {
-  // Reset RGB color values to their defaults
+  // Don't attempt attempt to reconfigure on ancient terminals
   if (tcap.colours < 256 || tcap.term == strstr(tcap.term, "rxvt")) {
-    // We shouldn't attempt to reconfigure on ancient terminals
     return;
-  } else if (0 == strcmp(tcap.term, "xterm-ghostty")) {
-    // To reset its color palette, ghostty needs an escape code
-    sendescseq("]104");
-  } else {
-    // All other terminals require `tput reset` (very ugly hack; perhaps one day
-    // we'll learn how to do this by sending the appropriate escape sequences)
-    terminfo_reset();
-    raw();
-    noecho();
   }
+
+  terminfo_reset();
 
   // Reconfigure
   configure();
