@@ -137,7 +137,7 @@ void sigusr1_handler() {
     // We shouldn't attempt to reconfigure on ancient terminals
     return;
   } else if (0 == strcmp(tcap.term, "xterm-ghostty")) {
-    // Ghostty can reset its color palette using an escape code
+    // To reset its color palette, ghostty needs an escape code
     sendescseq("]104");
   } else {
     // All other terminals require `tput reset` (very ugly hack; perhaps one day
