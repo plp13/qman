@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.4.0-7-ge263e76 -- [see what's new](#new-in-this-version)
+Version 1.4.0-8-g36bef08 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -244,6 +244,12 @@ open a pull request to to add it to the repository).
 ## Contributing
 If you wish to contribute to the program's development, clone the
 [devel](https://github.com/plp13/qman/tree/devel) branch:
+
+> **:question: It doesn't work on my non-Linux O/S (MacOS, FreeBSD, etc.)**
+
+Qman is specific to Linux, built upon the GNU `man` toolchain. Ports to other
+operating systems are possible. However, they'd most probably require a
+non-trivial amount of effort. They'd also need to be done as separate forks.
 
 ```
 $ git clone -b devel https://github.com/plp13/qman qman
