@@ -320,8 +320,8 @@ int wcs2ch(const wchar_t *src) {
     if (NULL == value)                                                         \
       trgt = NULL;                                                             \
     else {                                                                     \
-      trgt = walloc(value_len * 4);                                            \
-      xwcstombs(trgt, value, value_len);                                       \
+      trgt = walloc(value_len * 4 + 1);                                        \
+      xwcstombs(trgt, value, value_len * 4 + 1);                               \
     }                                                                          \
     return;                                                                    \
   }

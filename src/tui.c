@@ -6,6 +6,11 @@
 // Global variables
 //
 
+// Set by `sigusr1_reset()` to true if terminfo reset strings were sent to the
+// terminal. `winddown()` needs to be aware of this, in order to perform
+// additional cleanups.
+bool _terminfo_reset = false;
+
 tcap_t tcap;
 
 WINDOW *wmain = NULL;
@@ -129,10 +134,41 @@ mouse_t mouse_status = MS_EMPTY;
     }                                                                          \
   }
 
+// Helper of `sigusr1_handler()`. Reset terminal RGB color values to their
+// defaults.
+void sigusr1_reset() {
+  if (0 == strcmp(tcap.term, "xterm-ghostty")) {
+    // To reset its color palette, ghostty needs a special escape code
+    sendescseq("]104");
+  } else {
+    // For all other terminals, we use their reset strings, as provided by
+    // terminfo
+    char *s;
+    if ((s = tigetstr("rs1")) != NULL)
+      putp(s);
+    if ((s = tigetstr("rs2")) != NULL)
+      putp(s);
+    if ((s = tigetstr("rs3")) != NULL)
+      putp(s);
+    fflush(stdout);
+    _terminfo_reset = true;
+    // The above might put the terminal in cooked mode and/or enable echo
+    raw();
+    noecho();
+  }
+}
+
 // Re-configure the program. `init_tui()` makes sure this is called whenever
 // `SIGUSR1` is received.
 void sigusr1_handler() {
-  sendescseq("]104"); // reset color palette to terminal default
+  // Don't attempt attempt to reconfigure on ancient terminals
+  if (tcap.colours < 256 || tcap.term == strstr(tcap.term, "rxvt")) {
+    return;
+  }
+
+  sigusr1_reset();
+
+  // Reconfigure
   configure();
   init_tui_tcap();
   if (-1 == config.tcap.colours || t_auto == config.tcap.rgb ||
@@ -141,7 +177,8 @@ void sigusr1_handler() {
   init_tui_colours();
   init_tui_mouse();
   doupdate();
-  // Cause `termsize_changed()` to succeed, thus forcing a redraw
+
+  // Cause next `termsize_changed()` to succeed, thus forcing a redraw
   config.layout.width = 0;
   config.layout.height = 0;
 }
@@ -1296,6 +1333,16 @@ void winddown_tui() {
   }
 
   endwin();
+  if (_terminfo_reset) {
+    char *s;
+    if ((s = tigetstr("rs1")) != NULL)
+      putp(s);
+    if ((s = tigetstr("rs2")) != NULL)
+      putp(s);
+    if ((s = tigetstr("rs3")) != NULL)
+      putp(s);
+    fflush(stdout);
+  }
 }
 
 //
