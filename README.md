@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.4.1-2-g9640edf -- [see what's new](#new-in-this-version)
+Version 1.4.1-3-g1a953df -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
