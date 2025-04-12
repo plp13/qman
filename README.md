@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.4.0-10-g9d2539e -- [see what's new](#new-in-this-version)
+Version 1.4.1 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -63,6 +63,8 @@ and should be reported using the [issues](https://github.com/plp13/qman/issues)
 page.
 
 ## New in this version
+
+Version 1.4.0 introduces the following:
 - A new configuration subsystem that provides an `include` directive, allowing
   Qman's configuration to be broken into multiple files
 - A basic config file, `qman.conf`, together with a number of 'theme' config
@@ -76,6 +78,10 @@ page.
 - Option `-A`/`--action` lets the user specify a program action to be performed
   upon startup
 - Miscellaneous bug fixes and documentation updates
+
+Version 1.4.1 fixes a few bugs introduced with the on-the-fly reconfiguration
+feature, and a build failure when using `musl-libc`. It also includes some
+minor documentation updates.
 
 > **:warning: Caution**
 >
