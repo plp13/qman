@@ -26,7 +26,7 @@ void *xcalloc(size_t nmemb, size_t size) {
 }
 
 void *xreallocarray(void *ptr, size_t nmemb, size_t size) {
-#if defined(_DEFAULT_SOURCE) || defined(_GNU_SOURCE)
+#if defined(__GLIBC__) && (defined(_DEFAULT_SOURCE) || defined(_GNU_SOURCE))
   void *const res = reallocarray(ptr, nmemb, size);
 #else
   size_t total = nmemb * size;

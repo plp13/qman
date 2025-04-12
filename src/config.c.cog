@@ -608,7 +608,11 @@ for section, options in config_def.config_def.items():
 [[[end]]]*/
 
   if (NULL == config.misc.program_name)
+#if defined(__GLIBC__)
     config.misc.program_name = program_invocation_short_name;
+#else
+    config.misc.program_name = "qman";
+#endif
 
   set_transition_colours;
 }

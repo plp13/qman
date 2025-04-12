@@ -39,9 +39,9 @@
 #include <lzma.h>
 #endif
 
-#define _GNU_SOURCE
+#if defined(__GLIBC__)
 extern char *program_invocation_short_name;
-#undef _GNU_SOURCE
+#endif
 
 #include "util.h"
 #include "eini.h"
