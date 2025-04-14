@@ -160,7 +160,7 @@ void sigusr1_reset() {
 
 // Re-configure the program. `init_tui()` makes sure this is called whenever
 // `SIGUSR1` is received.
-void sigusr1_handler() {
+void sigusr1_handler(int signum) {
   // Don't attempt attempt to reconfigure on ancient terminals
   if (tcap.colours < 256 || tcap.term == strstr(tcap.term, "rxvt")) {
     return;
