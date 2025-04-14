@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.4.1-1-g9f8b161 -- [see what's new](#new-in-this-version)
+Version 1.4.1-2-g68c7051 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -82,6 +82,8 @@ Version 1.4.0 introduces the following:
 Version 1.4.1 fixes a few bugs introduced with the on-the-fly reconfiguration
 feature, and a build failure when using `musl-libc`. It also includes some
 minor documentation updates.
+
+Version 1.4.2 fixes a compiler error with `gcc` 14.
 
 > **:warning: Caution**
 >
