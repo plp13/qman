@@ -4,7 +4,7 @@
 
 #define EINI_H
 
-#include <lib.h>
+#include "lib.h"
 
 //
 // Types

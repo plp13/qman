@@ -36,7 +36,7 @@ deps = [
 if get_option('gzip').enabled() or get_option('gzip').auto()
   gzip = dependency('zlib', required: true)
   deps += [gzip]
-  add_global_arguments('-DQMAN_GZIP=true', language : 'c')
+  add_global_arguments('-DQMAN_GZIP=true', language: 'c')
 endif
 if get_option('bzip2').enabled() or get_option('bzip2').auto()
   bzip2 = dependency('bzip2', required: false)
@@ -44,7 +44,7 @@ if get_option('bzip2').enabled() or get_option('bzip2').auto()
     bzip2 = cc.find_library('bz2', required: true)
   endif
   deps += [bzip2]
-  add_global_arguments('-DQMAN_BZIP2=true', language : 'c')
+  add_global_arguments('-DQMAN_BZIP2=true', language: 'c')
 endif
 if get_option('lzma').enabled() or get_option('lzma').auto()
   xz = dependency('liblzma', required: false)
@@ -52,7 +52,7 @@ if get_option('lzma').enabled() or get_option('lzma').auto()
     xz = cc.find_library('lzma', required: true)
   endif
   deps += [xz]
-  add_global_arguments('-DQMAN_LZMA=true', language : 'c')
+  add_global_arguments('-DQMAN_LZMA=true', language: 'c')
 endif
 if get_option('tests').enabled() or get_option('tests').auto()
   cunit = dependency('cunit', required: true)
