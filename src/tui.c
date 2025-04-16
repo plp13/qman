@@ -160,7 +160,10 @@ void sigusr1_reset() {
 
 // Re-configure the program. `init_tui()` makes sure this is called whenever
 // `SIGUSR1` is received.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 void sigusr1_handler(int signum) {
+#pragma GCC diagnostic pop
   // Don't attempt attempt to reconfigure on ancient terminals
   if (tcap.colours < 256 || tcap.term == strstr(tcap.term, "rxvt")) {
     return;
@@ -2382,7 +2385,7 @@ bool tui_mouse_click(short y, short x) {
   // clear the selection
   if (mark.enabled) {
     wchar_t *mt;
-    get_mark(&mt, mark, page, page_len);
+    get_mark(&mt, mark, page);
     editcopy(mt);
     free(mt);
 

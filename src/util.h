@@ -375,14 +375,15 @@ extern wchar_t *wcscasestr(const wchar_t *haystack, const wchar_t *needle);
 extern unsigned scopylines(FILE *source, FILE *target);
 
 // Read a line from file `fp`, and place the result in `str` (without the
-// trailing newline). If the read was succesful, return the resulting string's
-// length. Otherwise, return -1.
+// trailing newline). `size` signifies the maximum number of characters to read.
+// If the read was succesful, return the resulting string's length. In case of
+// EOF, return -1.
 extern int sreadline(char *str, unsigned size, FILE *fp);
 
 // Split path environment variable `src` into a list of paths, placing them into
 // `dst` (of maximum length `dst_len`). Return the number of paths found. This
 // function modifes `src`.
-extern unsigned split_path(char ***dst, unsigned dst_len, char *src);
+extern unsigned split_path(char ***dst, char *src);
 
 // Initialize full regular expression `re`, using `str` and `snpt`
 extern void fr_init(full_regex_t *re, char *str, wchar_t *snpt);

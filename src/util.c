@@ -947,7 +947,7 @@ unsigned scopylines(FILE *source, FILE *trgt) {
 }
 
 int sreadline(char *str, unsigned size, FILE *fp) {
-  xfgets(str, BS_LINE, fp);
+  xfgets(str, size, fp);
   if (feof(fp)) {
     str[0] = L'\0';
     return -1;
@@ -960,7 +960,7 @@ int sreadline(char *str, unsigned size, FILE *fp) {
   return nlc - str;
 }
 
-unsigned split_path(char ***dst, unsigned dst_len, char *src) {
+unsigned split_path(char ***dst, char *src) {
   char **res = *dst;    // results
   unsigned res_cnt = 0; // number of results
   unsigned pos = 0;     // starting position of last path found

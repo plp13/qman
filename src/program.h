@@ -435,11 +435,10 @@ extern int search_next(result_t *res, unsigned res_len, unsigned from);
 // `res`.
 extern int search_prev(result_t *res, unsigned res_len, unsigned from);
 
-// Extract from `lines` (of length `lines_len`) the text indicated by `mark`,
-// and place it into `dst`, allocating all needed memory. Return the length of
-// `dst`. In case of error, this function sets `dst` to NULL and returns 0.
-extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines,
-                         unsigned lines_len);
+// Extract from `lines` the text indicated by `mark`, and place it into `dst`,
+// allocating all needed memory. Return the length of `dst`. In case of error,
+// this function sets `dst` to NULL and returns 0.
+extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines);
 
 // Note: for efficiency, we only populate `toc` and `toc_len` when the user
 // requests a table of contents for the first time

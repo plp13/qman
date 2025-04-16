@@ -1716,8 +1716,11 @@ unsigned sc_toc(toc_entry_t **dst, const wchar_t *const *sc,
   return en;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 link_loc_t prev_link(const line_t *lines, unsigned lines_len,
                      link_loc_t start) {
+#pragma GCC diagnostic pop
   unsigned i;
   link_loc_t res;
 
@@ -1916,8 +1919,7 @@ int search_prev(result_t *res, unsigned res_len, unsigned from) {
   return -1;
 }
 
-extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines,
-                         unsigned lines_len) {
+extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines) {
   // Return if no text is marked
   if (!mark.enabled) {
     *dst = NULL;

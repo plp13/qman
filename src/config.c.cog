@@ -671,7 +671,7 @@ void configure() {
       if (NULL != xcd) {
         char *xcd_dup = xstrdup(xcd);
         char **xcd_paths = xcalloc(BS_SHORT, sizeof(char *));
-        unsigned xcd_count = split_path(&xcd_paths, BS_SHORT, xcd_dup);
+        unsigned xcd_count = split_path(&xcd_paths, xcd_dup);
         for (unsigned i = 0; i < xcd_count; i++) {
           snprintf(path, BS_LINE, "%s/qman/qman.conf", xcd_paths[i]);
           fp = fopen(path, "r");
