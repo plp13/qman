@@ -351,11 +351,12 @@ extern unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
                                 const wchar_t *title, const wchar_t *ver,
                                 const wchar_t *date);
 
-// Search for elements of `hayst` (of length `hayst_len`), whose `ident` starts
-// with `needle`. Return the first matching position in `hayst` after `pos`, or
-// -1 if nothing can be matched.
+// Search for elements of `hayst` (of length `hayst_len`), whose `ident`
+// contains `needle` (if `fullsub`) or starts with `needle` (if not `fullsub`).
+// Return the first matching position in `hayst` after `pos`, or -1 if nothing
+// can be matched.
 extern int aprowhat_search(const wchar_t *needle, const aprowhat_t *hayst,
-                           unsigned hayst_len, unsigned pos);
+                           unsigned hayst_len, unsigned pos, bool fullsub);
 
 // Return true if there is an element in `hayst` (of length `hayst_len`) whose
 // `ident` is case-insensitive equal to `needle`

@@ -275,10 +275,12 @@ wchar_t *aw_quick_search(wchar_t *needle, int last, bool qident) {
   wchar_t *ret = NULL;
 
   // Search `aw_all` for `needle`
-  pos = aprowhat_search(needle, aw_all, aw_all_len, pos);
+  pos = aprowhat_search(needle, aw_all, aw_all_len, pos,
+                        config.misc.sp_substrings);
   while (-1 != pos && ln < lines) {
     res[ln] = pos;
-    pos = aprowhat_search(needle, aw_all, aw_all_len, ++pos);
+    pos = aprowhat_search(needle, aw_all, aw_all_len, ++pos,
+                          config.misc.sp_substrings);
     ln++;
   }
   lines = ln; // `lines` becomes exact no. of lines to display

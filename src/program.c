@@ -1170,15 +1170,20 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
 }
 
 int aprowhat_search(const wchar_t *needle, const aprowhat_t *hayst,
-                    unsigned hayst_len, unsigned pos) {
+                    unsigned hayst_len, unsigned pos, bool fullsub) {
   unsigned i;
 
   if (NULL == needle)
     return -1;
 
   for (i = pos; i < hayst_len; i++)
-    if (wcsstr(hayst[i].ident, needle) == hayst[i].ident)
-      return i;
+    if (fullsub) {
+      if (wcsstr(hayst[i].ident, needle) != NULL)
+        return i;
+    } else {
+      if (wcsstr(hayst[i].ident, needle) == hayst[i].ident)
+        return i;
+    }
 
   return -1;
 }

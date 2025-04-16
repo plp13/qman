@@ -161,7 +161,7 @@ config_def = {
     },
     "misc": {
         "program_name": (("string",), None, False, "Program executable basename (discovered automatically)"),
-        "program_version": (("wstring",), ("Qman 1.4.1-8-g24b3ab6",), False, "Formal program name and version"),
+        "program_version": (("wstring",), ("Qman 1.4.1-9-g43fd2a9",), False, "Formal program name and version"),
         "config_path": (("string",), None, False, "Path to the configuration file"),
         "man_path": (("string",), ("/usr/bin/man",), True, "Path to the man(1) command"),
         "groff_path": (("string",), ("/usr/bin/groff",), True, "Path to the groff(1) command"),
@@ -174,6 +174,7 @@ config_def = {
         "history_size": (("int", 0, 256 * 1024), ("65536",), True, "Maximum number of history entries"),
         "hyphenate": (("bool",), ("true",), True, "Hyphenate long words in manual pages"),
         "justify": (("bool",), ("true",), True, "Justify manual pages text"),
+        "sp_substrings": (("bool",), ("false",), True, "Include substring matches in incremental search results"),
         "global_whatis": (("bool",), ("false",), False, "-a / --all option was passed"),
         "global_apropos": (("bool",), ("false",), False, "-k / --global-whatis option was passed")
     }
