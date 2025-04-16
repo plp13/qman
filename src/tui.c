@@ -270,19 +270,31 @@ wchar_t *aw_quick_search(wchar_t *needle, int last, bool qident) {
   static unsigned last_needle_len = 0;   // length of last `needle` encountered
   unsigned *res =
       aalloca(lines, unsigned); // search results as positions in `aw_all`
-  unsigned pos = 0;             // current position in `aw_all`
+  unsigned pos;                 // current position in `aw_all`
   unsigned ln = 0;              // current line
   wchar_t *ret = NULL;
 
-  // Search `aw_all` for `needle`
-  pos = aprowhat_search(needle, aw_all, aw_all_len, pos,
-                        config.misc.sp_substrings);
+  // Search `aw_all` for pages beginning with `needle`, and add them into `res`
+  pos = 0;
+  pos = aprowhat_search(needle, aw_all, aw_all_len, pos, false);
   while (-1 != pos && ln < lines) {
     res[ln] = pos;
-    pos = aprowhat_search(needle, aw_all, aw_all_len, ++pos,
-                          config.misc.sp_substrings);
+    pos = aprowhat_search(needle, aw_all, aw_all_len, ++pos, false);
     ln++;
   }
+
+  // If there's space, also search for pages that contain `needle`, and add them
+  // to `res` as well (only if `config.misc.sp_substrings` is true)
+  if (config.misc.sp_substrings) {
+    pos = 0;
+    pos = aprowhat_search(needle, aw_all, aw_all_len, pos, true);
+    while (-1 != pos && ln < lines) {
+      res[ln] = pos;
+      pos = aprowhat_search(needle, aw_all, aw_all_len, ++pos, true);
+      ln++;
+    }
+  }
+
   lines = ln; // `lines` becomes exact no. of lines to display
 
   // Update `focus`, if the user has used the arrow keys or mouse to highlight a

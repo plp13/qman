@@ -1178,7 +1178,7 @@ int aprowhat_search(const wchar_t *needle, const aprowhat_t *hayst,
 
   for (i = pos; i < hayst_len; i++)
     if (fullsub) {
-      if (wcsstr(hayst[i].ident, needle) != NULL)
+      if (wcsstr(hayst[i].ident, needle) > hayst[i].ident)
         return i;
     } else {
       if (wcsstr(hayst[i].ident, needle) == hayst[i].ident)

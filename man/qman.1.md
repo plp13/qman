@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.4.1-9-g43fd2a9
+footer: Qman 1.4.1-10-g2f08e91
 date: December 15, 2023
 ---
 
@@ -369,7 +369,7 @@ This section contains various miscellaneous options:
 | history_size | unsigned int | 256k       | Maximum number of history entries |
 | hyphenate    | boolean      | true       | Whether to hyphenate long words in manual pages |
 | justify      | boolean      | true       | Whether to justify text in manual pages |
-| sp_substrings | boolean     | false      | Include substring matches in incremental search results |
+| sp_substrings | boolean     | true       | Include substring matches in incremental search results |
 
 When using a horizontally narrow terminal, setting _hyphenate_ to **true**
 and/or _justify_ to **false** can improve the program's output.
@@ -379,9 +379,10 @@ To avoid an annoying screen redraw, option _reset_after_http_ should be set to
 _reset_after_email_ should be set to **false** when using a GUI email client for
 e-mail links.
 
-By default, incremental search results only include manual pages whose name
-begins with the user's input. Setting _sp_substrings_ to **true** will also
-include pages whose names include the user's input as a substring.
+Setting _sp_substrings_ to **false** causes incremental search results to
+only include pages whose names start with the user's input. Setting it to
+**true** (the default) will also include pages whose names contain the input as
+a substring, provided there is enough space left in the window.
 
 ## Include directive
 Supplemental configuration files can be included using:
