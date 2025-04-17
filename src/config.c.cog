@@ -638,7 +638,7 @@ void configure() {
   if (NULL != config.misc.config_path) {
     // `-C` option was used; try to open specified config file, and fail if not
     // possible
-    xstrncpy(path, config.misc.config_path, BS_LINE);
+    strlcpy(path, config.misc.config_path, BS_LINE);
     fp = fopen(path, "r");
     if (NULL == fp) {
       swprintf(errmsg, BS_SHORT, L"Unable to open config file '%s'",
@@ -685,13 +685,13 @@ void configure() {
 
     // /etc/xdg/qman/qman.conf
     if (NULL == fp) {
-      xstrncpy(path, "/etc/xdg/qman/qman.conf", BS_LINE);
+      strlcpy(path, "/etc/xdg/qman/qman.conf", BS_LINE);
       fp = fopen(path, "r");
     }
 
     // /etc/qman/qman.conf
     if (NULL == fp) {
-      xstrncpy(path, "/etc/qman/qman.conf", BS_LINE);
+      strlcpy(path, "/etc/qman/qman.conf", BS_LINE);
       fp = fopen(path, "r");
     }
   }

@@ -19,13 +19,13 @@ regex_t eini_re_include, eini_re_section, eini_re_value;
   if (NULL == mykey)                                                           \
     ret.key = NULL;                                                            \
   else {                                                                       \
-    xwcsncpy(ret_key, wnnl(mykey), BS_SHORT);                                  \
+    wcslcpy(ret_key, wnnl(mykey), BS_SHORT);                                   \
     ret.key = ret_key;                                                         \
   }                                                                            \
   if (NULL == myvalue)                                                         \
     ret.value = NULL;                                                          \
   else {                                                                       \
-    xwcsncpy(ret_value, wnnl(myvalue), BS_LINE);                               \
+    wcslcpy(ret_value, wnnl(myvalue), BS_LINE);                                \
     wunescape(ret_value);                                                      \
     ret.value = ret_value;                                                     \
   }
@@ -233,9 +233,9 @@ void eini(eini_handler_t hf, eini_error_t ef, const char *path) {
       } else {
         char apath[BS_LINE];
         xwcstombs(apath, lne.value, BS_LINE);
-        xstrncpy(ipath, xdirname(path), BS_LINE);
-        strncat(ipath, "/", BS_LINE - strlen(ipath) - 1);
-        strncat(ipath, apath, BS_LINE - strlen(ipath) - 1);
+        strlcpy(ipath, xdirname(path), BS_LINE);
+        strlcat(ipath, "/", BS_LINE);
+        strlcat(ipath, apath, BS_LINE);
       }
       ifp = fopen(ipath, "r");
       if (NULL == ifp) {
@@ -248,7 +248,7 @@ void eini(eini_handler_t hf, eini_error_t ef, const char *path) {
       break;
     }
     case EINI_SECTION: {
-      xwcsncpy(sec, lne.value, BS_SHORT);
+      wcslcpy(sec, lne.value, BS_SHORT);
       break;
     }
     case EINI_VALUE: {

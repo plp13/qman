@@ -226,14 +226,14 @@ size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
 char *xbasename(const char *path) {
   static char pathc[BS_LINE];
 
-  xstrncpy(pathc, path, BS_LINE);
+  strlcpy(pathc, path, BS_LINE);
   return basename(pathc);
 }
 
 char *xdirname(const char *path) {
   static char pathc[BS_LINE];
 
-  xstrncpy(pathc, path, BS_LINE);
+  strlcpy(pathc, path, BS_LINE);
   return dirname(pathc);
 }
 
@@ -289,21 +289,6 @@ size_t xmbstowcs(wchar_t *dest, const char *src, size_t n) {
     res--;
 
   dest[res] = L'\0';
-
-  return res;
-}
-
-wchar_t *xwcsncpy(wchar_t *dest, const wchar_t *src, size_t n) {
-  wchar_t *res = wcsncpy(dest, src, n);
-  dest[n - 1] = L'\0';
-
-  return res;
-}
-
-char *xstrncpy(char *dest, const char *src, size_t n) {
-  char *res = strncpy(dest, src, n);
-  if (strlen(src) >= n)
-    dest[n - 1] = '\0';
 
   return res;
 }
