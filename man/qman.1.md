@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.4.1-10-g2f08e91
+footer: Qman 1.4.1-11-gd377621
 date: December 15, 2023
 ---
 
@@ -257,8 +257,8 @@ Options in this section specify the user interface colors:
 | imm_border        | pop-up dialogs border                                    |
 | imm_title         | pop-up dialogs title                                     |
 | sp_input          | pop-up input dialog prompt                               |
-| sp_text           | pop-up input dialog progressive search text              |
-| sp_text_f         | pop-up input dialog progressive search text (focused)    |
+| sp_text           | pop-up input dialog incremental search text              |
+| sp_text_f         | pop-up input dialog incremental search text (focused)    |
 | help_text         | help dialog entries text                                 |
 | help_text_f       | help dialog entries text (focused)                       |
 | history_text      | history dialog entries text                              |

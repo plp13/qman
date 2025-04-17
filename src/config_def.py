@@ -68,7 +68,8 @@ config_def = {
         "box_bl": (("wstring",), ("└",), True, "Dialog box bottom left corner"),
         "box_br": (("wstring",), ("┘",), True, "Dialog box bottom right corner"),
         "arrow_up": (("wstring",), ("↑",), True, "Up arrow"),
-        "arrow_down": (("wstring",), ("↓",), True, "Down arrow")
+        "arrow_down": (("wstring",), ("↓",), True, "Down arrow"),
+        "arrow_lr": (("wstring",), ("↔",), True, "Left/right arrow")
     },
     "colours": {
         "fallback": (("colour",), ("white", "black", "false"), False, "Fallback for B&W terminals"),
@@ -94,8 +95,8 @@ config_def = {
         "imm_border": (("colour",), ("yellow", "black", "true"), True, "Pop-up dialogs border"),
         "imm_title": (("colour",), ("yellow", "red", "true"), True, "Pop-up dialogs title"),
         "sp_input": (("colour",), ("white", "black", "false"), True, "Pop-up input dialog prompt"),
-        "sp_text": (("colour",), ("cyan", "black", "false"), True, "Pop-up input dialog progressive help text"),
-        "sp_text_f": (("colour",), ("white", "black", "false"), True, "Pop-up input dialog progressive help text (focused)"),
+        "sp_text": (("colour",), ("cyan", "black", "false"), True, "Pop-up input dialog incremental search text"),
+        "sp_text_f": (("colour",), ("white", "black", "false"), True, "Pop-up input dialog incremental search text (focused)"),
         "help_text": (("colour",), ("cyan", "black", "false"), True, "Help dialog entries text"),
         "help_text_f": (("colour",), ("black", "cyan", "false"), True, "Help dialog entries text (focused)"),
         "history_text": (("colour",), ("cyan", "black", "false"), True, "History dialog entries text"),
@@ -161,7 +162,7 @@ config_def = {
     },
     "misc": {
         "program_name": (("string",), None, False, "Program executable basename (discovered automatically)"),
-        "program_version": (("wstring",), ("Qman 1.4.1-10-g2f08e91",), False, "Formal program name and version"),
+        "program_version": (("wstring",), ("Qman 1.4.1-11-gd377621",), False, "Formal program name and version"),
         "config_path": (("string",), None, False, "Path to the configuration file"),
         "man_path": (("string",), ("/usr/bin/man",), True, "Path to the man(1) command"),
         "groff_path": (("string",), ("/usr/bin/groff",), True, "Path to the groff(1) command"),
