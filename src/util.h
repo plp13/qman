@@ -315,9 +315,9 @@ extern void wunescape(wchar_t *src);
 extern unsigned wccnt(const wchar_t *hayst, wchar_t needle);
 
 // Replace all occurences of `needle` in `hayst` with `repl`. Place the result
-// in `dst`.
+// in `dst` (of size `dst_len`).
 extern void wcrepl(wchar_t *dst, const wchar_t *hayst, wchar_t needle,
-                   const wchar_t *repl);
+                   const wchar_t *repl, unsigned dst_len);
 
 // Insert newlines in `trgt` so that it word-wraps before it reaches `cols`
 // columns.

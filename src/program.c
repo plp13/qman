@@ -568,7 +568,7 @@ void init() {
   sc_all_len = aprowhat_sections(&sc_all, aw_all, aw_all_len);
 
   // Initialize `page_title`
-  wcscpy(page_title, L"");
+  wcslcpy(page_title, L"", BS_SHORT);
 
   // initialize regular expressions
   fr_init(&re_man, "[a-zA-Z0-9\\.:@_-]+\\([a-zA-Z0-9]+\\)", L")");
@@ -731,18 +731,18 @@ void parse_args(int argc, char *const *argv) {
       }
     }
 
-    wcscpy(tmp, L"");
+    wcslcpy(tmp, L"", BS_LINE);
     tmp_len = 0;
 
     if (history[history_cur].request_type == RT_MAN && !config.layout.tui) {
       // If we are showing a manual page, we are in CLI mode...
       if (config.misc.global_apropos) {
         // ...and the user has requested global apropos, add '-K' to `tmp`
-        wcscpy(tmp, L"-K ");
+        wcslcpy(tmp, L"-K ", BS_LINE);
         tmp_len = 3;
       } else if (config.misc.global_whatis) {
         // ...and the user has requested global whatis, add '-a' to `tmp`
-        wcscpy(tmp, L"-a ");
+        wcslcpy(tmp, L"-a ", BS_LINE);
         tmp_len = 3;
       }
     }
@@ -752,11 +752,11 @@ void parse_args(int argc, char *const *argv) {
     for (i = 0; i < argc; i++) {
       swprintf(tmp2, BS_SHORT, L"'%s'", argv[i]);
       if (tmp_len + wcslen(tmp2) < BS_LINE) {
-        wcscat(tmp, tmp2);
+        wcslcat(tmp, tmp2, BS_LINE);
         tmp_len += wcslen(tmp2);
       }
       if (i < argc - 1 && tmp_len + 4 < BS_LINE) {
-        wcscat(tmp, L" ");
+        wcslcat(tmp, L" ", BS_LINE);
         tmp_len++;
       }
     }
@@ -790,9 +790,10 @@ void usage() {
     else
       swprintf(long_opt_str, BS_SHORT, L"--%s=ARG", options[i].long_opt);
     // Help text
-    wcscpy(tmp_str, options[i].help_text);
+    wcslcpy(tmp_str, options[i].help_text, BS_LINE);
     wwrap(tmp_str, 52);
-    wcrepl(help_text_str, tmp_str, L'\n', L"\n                           ");
+    wcrepl(help_text_str, tmp_str, L'\n', L"\n                           ",
+           BS_LINE);
     wprintf(L"  %ls, %-20ls %ls\n", short_opt_str, long_opt_str, help_text_str);
     i++;
   } while (options[i]._cont);
@@ -920,16 +921,16 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
       winddown(ES_OPER_ERROR, L"Malformed temporary apropos/whatis file");
 
     // Extract `page`, `section`, and `descr`, together with their lengths
-    strcpy(page, strtok(line, " ("));
+    strlcpy(page, strtok(line, " ("), BS_SHORT);
     page_len = strlen(page);
-    strcpy(section, strtok(NULL, " ()"));
+    strlcpy(section, strtok(NULL, " ()"), BS_SHORT);
     section_len = strlen(section);
     word = strtok(NULL, " )-");
     descr[0] = '\0';
     while (NULL != word) {
       if ('\0' != descr[0])
-        strcat(descr, " ");
-      strcat(descr, word);
+        strlcat(descr, " ", BS_LINE);
+      strlcat(descr, word, BS_LINE);
       word = strtok(NULL, " ");
     }
     descr_len = strlen(descr);
@@ -1043,7 +1044,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
     // Section title for sections
     inc_ln;
     line_alloc(res[ln], line_width);
-    wcscpy(tmp, L"SECTIONS");
+    wcslcpy(tmp, L"SECTIONS", BS_LINE);
     swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
              lmargin_width, "",                         //
              text_width, tmp);
@@ -1068,7 +1069,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
         sc_i = sc_cols * i + j;
         if (sc_i < sc_len) {
           swprintf(tmp, sc_maxwidth + 5, L" %-*ls", sc_maxwidth + 3, sc[sc_i]);
-          wcscat(res[ln].text, tmp);
+          wcslcat(res[ln].text, tmp, line_width + 1);
           swprintf(tmp, BS_LINE, L"MANUAL PAGES IN SECTION '%ls'", sc[sc_i]);
           add_link(&res[ln], lmargin_width + j * (sc_maxwidth + 4) + 1,
                    lmargin_width + j * (sc_maxwidth + 4) +
@@ -1119,12 +1120,12 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
                  false, 0, 0, LT_MAN, aw[j].ident);
 
         // Description
-        wcscpy(tmp, aw[j].descr);
+        wcslcpy(tmp, aw[j].descr, BS_LINE);
         wwrap(tmp, rc_width);
         wchar_t *buf;
         wchar_t *ptr = wcstok(tmp, L"\n", &buf);
         if (NULL != ptr && page_width < lc_width) {
-          wcscat(res[ln].text, ptr);
+          wcslcat(res[ln].text, ptr, line_width + 1);
           ptr = wcstok(NULL, L"\n", &buf);
         }
         while (NULL != ptr) {
@@ -1244,7 +1245,7 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
       unsigned textsp = wmargend(&gline[3], L"\"");
       if (textsp > 0) {
         res[en] = walloc(BS_LINE);
-        wcscpy(res[en], &gline[3 + textsp]);
+        wcslcpy(res[en], &gline[3 + textsp], BS_LINE);
         wmargtrim(res[en], L"\"");
         inc_en;
       }
@@ -1374,7 +1375,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
       // Section title for sections
       inc_ln;
       line_alloc(res[ln], line_width);
-      wcscpy(tmpw, L"SECTIONS");
+      wcslcpy(tmpw, L"SECTIONS", BS_LINE);
       swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
                lmargin_width, "",                         //
                text_width, tmpw);
@@ -1404,7 +1405,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
             swprintf(tmpw, sc_maxwidth + 5, L" %-*ls", sc_maxwidth + 3,
                      sc[sc_i]);
             wcslower(tmpw);
-            wcscat(res[ln].text, tmpw);
+            wcslcat(res[ln].text, tmpw, line_width + 1);
             add_link(&res[ln], lmargin_width + j * (sc_maxwidth + 4) + 1,
                      lmargin_width + j * (sc_maxwidth + 4) +
                          MIN(sc_maxwidth + 3, wcslen(sc[sc_i])) + 1,
@@ -1573,7 +1574,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   if (config.layout.sections_on_top) {
     res[en].type = TT_HEAD;
     res[en].text = walloc(BS_LINE);
-    wcscpy(res[en].text, L"SECTIONS");
+    wcslcpy(res[en].text, L"SECTIONS", BS_LINE);
     inc_en;
   }
 
@@ -1610,7 +1611,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       textsp = wmargend(&gline[3], L"\"");
       if (textsp > 0) {
         res[en].text = walloc(BS_LINE);
-        wcscpy(res[en].text, &gline[3 + textsp]);
+        wcslcpy(res[en].text, &gline[3 + textsp], BS_LINE);
         wmargtrim(res[en].text, L"\"");
         inc_en;
         sh_seen = true;
@@ -1621,7 +1622,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       textsp = wmargend(&gline[3], L"\"");
       if (textsp > 0) {
         res[en].text = walloc(BS_LINE);
-        wcscpy(res[en].text, &gline[3 + textsp]);
+        wcslcpy(res[en].text, &gline[3 + textsp], BS_LINE);
         wmargtrim(res[en].text, L"\"");
         inc_en;
       }
@@ -1661,7 +1662,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
         textsp = wmargend(gline, NULL);
         res[en].type = TT_TAGPAR;
         res[en].text = walloc(BS_LINE);
-        wcscpy(res[en].text, &gline[textsp]);
+        wcslcpy(res[en].text, &gline[textsp], BS_LINE);
         glen = wmargtrim(res[en].text, L"\n");
         {
           // Edge case: there's a line escape at the end of the tag line; remove
@@ -1705,7 +1706,7 @@ unsigned sc_toc(toc_entry_t **dst, const wchar_t *const *sc,
   if (config.layout.sections_on_top) {
     res[en].type = TT_HEAD;
     res[en].text = walloc(BS_LINE);
-    wcscpy(res[en].text, L"SECTIONS");
+    wcslcpy(res[en].text, L"SECTIONS", BS_LINE);
     inc_en;
   }
 
@@ -1931,9 +1932,10 @@ extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines) {
     return 0;
   }
 
-  wchar_t *res = walloc(BS_LINE * config.layout.height); // return value
-  wchar_t tmp[BS_LINE];                                  // temporary
-  unsigned ln;                                           // current line number
+  unsigned res_len = BS_LINE * config.layout.height; // return value length
+  wchar_t *res = walloc(res_len);                    // return value
+  wchar_t tmp[BS_LINE];                              // temporary
+  unsigned ln;                                       // current line number
 
   // Necessary to get rid of valgrind warnings
   memset(res, 0, sizeof(wchar_t) * BS_LINE * config.layout.height);
@@ -1949,15 +1951,15 @@ extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines) {
     for (ln = mark.start_line; ln <= mark.end_line; ln++) {
       if (ln == mark.start_line) {
         // First line; append text from `start_char` to end of line
-        wcscat(res, &lines[ln].text[mark.start_char]);
+        wcslcat(res, &lines[ln].text[mark.start_char], res_len);
       } else if (ln == mark.end_line) {
         // Last line; append text from beginning of line to `end_char`
         wcsncpy(tmp, lines[ln].text, 1 + mark.end_char);
         tmp[1 + mark.end_char] = L'\0';
-        wcscat(res, tmp);
+        wcslcat(res, tmp, res_len);
       } else {
         // Intermediary lines; append entire line text
-        wcscat(res, lines[ln].text);
+        wcslcat(res, lines[ln].text, res_len);
       }
     }
   }
@@ -1983,7 +1985,7 @@ void populate_page() {
   // Populate page according to the request type of `history[history_cur]`
   switch (history[history_cur].request_type) {
   case RT_INDEX:
-    wcscpy(page_title, L"All Manual Pages");
+    wcslcpy(page_title, L"All Manual Pages", BS_SHORT);
     entitle(page_title);
     page_len = index_page(&page);
     break;

@@ -683,19 +683,19 @@ unsigned wccnt(const wchar_t *hayst, wchar_t needle) {
 }
 
 void wcrepl(wchar_t *dst, const wchar_t *hayst, wchar_t needle,
-            const wchar_t *repl) {
+            const wchar_t *repl, unsigned dst_len) {
   const wchar_t *const hayst_start = (wchar_t *)hayst;
   unsigned offset = 0, repl_cnt = 0;
   const unsigned repl_len = wcslen(repl);
 
-  wcscpy(dst, hayst);
+  wcslcpy(dst, hayst, dst_len);
 
   do {
     if (offset == 0)
       hayst = wcschr(hayst, needle);
     else {
-      wcscpy(&dst[offset], repl);
-      wcscpy(&dst[offset + repl_len], hayst + 1);
+      wcslcpy(&dst[offset], repl, dst_len - offset);
+      wcslcpy(&dst[offset + repl_len], hayst + 1, dst_len - offset - repl_len);
       repl_cnt++;
       hayst = wcschr(hayst + 1, needle);
     }

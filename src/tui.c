@@ -111,14 +111,14 @@ mouse_t mouse_status = MS_EMPTY;
 #define ls_jump(trgt, trgt_prev)                                               \
   {                                                                            \
     wchar_t trgt_clone[BS_LINE];                                               \
-    wcscpy(trgt_clone, trgt);                                                  \
+    wcslcpy(trgt_clone, trgt, BS_LINE);                                        \
     int best;                                                                  \
     if (NULL == trgt_prev)                                                     \
       best = 0;                                                                \
     else {                                                                     \
       wchar_t trgt_prev_clone[BS_LINE];                                        \
       /* ?/: is necessary to avoid a spurious -Wnonnull compiler warning */    \
-      wcscpy(trgt_prev_clone, NULL != trgt_prev ? trgt_prev : L"");            \
+      wcslcpy(trgt_prev_clone, NULL != trgt_prev ? trgt_prev : L"", BS_LINE);  \
       best = ls_discover(trgt_prev_clone, 0);                                  \
     }                                                                          \
     best = ls_discover(trgt_clone, best);                                      \
@@ -213,7 +213,7 @@ int ls_discover(wchar_t *trgt, unsigned sln) {
   j = 0;
   for (ln = sln; ln < page_len && j < BS_LINE; ln++) {
     wchar_t text[BS_LINE]; // current line text
-    wcscpy(text, page[ln].text);
+    wcslcpy(text, page[ln].text, BS_LINE);
     if (wcsstr(text, trgt_words[0]) == &text[wmargend(text, NULL)]) {
       // In order for a line to be a candidate, it must begin with the first
       // word in `trgt`
@@ -1637,7 +1637,7 @@ bool tui_open_apropos() {
   error_on_invalid_flink;
 
   if (LT_MAN == page[page_flink.line].links[page_flink.link].type) {
-    wcscpy(wtrgt, page[page_flink.line].links[page_flink.link].trgt);
+    wcslcpy(wtrgt, page[page_flink.line].links[page_flink.link].trgt, BS_LINE);
     wtrgt_stripped = wcstok(wtrgt, L"()", &buf);
 
     if (NULL == wtrgt_stripped) {
@@ -1673,7 +1673,7 @@ bool tui_open_whatis() {
   error_on_invalid_flink;
 
   if (LT_MAN == page[page_flink.line].links[page_flink.link].type) {
-    wcscpy(wtrgt, page[page_flink.line].links[page_flink.link].trgt);
+    wcslcpy(wtrgt, page[page_flink.line].links[page_flink.link].trgt, BS_LINE);
     wtrgt_stripped = wcstok(wtrgt, L"()", &buf);
 
     if (NULL == wtrgt_stripped) {
@@ -2269,11 +2269,11 @@ bool tui_help() {
     // Produce `keys_names[i]` and update `keys_names_max`, using
     // `cur_key_names`
     keys_names[i] = walloca(BS_SHORT);
-    wcscpy(keys_names[i], L"");
+    wcslcpy(keys_names[i], L"", BS_SHORT);
     for (j = 0; NULL != cur_key_names[j]; j++) {
       if (0 != j)
-        wcscat(keys_names[i], L", ");
-      wcscat(keys_names[i], cur_key_names[j]);
+        wcslcat(keys_names[i], L", ", BS_SHORT);
+      wcslcat(keys_names[i], cur_key_names[j], BS_SHORT);
       cur_key_names[j] = NULL;
     }
     keys_names_max = MAX(keys_names_max, wcslen(keys_names[i]));
