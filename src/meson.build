@@ -3,7 +3,7 @@
 # Compiler
 cc = meson.get_compiler('c')
 add_global_arguments(['-Wall', '-Wextra', '-Wno-sign-compare'], language: 'c')
-add_global_arguments('-O2', '-D_FORTIFY_SOURCE=2', language: 'c')
+# add_global_arguments('-O2', '-D_FORTIFY_SOURCE=2', language: 'c')
 
 # Configuration subsystem sources (generated from config_def.py using cog)
 cog = find_program('cogapp', 'cog', 'cog.py')
