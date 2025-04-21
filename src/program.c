@@ -912,7 +912,7 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   wchar_t *section;                             // section (in `line`)
   wchar_t *descr = walloca(BS_LINE);            // description (in `line`)
   wchar_t *buf;                                 // temporary
-  unsigned pages_len, cur_page_len, section_len,
+  unsigned wline_len, pages_len, cur_page_len, section_len,
       descr_len;      // lengths of the above
   unsigned res_i = 0; // current result
   unsigned i;         // iterators
@@ -925,7 +925,8 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
     xfgets(line, BS_LONG, pp);
     // loggit(line);
 
-    xmbstowcs(wline, line, BS_LONG);
+    wline_len = xmbstowcs(wline, line, BS_LONG);
+    wline[wline_len - 1] = L'\0';
 
     // Extract `pages`, `section, and `descr`
     descr = wcsstr(wline, L" - ");
