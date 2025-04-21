@@ -291,6 +291,10 @@ extern full_regex_t re_man, // a manual page
 // Initialize all program components, except ncurses
 extern void init();
 
+// Initialize additional program components after `configure()` has been
+// performed
+extern void late_init();
+
 // Retrieve `argc` and `argv` from `main()` and parse the command line options.
 // Modify `config` and `history` appropriately, and return `optind`. Exit in
 // case of usage error.

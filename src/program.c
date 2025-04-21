@@ -563,10 +563,6 @@ void init() {
   history = aalloc(config.misc.history_size, request_t);
   history_replace(RT_NONE, NULL);
 
-  // Initialize `aw_all` and `sc_all`
-  aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"''");
-  sc_all_len = aprowhat_sections(&sc_all, aw_all, aw_all_len);
-
   // Initialize `page_title`
   wcslcpy(page_title, L"", BS_SHORT);
 
@@ -582,6 +578,12 @@ void init() {
       "\\?\\^\\|\\.!#%&'=_`{}~-]*@[a-zA-Z0-9-][a-zA-Z0-9-]+\\.[a-zA-Z0-9-][a-"
       "zA-Z0-9\\.-]+[a-zA-Z0-9-]",
       L"@");
+}
+
+void late_init() {
+  // Initialize `aw_all` and `sc_all`
+  aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"''");
+  sc_all_len = aprowhat_sections(&sc_all, aw_all, aw_all_len);
 }
 
 int parse_options(int argc, char *const *argv) {
@@ -889,69 +891,87 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
                        const wchar_t *args) {
   // Prepare `apropos`/`whatis` command
   char cmdstr[BS_LINE];
-  if (AW_WHATIS == cmd)
-    snprintf(cmdstr, BS_LINE, "%s -l %ls 2>>/dev/null", config.misc.whatis_path,
-             args);
+  char *longopt;
+  if (config.misc.mandoc)
+    longopt = "";
   else
-    snprintf(cmdstr, BS_LINE, "%s -l %ls 2>>/dev/null",
-             config.misc.apropos_path, args);
+    longopt = "-l";
+  if (AW_WHATIS == cmd)
+    snprintf(cmdstr, BS_LINE, "%s %s %ls 2>>/dev/null", config.misc.whatis_path,
+             longopt, args);
+  else
+    snprintf(cmdstr, BS_LINE, "%s %s %ls 2>>/dev/null",
+             config.misc.apropos_path, longopt, args);
 
-  // Execute the command, and enter its result into a temporary file. `lines`
-  // becomes the total number of lines copied.
+  unsigned res_len = BS_LINE;                    // result length
+  aprowhat_t *res = aalloc(res_len, aprowhat_t); // result
+  char *line =
+      salloc(BS_LONG); // current line of text, as returned by the command
+  wchar_t *wline = walloc(BS_LONG);             // `wchar_t *` version of `line`
+  wchar_t **pages = aalloc(BS_LINE, wchar_t *); // pages (in `line`)
+  wchar_t *section;                             // section (in `line`)
+  wchar_t *descr = walloca(BS_LINE);            // description (in `line`)
+  wchar_t *buf;                                 // temporary
+  unsigned pages_len, cur_page_len, section_len,
+      descr_len;      // lengths of the above
+  unsigned res_i = 0; // current result
+  unsigned i;         // iterators
+
+  // Execute the command
   FILE *pp = xpopen(cmdstr, "r");
-  FILE *fp = xtmpfile();
-  const unsigned lines = scopylines(pp, fp);
-  xpclose(pp);
-  rewind(fp);
-
-  // Result
-  aprowhat_t *res = aalloc(lines, aprowhat_t);
-
-  char line[BS_LINE];     // current line of text, as returned by the command
-  char page[BS_SHORT];    // current manual page
-  char section[BS_SHORT]; // current section
-  char *word;             // used by `strtok()` to compile `descr`
-  char descr[BS_LINE];    // current page description
-
-  unsigned page_len, section_len, descr_len, i;
 
   // For each line returned by the command...
-  for (i = 0; i < lines; i++) {
-    if (-1 == sreadline(line, BS_LINE, fp))
-      winddown(ES_OPER_ERROR, L"Malformed temporary apropos/whatis file");
+  while (!feof(pp)) {
+    xfgets(line, BS_LONG, pp);
+    // loggit(line);
 
-    // Extract `page`, `section`, and `descr`, together with their lengths
-    strlcpy(page, strtok(line, " ("), BS_SHORT);
-    page_len = strlen(page);
-    strlcpy(section, strtok(NULL, " ()"), BS_SHORT);
-    section_len = strlen(section);
-    word = strtok(NULL, " )-");
-    descr[0] = '\0';
-    while (NULL != word) {
-      if ('\0' != descr[0])
-        strlcat(descr, " ", BS_LINE);
-      strlcat(descr, word, BS_LINE);
-      word = strtok(NULL, " ");
+    xmbstowcs(wline, line, BS_LONG);
+
+    // Extract `pages`, `section, and `descr`
+    descr = wcsstr(wline, L" - ");
+    if (NULL == descr)
+      winddown(ES_OPER_ERROR, L"Malformed apropos/whatis output");
+    descr[0] = L'\0';
+    descr = &descr[3];
+    descr_len = wcslen(descr);
+    wcstok(wline, L"(", &buf);
+    section = wcstok(NULL, L"(, \")", &buf);
+    if (NULL == section)
+      winddown(ES_OPER_ERROR, L"Malformed apropos/whatis output");
+    section_len = wcslen(section);
+    pages_len = wsplit(&pages, BS_LINE, wline, L",");
+
+    // For each page described by line...
+    for (i = 0; i < pages_len; i++) {
+      // Populate the `res_i`th element of `res`
+      cur_page_len = wcslen(pages[i]);
+      res[res_i].page = walloc(cur_page_len);
+      wcslcpy(res[res_i].page, pages[i], cur_page_len + 1);
+      res[res_i].section = walloc(section_len);
+      wcslcpy(res[res_i].section, section, section_len + 1);
+      res[res_i].ident = walloc(cur_page_len + section_len + 3);
+      swprintf(res[res_i].ident, cur_page_len + section_len + 3, L"%ls(%ls)",
+               pages[i], section);
+      res[res_i].descr = walloc(descr_len);
+      wcslcpy(res[res_i].descr, descr, descr_len + 1);
+      // logprintf("%d. %ls(%ls)", res_i, res[res_i].page, res[res_i].section);
+      // logprintf("%ls", res[res_i].descr);
+      // loggit("");
+
+      // Increase `res_i`, and reallocate `res` if necessary
+      res_i++;
+      if (res_i == res_len) {
+        res_len += BS_LINE;
+        res = xreallocarray(res, res_len, sizeof(aprowhat_t));
+      }
     }
-    descr_len = strlen(descr);
-
-    // Populate the `i`th element of `res` (allocating when necessary)
-    res[i].page = walloc(page_len);
-    xmbstowcs(res[i].page, page, page_len + 1);
-    res[i].section = walloc(section_len);
-    xmbstowcs(res[i].section, section, section_len + 1);
-    res[i].ident = walloc(page_len + section_len + 3);
-    swprintf(res[i].ident, page_len + section_len + 3, L"%s(%s)", page,
-             section);
-    res[i].descr = walloc(descr_len);
-    xmbstowcs(res[i].descr, descr, descr_len + 1);
   }
 
-  xfclose(fp);
+  xfclose(pp);
 
   // If no results were returned by the command, set `err` and `err_msg`
   err = false;
-  if (0 == lines) {
+  if (0 == res_len) {
     err = true;
     if (AW_WHATIS == cmd)
       swprintf(err_msg, BS_LINE, L"Whatis %ls: nothing apropriate", args);
@@ -959,8 +979,14 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
       swprintf(err_msg, BS_LINE, L"Apropos %ls: nothing apropriate", args);
   }
 
+  // Deallocate unused memory and return
+  res = xreallocarray(res, res_i, sizeof(aprowhat_t));
+  free(line);
+  free(wline);
+  free(pages);
   *dst = res;
-  return lines;
+  logprintf("%d", res_i);
+  return res_i;
 }
 
 unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *aw,

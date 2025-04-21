@@ -162,7 +162,7 @@ config_def = {
     },
     "misc": {
         "program_name": (("string",), None, False, "Program executable basename (discovered automatically)"),
-        "program_version": (("wstring",), ("Qman 1.4.1-14-gcdc94b5",), False, "Formal program name and version"),
+        "program_version": (("wstring",), ("Qman 1.4.1-15-gabc9cb4",), False, "Formal program name and version"),
         "config_path": (("string",), None, False, "Path to the configuration file"),
         "man_path": (("string",), ("/usr/bin/man",), True, "Path to the man(1) command"),
         "groff_path": (("string",), ("/usr/bin/groff",), True, "Path to the groff(1) command"),
@@ -170,6 +170,7 @@ config_def = {
         "apropos_path": (("string",), ("/usr/bin/apropos",), True, "Path to the apropos(1) command"),
         "browser_path": (("string",), ("/usr/bin/xdg-open",), True, "Path to web browser command"),
         "mailer_path": (("string",), ("/usr/bin/xdg-email",), True, "Path to mailer command"),
+        "mandoc": (("bool",), ("false",), True, "System is using mandoc (as opposed to GNU man)"),
         "reset_after_http": (("bool",), ("true",), True, "Re-initialize curses after opening an http(s) link"),
         "reset_after_email": (("bool",), ("true",), True, "Re-initialize curses after opening an e-mail link"),
         "history_size": (("int", 0, 256 * 1024), ("65536",), True, "Maximum number of history entries"),

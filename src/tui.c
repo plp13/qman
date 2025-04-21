@@ -173,6 +173,7 @@ void sigusr1_handler(int signum) {
 
   // Reconfigure
   configure();
+  late_init();
   init_tui_tcap();
   if (-1 == config.tcap.colours || t_auto == config.tcap.rgb ||
       t_auto == config.tcap.unicode || t_auto == config.tcap.clipboard)
@@ -2530,6 +2531,7 @@ void tui() {
     // value might depend on terminal capabilities
     configure();
   }
+  late_init();
   init_tui_colours();
   init_tui_mouse();
   termsize_changed();

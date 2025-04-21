@@ -64,6 +64,7 @@ void print_page(const line_t *lines, unsigned lines_len) {
 // Main handler for the CLI
 void cli() {
   configure();
+  late_init();
   init_cli();
 
   populate_page();

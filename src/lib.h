@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
+#include <ctype.h>
 #include <libgen.h>
 #include <fcntl.h>
 #include <sys/types.h>

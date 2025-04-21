@@ -59,8 +59,9 @@ typedef struct {
 //
 
 // Buffer sizes
-#define BS_SHORT 128 // length of a short array
-#define BS_LINE 1024 // length of an array that is suitable for a line of text
+#define BS_SHORT 128   // length of a short array
+#define BS_LINE 1024   // length of an array that is suitable for a line of text
+#define BS_LONG 131072 // length of a long array
 
 // Rudimentary logging, used for debugging
 #define F_LOG "./qman.log" // log file

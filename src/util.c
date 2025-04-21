@@ -1035,4 +1035,5 @@ void loggit(const char *msg) {
 
   time(&now);
   fwprintf(lfp, L"[%s] %s\n", strtok(ctime(&now), "\n"), msg);
+  fflush(lfp);
 }
