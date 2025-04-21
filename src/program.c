@@ -111,6 +111,39 @@ full_regex_t re_man, re_http, re_email;
     res = xreallocarray(res, res_len, sizeof(result_t));                       \
   }
 
+// Helper of `man()`, `man_sections()` and `man_doc()`. If the `man` command
+// doesn't support `page(section)` style arguments, correct any of them them in
+// `src` into `section page` style arguments. Place the result into `dst`.
+void correct_args(wchar_t **dst, const wchar_t *src) {
+  if (config.misc.mandoc) {
+    wchar_t *srcc = walloca(wcslen(src) * 2); // copy of `src`
+    wchar_t *arg;                             // current argument
+    wchar_t **arg_dec =
+        aalloc(2, wchar_t *); // decomposed current argument (e.g. `"ls(1)"` ->
+                              // `["ls", "1"]`)
+    unsigned arg_dec_len;     // length of `arg_dec`
+    wchar_t *tmp = walloca(wcslen(src) * 2); // temporary
+    wchar_t *buf;                            // temporary
+
+    wcslcpy(*dst, L"", BS_LINE);
+    wcslcpy(srcc, src, BS_LINE);
+    arg = wcstok(srcc, L"' \t", &buf);
+    while (NULL != arg) {
+      arg_dec_len = wsplit(&arg_dec, 2, arg, L"()");
+      if (2 == arg_dec_len)
+        swprintf(tmp, BS_LINE, L"'%ls' '%ls'", arg_dec[1], arg_dec[0]);
+      else
+        swprintf(tmp, BS_LINE, L"'%ls'", arg_dec[0]);
+      wcslcat(*dst, tmp, BS_LINE);
+      arg = wcstok(NULL, L"' \t", &buf);
+    }
+  } else {
+    wcslcpy(*dst, src, BS_LINE);
+  }
+  logprintf("BEFORE: %ls", src);
+  logprintf("AFTER:  %ls", *dst);
+}
+
 // Helper of `man()` and `aprowhat_render()`. Add a link to `line`. Allocate
 // memory using `line_realloc_link()` to do so. Use `start`, `end`, `link_next`,
 // `type`, and `trgt` to populate the new link's members.
@@ -986,7 +1019,7 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   free(wline);
   free(pages);
   *dst = res;
-  logprintf("%d", res_i);
+  // logprintf("%d", res_i);
   return res_i;
 }
 
@@ -1231,6 +1264,7 @@ bool aprowhat_has(const wchar_t *needle, const aprowhat_t *hayst,
 }
 
 unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
+  wchar_t *argsc = walloca(wcslen(args) * 2); // corrected copy of `args`
   char gpath[BS_LINE];    // path to groff document for manual page
   int glen;               // length of current line in groff document
   wchar_t gline[BS_LINE]; // current line in groff document
@@ -1240,19 +1274,31 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
   unsigned res_len = BS_SHORT;                // result buffer length
   wchar_t **res = aalloc(res_len, wchar_t *); // result buffer
 
-  // Use GNU man to figure out gpath
+  // Use `man` to figure out `gpath`
+  correct_args(&argsc, args);
   char cmdstr[BS_LINE];
-  if (local_file)
-    snprintf(cmdstr, BS_LINE,
-             "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
-             config.misc.man_path, args);
-  else {
-    snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
-             config.misc.man_path, args);
+  if (config.misc.mandoc) {
+    // `mandoc` specific
+    if (local_file)
+      snprintf(cmdstr, BS_LINE, "%s -w -l %ls 2>>/dev/null",
+               config.misc.man_path, argsc);
+    else
+      snprintf(cmdstr, BS_LINE, "%s -w %ls 2>>/dev/null", config.misc.man_path,
+               argsc);
+  } else {
+    // GNU `man` specific
+    if (local_file)
+      snprintf(cmdstr, BS_LINE,
+               "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
+               config.misc.man_path, argsc);
+    else {
+      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
+               config.misc.man_path, argsc);
+    }
   }
   FILE *pp = xpopen(cmdstr, "r");
   if (-1 == sreadline(gpath, BS_LINE, pp))
-    winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
+    winddown(ES_CHILD_ERROR, L"man command returned invalid output");
   xpclose(pp);
 
   // Open `gpath`
@@ -1336,11 +1382,12 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   const unsigned text_width =
       line_width - lmargin_width - rmargin_width; // main text area
 
-  unsigned ln = 0;                 // current line number
-  int len;                         // length of current line text
-  unsigned i, j;                   // iterators
-  wchar_t *tmpw = walloc(BS_LINE); // temporary
-  char *tmps = salloc(BS_LINE);    // temporary
+  unsigned ln = 0;                            // current line number
+  int len;                                    // length of current line text
+  unsigned i, j;                              // iterators
+  wchar_t *argsc = walloca(wcslen(args) * 2); // corrected copy of `args`
+  wchar_t *tmpw = walloc(BS_LINE);            // temporary
+  char *tmps = salloc(BS_LINE);               // temporary
 
   bool ilink = false;   // we are inside an embedded HTTP link
   unsigned ilink_ln;    // embedded link line
@@ -1358,25 +1405,42 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // Set up the environment for `man` to create its output as we want it
   char *old_term = getenv("TERM");
   setenv("TERM", "xterm", true);
-  sprintf(tmps, "%d", 1 + text_width);
-  setenv("MANWIDTH", tmps, true);
-  sprintf(tmps, "%s %s", config.misc.hyphenate ? "" : "--nh",
-          config.misc.justify ? "" : "--nj");
-  setenv("MANOPT", tmps, true);
-  setenv("MAN_KEEP_FORMATTING", "1", true);
-  setenv("MANROFFOPT", "", true);
-  setenv("GROFF_SGR", "1", true);
-  unsetenv("GROFF_NO_SGR");
+  if (config.misc.mandoc) {
+    // `mandoc` specific
+  } else {
+    // GNU `man` specific
+    sprintf(tmps, "%d", 1 + text_width);
+    setenv("MANWIDTH", tmps, true);
+    sprintf(tmps, "%s %s", config.misc.hyphenate ? "" : "--nh",
+            config.misc.justify ? "" : "--nj");
+    setenv("MANOPT", tmps, true);
+    setenv("MAN_KEEP_FORMATTING", "1", true);
+    setenv("MANROFFOPT", "", true);
+    setenv("GROFF_SGR", "1", true);
+    unsetenv("GROFF_NO_SGR");
+  }
 
   // Prepare `man` command
+  correct_args(&argsc, args);
   char cmdstr[BS_LINE];
-  if (local_file)
-    snprintf(cmdstr, BS_LINE,
-             "%s --warnings='!all' --local-file %ls 2>>/dev/null",
-             config.misc.man_path, args);
-  else
-    snprintf(cmdstr, BS_LINE, "%s --warnings='!all' %ls 2>>/dev/null",
-             config.misc.man_path, args);
+  if (config.misc.mandoc) {
+    // `mandoc` specific
+    if (local_file)
+      snprintf(cmdstr, BS_LINE, "%s -T utf8 -O width=%d -l %ls 2>>/dev/null",
+               config.misc.man_path, text_width, argsc);
+    else
+      snprintf(cmdstr, BS_LINE, "%s -T utf8 -O width=%d %ls 2>>/dev/null",
+               config.misc.man_path, text_width, argsc);
+  } else {
+    // GNU `man` specific
+    if (local_file)
+      snprintf(cmdstr, BS_LINE,
+               "%s --warnings='!all' --local-file %ls 2>>/dev/null",
+               config.misc.man_path, argsc);
+    else
+      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' %ls 2>>/dev/null",
+               config.misc.man_path, argsc);
+  }
 
   // Execute `man`
   FILE *pp = xpopen(cmdstr, "r");
@@ -1447,7 +1511,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     }
 
     if (-1 == len)
-      winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
+      winddown(ES_CHILD_ERROR, L"man command returned invalid output");
 
     // Allocate memory for a new line in `res`
     line_alloc(res[ln], config.layout.lmargin + len + 1);
@@ -1586,6 +1650,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 }
 
 unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
+  wchar_t *argsc = walloca(wcslen(args) * 2); // corrected copy of `args`
   char gpath[BS_LINE];    // path to groff document for manual page
   int glen;               // length of current line in groff document
   wchar_t gline[BS_LINE]; // current line in groff document
@@ -1606,18 +1671,30 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   }
 
   // Use `man` to figure out `gpath`
+  correct_args(&argsc, args);
   char cmdstr[BS_LINE];
-  if (local_file)
-    snprintf(cmdstr, BS_LINE,
-             "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
-             config.misc.man_path, args);
-  else {
-    snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
-             config.misc.man_path, args);
+  if (config.misc.mandoc) {
+    // `mandoc` specific
+    if (local_file)
+      snprintf(cmdstr, BS_LINE, "%s -w -l %ls 2>>/dev/null",
+               config.misc.man_path, argsc);
+    else
+      snprintf(cmdstr, BS_LINE, "%s -w %ls 2>>/dev/null", config.misc.man_path,
+               argsc);
+  } else {
+    // GNU `man` specific
+    if (local_file)
+      snprintf(cmdstr, BS_LINE,
+               "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
+               config.misc.man_path, argsc);
+    else {
+      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
+               config.misc.man_path, argsc);
+    }
   }
   FILE *pp = xpopen(cmdstr, "r");
   if (-1 == sreadline(gpath, BS_LINE, pp))
-    winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
+    winddown(ES_CHILD_ERROR, L"man command returned invalid output");
   xpclose(pp);
 
   // Open `gpath`
