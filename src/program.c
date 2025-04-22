@@ -960,21 +960,33 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
     // loggit(line);
 
     wline_len = xmbstowcs(wline, line, BS_LONG);
-    if (-1 == wline_len)
-      winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
+    if (-1 == wline_len) {
+      if (0 == res_i)
+        break;
+      else
+        winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
+    }
     wline[wline_len - 1] = L'\0';
 
     // Extract `pages`, `section, and `descr`
     descr = wcsstr(wline, L" - ");
-    if (NULL == descr)
-      winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
+    if (NULL == descr) {
+      if (0 == res_i)
+        break;
+      else
+        winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
+    }
     descr[0] = L'\0';
     descr = &descr[3];
     descr_len = wcslen(descr);
     wcstok(wline, L"(", &buf);
     section = wcstok(NULL, L"(, \")", &buf);
-    if (NULL == section)
-      winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
+    if (NULL == section) {
+      if (0 == res_i)
+        break;
+      else
+        winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
+    }
     section_len = wcslen(section);
     pages_len = wsplit(&pages, BS_LINE, wline, L",");
 
@@ -1004,11 +1016,11 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
     }
   }
 
-  xfclose(pp);
+  int status = xpclose(pp);
 
   // If no results were returned by the command, set `err` and `err_msg`
   err = false;
-  if (0 == res_len) {
+  if (0 == res_i || 0 != status) {
     err = true;
     if (AW_WHATIS == cmd)
       swprintf(err_msg, BS_LINE, L"Whatis %ls: nothing apropriate", args);
@@ -1017,7 +1029,8 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   }
 
   // Deallocate unused memory and return
-  res = xreallocarray(res, res_i, sizeof(aprowhat_t));
+  if (res_i > 0)
+    res = xreallocarray(res, res_i, sizeof(aprowhat_t));
   free(line);
   free(wline);
   free(pages);
@@ -1455,11 +1468,9 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   xfgets(tmps, BS_LINE, pp);
   len = xmbstowcs(tmpw, tmps, BS_LINE);
   i = 0;
-  while (0 == len || L'\n' == tmpw[wmargend(tmpw, L"\n")]) {
+  while (!feof(pp) && (0 == len || L'\n' == tmpw[wmargend(tmpw, L"\n")])) {
     xfgets(tmps, BS_LINE, pp);
     len = xmbstowcs(tmpw, tmps, BS_LINE);
-    if (i++ > BS_LINE)
-      winddown(ES_CHILD_ERROR, L"Malformed man command output");
   }
 
   // For each line of `man`'s output...
@@ -1516,8 +1527,12 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
       len = xmbstowcs(tmpw, tmps, BS_LINE);
     }
 
-    if (-1 == len)
-      winddown(ES_CHILD_ERROR, L"Malformed man command output");
+    if (-1 == len) {
+      if (0 == ln)
+        break;
+      else
+        winddown(ES_CHILD_ERROR, L"Malformed man command output");
+    }
 
     // Allocate memory for a new line in `res`
     line_alloc(res[ln], config.layout.lmargin + len + 1);
@@ -1631,7 +1646,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   if (NULL != old_term)
     setenv("TERM", old_term, true);
 
-  xpclose(pp);
+  int status = xpclose(pp);
   free(tmpw);
   free(tmps);
 
@@ -1646,7 +1661,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 
   // If no results were returned by `man`, set `err` and `err_msg`
   err = false;
-  if (0 == ln) {
+  if (0 == ln || status != 0) {
     err = true;
     swprintf(err_msg, BS_LINE, L"No manual page for %ls", args);
   }
