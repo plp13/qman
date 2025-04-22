@@ -945,8 +945,9 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   wchar_t *section;                             // section (in `line`)
   wchar_t *descr = walloca(BS_LINE);            // description (in `line`)
   wchar_t *buf;                                 // temporary
-  unsigned wline_len, pages_len, cur_page_len, section_len,
-      descr_len;      // lengths of the above
+  unsigned pages_len, cur_page_len, section_len,
+      descr_len;      // lengths of `pages`, `cur_page`, `section`, and `descr`
+  int wline_len;      // length of `wline`
   unsigned res_i = 0; // current result
   unsigned i;         // iterators
 
@@ -959,19 +960,21 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
     // loggit(line);
 
     wline_len = xmbstowcs(wline, line, BS_LONG);
+    if (-1 == wline_len)
+      winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
     wline[wline_len - 1] = L'\0';
 
     // Extract `pages`, `section, and `descr`
     descr = wcsstr(wline, L" - ");
     if (NULL == descr)
-      winddown(ES_OPER_ERROR, L"Malformed apropos/whatis output");
+      winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
     descr[0] = L'\0';
     descr = &descr[3];
     descr_len = wcslen(descr);
     wcstok(wline, L"(", &buf);
     section = wcstok(NULL, L"(, \")", &buf);
     if (NULL == section)
-      winddown(ES_OPER_ERROR, L"Malformed apropos/whatis output");
+      winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
     section_len = wcslen(section);
     pages_len = wsplit(&pages, BS_LINE, wline, L",");
 
@@ -1298,7 +1301,7 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
   }
   FILE *pp = xpopen(cmdstr, "r");
   if (-1 == sreadline(gpath, BS_LINE, pp))
-    winddown(ES_CHILD_ERROR, L"man command returned invalid output");
+    winddown(ES_CHILD_ERROR, L"Malformed man command output");
   xpclose(pp);
 
   // Open `gpath`
@@ -1451,9 +1454,12 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // `tmps`/`tmpw`
   xfgets(tmps, BS_LINE, pp);
   len = xmbstowcs(tmpw, tmps, BS_LINE);
+  i = 0;
   while (0 == len || L'\n' == tmpw[wmargend(tmpw, L"\n")]) {
     xfgets(tmps, BS_LINE, pp);
     len = xmbstowcs(tmpw, tmps, BS_LINE);
+    if (i++ > BS_LINE)
+      winddown(ES_CHILD_ERROR, L"Malformed man command output");
   }
 
   // For each line of `man`'s output...
@@ -1511,7 +1517,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     }
 
     if (-1 == len)
-      winddown(ES_CHILD_ERROR, L"man command returned invalid output");
+      winddown(ES_CHILD_ERROR, L"Malformed man command output");
 
     // Allocate memory for a new line in `res`
     line_alloc(res[ln], config.layout.lmargin + len + 1);
@@ -1694,7 +1700,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   }
   FILE *pp = xpopen(cmdstr, "r");
   if (-1 == sreadline(gpath, BS_LINE, pp))
-    winddown(ES_CHILD_ERROR, L"man command returned invalid output");
+    winddown(ES_CHILD_ERROR, L"Malformed man command output");
   xpclose(pp);
 
   // Open `gpath`
