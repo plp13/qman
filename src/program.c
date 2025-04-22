@@ -111,6 +111,148 @@ full_regex_t re_man, re_http, re_email;
     res = xreallocarray(res, res_len, sizeof(result_t));                       \
   }
 
+// The following are helpers of `man()`
+
+// true if `tmpw[i]` contains a 'bold' terminal escape sequence
+#define got_bold                                                               \
+  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 2] == L'1') && (tmpw[i + 3] == L'm'))
+
+// true if `tmpw[i]` contains a 'bold' typewriter (NO_SGR) sequence
+#define got_bold_nosgr                                                         \
+  ((i + 3 < len) && (tmpw[i] == tmpw[i + 2]) && (tmpw[i + 1] == L'\b'))
+
+// true if `tmpw[i]` contains a 'not bold' terminal escape sequence
+#define got_not_bold                                                           \
+  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 2] == L'0') && (tmpw[i + 3] == L'm'))
+
+// true if `tmpw[i]` contains a 'italic' terminal escape sequence
+#define got_italic                                                             \
+  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 2] == L'3') && (tmpw[i + 3] == L'm'))
+
+// true if `tmpw[i]` contains a 'not italic' terminal escape sequence
+#define got_not_italic                                                         \
+  ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'3') && (tmpw[i + 4] == L'm'))
+
+// true if `tmpw[i]` contains a 'underline' terminal escape sequence
+#define got_uline                                                              \
+  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 2] == L'4') && (tmpw[i + 3] == L'm'))
+
+// true if `tmpw[i]` contains a 'underline' typewriter (NO_SGR) sequence
+#define got_uline_nosgr                                                        \
+  ((i + 3 < len) && (tmpw[i] == L'_') && (tmpw[i + 1] == L'\b'))
+
+// true if `tmpw[i]` contains a 'not underline' terminal escape sequence
+#define got_not_uline                                                          \
+  ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'4') && (tmpw[i + 4] == L'm'))
+
+// true if `tmpw[i]` contains a 'normal / not dim' terminal escape sequence
+#define got_normal                                                             \
+  ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'2') && (tmpw[i + 4] == L'm'))
+
+// true if `tmpw[i]` contains any single-digit terminal formatting sequence
+#define got_any_1                                                              \
+  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 3] == L'm'))
+
+// true if `tmpw[i]` contains any two-digit terminal formatting sequence
+#define got_any_2                                                              \
+  ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 4] == L'm'))
+
+// true if `tmpw[i]` contains any three-digit terminal formatting sequence
+#define got_any_3                                                              \
+  ((i + 6 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
+   (tmpw[i + 5] == L'm'))
+
+// true if `tmpw[i]` contains an esape-]8 (link embedding) sequence
+#define got_esc8                                                               \
+  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L']') &&             \
+   (tmpw[i + 2] == L'8') && (tmpw[i + 3] == L';'))
+
+// The following are helpers of `man_toc()` and `man_sections()`
+
+// true if `gline` is a section header
+#define got_sh                                                                 \
+  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
+   (L'S' == gline[1] || L's' == gline[1]) &&                                   \
+   (L'H' == gline[2] || L'h' == gline[2]))
+
+// true if `gline` is a sub-section header
+#define got_ss                                                                 \
+  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
+   (L'S' == gline[1] || L's' == gline[1]) &&                                   \
+   (L'S' == gline[2] || L's' == gline[2]))
+
+// true if `gline` is a tagged paragraph
+#define got_tp                                                                 \
+  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
+   (L'T' == gline[1] || L't' == gline[1]) &&                                   \
+   (L'P' == gline[2] || L'p' == gline[2]))
+
+// true if `gline` is a command to output delayed text
+#define got_pd                                                                 \
+  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
+   (L'P' == gline[1] || L'p' == gline[1]) &&                                   \
+   (L'D' == gline[2] || L'd' == gline[2]))
+
+// true if a tag line is a comment
+#define got_comment                                                            \
+  ((glen > 2) && (gline[0] == L'.') && (gline[1] == L'\\') &&                  \
+   ((gline[2] == L'\"' || gline[2] == L'#')))
+
+// Components of `got_trap` and `got_ok`
+#define got_b                                                                  \
+  ((glen > 1) && (L'.' == gline[0]) && (L'B' == gline[1] || L'b' == gline[1]))
+#define got_i                                                                  \
+  ((glen > 1) && (L'.' == gline[0]) && (L'I' == gline[1] || L'i' == gline[1]))
+#define got_sm                                                                 \
+  ((glen > 2) && (L'.' == gline[0]) &&                                         \
+   (L's' == gline[1] || L'S' == gline[1]) &&                                   \
+   (L'm' == gline[2] || L'M' == gline[2]))
+#define got_sb                                                                 \
+  ((glen > 2) && (L'.' == gline[0]) &&                                         \
+   (L's' == gline[1] || L'S' == gline[1]) &&                                   \
+   (L'b' == gline[2] || L'B' == gline[2]))
+#define got_bi                                                                 \
+  ((glen > 2) && (L'.' == gline[0]) &&                                         \
+   (L'b' == gline[1] || L'B' == gline[1]) &&                                   \
+   (L'i' == gline[2] || L'I' == gline[2]))
+#define got_br                                                                 \
+  ((glen > 2) && (L'.' == gline[0]) &&                                         \
+   (L'b' == gline[1] || L'B' == gline[1]) &&                                   \
+   (L'r' == gline[2] || L'R' == gline[2]))
+#define got_ib                                                                 \
+  ((glen > 2) && (L'.' == gline[0]) &&                                         \
+   (L'i' == gline[1] || L'I' == gline[1]) &&                                   \
+   (L'b' == gline[2] || L'B' == gline[2]))
+#define got_ir                                                                 \
+  ((glen > 2) && (L'.' == gline[0]) &&                                         \
+   (L'i' == gline[1] || L'I' == gline[1]) &&                                   \
+   (L'r' == gline[2] || L'R' == gline[2]))
+#define got_rb                                                                 \
+  ((glen > 2) && (L'.' == gline[0]) &&                                         \
+   (L'r' == gline[1] || L'R' == gline[1]) &&                                   \
+   (L'b' == gline[2] || L'B' == gline[2]))
+#define got_ri                                                                 \
+  ((glen > 2) && (L'.' == gline[0]) &&                                         \
+   (L'r' == gline[1] || L'R' == gline[1]) &&                                   \
+   (L'i' == gline[2] || L'I' == gline[2]))
+
+// true if a tag line starts with a formatting command that sets a trap
+#define got_trap (got_b || got_i || got_sm || got_sb)
+
+// true if a tag line starts with an allowed formatting command
+#define got_ok                                                                 \
+  (got_b || got_i || got_sm || got_sb || got_bi || got_br || got_ib ||         \
+   got_ir || got_rb || got_ri)
+
 // Helper of `man()`, `man_sections()` and `man_doc()`. If the `man` command
 // doesn't support `page(section)` style arguments, correct any of them them in
 // `src` into `section page` style arguments. Place the result into `dst`.
@@ -140,8 +282,8 @@ void correct_args(wchar_t **dst, const wchar_t *src) {
   } else {
     wcslcpy(*dst, src, BS_LINE);
   }
-  logprintf("BEFORE: %ls", src);
-  logprintf("AFTER:  %ls", *dst);
+  // logprintf("BEFORE: %ls", src);
+  // logprintf("AFTER:  %ls", *dst);
 }
 
 // Helper of `man()` and `aprowhat_render()`. Add a link to `line`. Allocate
@@ -319,148 +461,6 @@ bool section_header_level(line_t *line) {
     return -1;
   }
 }
-
-// The following are helpers of `man()`
-
-// true if `tmpw[i]` contains a 'bold' terminal escape sequence
-#define got_bold                                                               \
-  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
-   (tmpw[i + 2] == L'1') && (tmpw[i + 3] == L'm'))
-
-// true if `tmpw[i]` contains a 'bold' typewriter (NO_SGR) sequence
-#define got_bold_nosgr                                                         \
-  ((i + 3 < len) && (tmpw[i] == tmpw[i + 2]) && (tmpw[i + 1] == L'\b'))
-
-// true if `tmpw[i]` contains a 'not bold' terminal escape sequence
-#define got_not_bold                                                           \
-  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
-   (tmpw[i + 2] == L'0') && (tmpw[i + 3] == L'm'))
-
-// true if `tmpw[i]` contains a 'italic' terminal escape sequence
-#define got_italic                                                             \
-  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
-   (tmpw[i + 2] == L'3') && (tmpw[i + 3] == L'm'))
-
-// true if `tmpw[i]` contains a 'not italic' terminal escape sequence
-#define got_not_italic                                                         \
-  ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
-   (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'3') && (tmpw[i + 4] == L'm'))
-
-// true if `tmpw[i]` contains a 'underline' terminal escape sequence
-#define got_uline                                                              \
-  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
-   (tmpw[i + 2] == L'4') && (tmpw[i + 3] == L'm'))
-
-// true if `tmpw[i]` contains a 'underline' typewriter (NO_SGR) sequence
-#define got_uline_nosgr                                                        \
-  ((i + 3 < len) && (tmpw[i] == L'_') && (tmpw[i + 1] == L'\b'))
-
-// true if `tmpw[i]` contains a 'not underline' terminal escape sequence
-#define got_not_uline                                                          \
-  ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
-   (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'4') && (tmpw[i + 4] == L'm'))
-
-// true if `tmpw[i]` contains a 'normal / not dim' terminal escape sequence
-#define got_normal                                                             \
-  ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
-   (tmpw[i + 2] == L'2') && (tmpw[i + 3] == L'2') && (tmpw[i + 4] == L'm'))
-
-// true if `tmpw[i]` contains any single-digit terminal formatting sequence
-#define got_any_1                                                              \
-  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
-   (tmpw[i + 3] == L'm'))
-
-// true if `tmpw[i]` contains any two-digit terminal formatting sequence
-#define got_any_2                                                              \
-  ((i + 5 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
-   (tmpw[i + 4] == L'm'))
-
-// true if `tmpw[i]` contains any three-digit terminal formatting sequence
-#define got_any_3                                                              \
-  ((i + 6 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
-   (tmpw[i + 5] == L'm'))
-
-// true if `tmpw[i]` contains an esape-]8 (link embedding) sequence
-#define got_esc8                                                               \
-  ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L']') &&             \
-   (tmpw[i + 2] == L'8') && (tmpw[i + 3] == L';'))
-
-// The following are helpers of `man_toc()` and `man_sections()`
-
-// true if `gline` is a section header
-#define got_sh                                                                 \
-  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
-   (L'S' == gline[1] || L's' == gline[1]) &&                                   \
-   (L'H' == gline[2] || L'h' == gline[2]))
-
-// true if `gline` is a sub-section header
-#define got_ss                                                                 \
-  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
-   (L'S' == gline[1] || L's' == gline[1]) &&                                   \
-   (L'S' == gline[2] || L's' == gline[2]))
-
-// true if `gline` is a tagged paragraph
-#define got_tp                                                                 \
-  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
-   (L'T' == gline[1] || L't' == gline[1]) &&                                   \
-   (L'P' == gline[2] || L'p' == gline[2]))
-
-// true if `gline` is a command to output delayed text
-#define got_pd                                                                 \
-  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
-   (L'P' == gline[1] || L'p' == gline[1]) &&                                   \
-   (L'D' == gline[2] || L'd' == gline[2]))
-
-// true if a tag line is a comment
-#define got_comment                                                            \
-  ((glen > 2) && (gline[0] == L'.') && (gline[1] == L'\\') &&                  \
-   ((gline[2] == L'\"' || gline[2] == L'#')))
-
-// Components of `got_trap` and `got_ok`
-#define got_b                                                                  \
-  ((glen > 1) && (L'.' == gline[0]) && (L'B' == gline[1] || L'b' == gline[1]))
-#define got_i                                                                  \
-  ((glen > 1) && (L'.' == gline[0]) && (L'I' == gline[1] || L'i' == gline[1]))
-#define got_sm                                                                 \
-  ((glen > 2) && (L'.' == gline[0]) &&                                         \
-   (L's' == gline[1] || L'S' == gline[1]) &&                                   \
-   (L'm' == gline[2] || L'M' == gline[2]))
-#define got_sb                                                                 \
-  ((glen > 2) && (L'.' == gline[0]) &&                                         \
-   (L's' == gline[1] || L'S' == gline[1]) &&                                   \
-   (L'b' == gline[2] || L'B' == gline[2]))
-#define got_bi                                                                 \
-  ((glen > 2) && (L'.' == gline[0]) &&                                         \
-   (L'b' == gline[1] || L'B' == gline[1]) &&                                   \
-   (L'i' == gline[2] || L'I' == gline[2]))
-#define got_br                                                                 \
-  ((glen > 2) && (L'.' == gline[0]) &&                                         \
-   (L'b' == gline[1] || L'B' == gline[1]) &&                                   \
-   (L'r' == gline[2] || L'R' == gline[2]))
-#define got_ib                                                                 \
-  ((glen > 2) && (L'.' == gline[0]) &&                                         \
-   (L'i' == gline[1] || L'I' == gline[1]) &&                                   \
-   (L'b' == gline[2] || L'B' == gline[2]))
-#define got_ir                                                                 \
-  ((glen > 2) && (L'.' == gline[0]) &&                                         \
-   (L'i' == gline[1] || L'I' == gline[1]) &&                                   \
-   (L'r' == gline[2] || L'R' == gline[2]))
-#define got_rb                                                                 \
-  ((glen > 2) && (L'.' == gline[0]) &&                                         \
-   (L'r' == gline[1] || L'R' == gline[1]) &&                                   \
-   (L'b' == gline[2] || L'B' == gline[2]))
-#define got_ri                                                                 \
-  ((glen > 2) && (L'.' == gline[0]) &&                                         \
-   (L'r' == gline[1] || L'R' == gline[1]) &&                                   \
-   (L'i' == gline[2] || L'I' == gline[2]))
-
-// true if a tag line starts with a formatting command that sets a trap
-#define got_trap (got_b || got_i || got_sm || got_sb)
-
-// true if a tag line starts with an allowed formatting command
-#define got_ok                                                                 \
-  (got_b || got_i || got_sm || got_sb || got_bi || got_br || got_ib ||         \
-   got_ir || got_rb || got_ri)
 
 // Helper of `man_toc()`. Massage the `text` of every entry in `toc` (of size
 // `toc_len`) with the `groff` command, in order to remove escaped characters,
