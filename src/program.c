@@ -253,7 +253,43 @@ full_regex_t re_man, re_http, re_email;
   (got_b || got_i || got_sm || got_sb || got_bi || got_br || got_ib ||         \
    got_ir || got_rb || got_ri)
 
-// Helper of `man()`, `man_sections()` and `man_doc()`. If the `man` command
+// Helper of `man()`, `man_sections()` and `man_toc()`. Place the location of
+// the manual page source that corresponds to `args` into `dst`. If no such
+// location exists, return false, otherwise return true. `local_file` signifies
+// whether `args` contains a local file path, rather than a manual page name and
+// section.
+bool man_loc(char *dst, wchar_t *args, bool local_file) {
+  char cmdstr[BS_LINE]; // command to execute
+  bool ret = true;      // return value
+
+  if (config.misc.mandoc) {
+    // `mandoc` specific
+    if (local_file) {
+      wcstombs(dst, args, BS_LINE);
+      return true;
+    } else
+      snprintf(cmdstr, BS_LINE, "%s -w %ls 2>>/dev/null", config.misc.man_path,
+               args);
+  } else {
+    // GNU `man` specific
+    if (local_file)
+      snprintf(cmdstr, BS_LINE,
+               "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
+               config.misc.man_path, args);
+    else {
+      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
+               config.misc.man_path, args);
+    }
+  }
+
+  FILE *pp = xpopen(cmdstr, "r");
+  if (-1 == sreadline(dst, BS_LINE, pp))
+    ret = false;
+
+  xpclose(pp);
+  return ret;
+}
+// Helper of `man()`, `man_sections()` and `man_toc()`. If the `man` command
 // doesn't support `page(section)` style arguments, correct any of them them in
 // `src` into `section page` style arguments. Place the result into `dst`.
 void correct_args(wchar_t **dst, const wchar_t *src) {
@@ -266,17 +302,26 @@ void correct_args(wchar_t **dst, const wchar_t *src) {
     unsigned arg_dec_len;     // length of `arg_dec`
     wchar_t *tmp = walloca(wcslen(src) * 2); // temporary
     wchar_t *buf;                            // temporary
+    bool ft = true; // whether this is the first argument we're encountering
 
     wcslcpy(*dst, L"", BS_LINE);
     wcslcpy(srcc, src, BS_LINE);
     arg = wcstok(srcc, L"' \t", &buf);
+
     while (NULL != arg) {
       arg_dec_len = wsplit(&arg_dec, 2, arg, L"()");
+
       if (2 == arg_dec_len)
         swprintf(tmp, BS_LINE, L"'%ls' '%ls'", arg_dec[1], arg_dec[0]);
       else
-        swprintf(tmp, BS_LINE, L"'%ls'", arg_dec[0]);
+        swprintf(tmp, BS_LINE, L"'%ls' ", arg_dec[0]);
+
+      if (ft)
+        ft = false;
+      else
+        wcslcat(*dst, L" ", BS_LINE);
       wcslcat(*dst, tmp, BS_LINE);
+
       arg = wcstok(NULL, L"' \t", &buf);
     }
   } else {
@@ -1018,7 +1063,8 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
 
   int status = xpclose(pp);
 
-  // If no results were returned by the command, set `err` and `err_msg`
+  // If no results were returned by the command, set `err` to true and describe
+  // the error in `err_msg`. Otherwise, set `err` to false.
   err = false;
   if (0 == res_i || 0 != status) {
     err = true;
@@ -1290,32 +1336,10 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
   unsigned res_len = BS_SHORT;                // result buffer length
   wchar_t **res = aalloc(res_len, wchar_t *); // result buffer
 
-  // Use `man` to figure out `gpath`
+  // Correct arguments and use `man` to figure out `gpath`
   correct_args(&argsc, args);
-  char cmdstr[BS_LINE];
-  if (config.misc.mandoc) {
-    // `mandoc` specific
-    if (local_file)
-      snprintf(cmdstr, BS_LINE, "%s -w -l %ls 2>>/dev/null",
-               config.misc.man_path, argsc);
-    else
-      snprintf(cmdstr, BS_LINE, "%s -w %ls 2>>/dev/null", config.misc.man_path,
-               argsc);
-  } else {
-    // GNU `man` specific
-    if (local_file)
-      snprintf(cmdstr, BS_LINE,
-               "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
-               config.misc.man_path, argsc);
-    else {
-      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
-               config.misc.man_path, argsc);
-    }
-  }
-  FILE *pp = xpopen(cmdstr, "r");
-  if (-1 == sreadline(gpath, BS_LINE, pp))
-    winddown(ES_CHILD_ERROR, L"Malformed man command output");
-  xpclose(pp);
+  if (false == man_loc(gpath, argsc, local_file))
+    winddown(ES_OPER_ERROR, L"Failed to locate manual page source file");
 
   // Open `gpath`
   archive_t gp = aropen(gpath);
@@ -1441,12 +1465,16 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   char cmdstr[BS_LINE];
   if (config.misc.mandoc) {
     // `mandoc` specific
-    if (local_file)
-      snprintf(cmdstr, BS_LINE, "%s -T utf8 -O width=%d -l %ls 2>>/dev/null",
-               config.misc.man_path, text_width, argsc);
-    else
-      snprintf(cmdstr, BS_LINE, "%s -T utf8 -O width=%d %ls 2>>/dev/null",
-               config.misc.man_path, text_width, argsc);
+    char gpath[BS_LINE]; // path to groff document for manual page
+    if (false == man_loc(gpath, argsc, local_file)) {
+      // Ugly, but will cause `man` to fail gracefully
+      strlcpy(gpath, "1234567890thequickbrownfoxjumpsoverthelazydog", BS_LINE);
+    }
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
+    snprintf(cmdstr, BS_LINE, "%s -T utf8 -O width=%d -l %s 2>>/dev/null",
+             config.misc.man_path, text_width, gpath);
+#pragma GCC diagnostic pop
   } else {
     // GNU `man` specific
     if (local_file)
@@ -1659,7 +1687,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     }
   }
 
-  // If no results were returned by `man`, set `err` and `err_msg`
+  // If no results were returned by `man`, set `err` to true and describe the
+  // error in `err_msg`. Otherwise, set `err` to false.
   err = false;
   if (0 == ln || status != 0) {
     err = true;
@@ -1691,32 +1720,10 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
     inc_en;
   }
 
-  // Use `man` to figure out `gpath`
+  // Correct arguments and use `man` to figure out `gpath`
   correct_args(&argsc, args);
-  char cmdstr[BS_LINE];
-  if (config.misc.mandoc) {
-    // `mandoc` specific
-    if (local_file)
-      snprintf(cmdstr, BS_LINE, "%s -w -l %ls 2>>/dev/null",
-               config.misc.man_path, argsc);
-    else
-      snprintf(cmdstr, BS_LINE, "%s -w %ls 2>>/dev/null", config.misc.man_path,
-               argsc);
-  } else {
-    // GNU `man` specific
-    if (local_file)
-      snprintf(cmdstr, BS_LINE,
-               "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
-               config.misc.man_path, argsc);
-    else {
-      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
-               config.misc.man_path, argsc);
-    }
-  }
-  FILE *pp = xpopen(cmdstr, "r");
-  if (-1 == sreadline(gpath, BS_LINE, pp))
-    winddown(ES_CHILD_ERROR, L"Malformed man command output");
-  xpclose(pp);
+  if (false == man_loc(gpath, argsc, local_file))
+    winddown(ES_OPER_ERROR, L"Failed to locate manual page source file");
 
   // Open `gpath`
   archive_t gp = aropen(gpath);
