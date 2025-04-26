@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.4.1-21-g4eff824
+footer: Qman 1.4.1-22-gce639a9
 date: December 15, 2023
 ---
 
@@ -364,6 +364,7 @@ This section contains various miscellaneous options:
 | apropos_path | string       | /usr/bin/apropos | Path to the **apropos(1)** command |
 | browser_path | string       | /usr/bin/xdg-open | Path to the command that will be used to open HTTP links (i.e. your web browser) |
 | mailer_path  | string       | /usr/bin/xdg-email | Path to the command that will be used to open e-mail links (i.e. your e-mail software) |
+| mandoc       | boolean      | false      | Whether the operating system uses **mandoc(1)** (as opposed to GNU **man(1)**)
 | reset_after_http | boolean  | true       | Re-initialize curses after opening an http(s) link |
 | reset_after_email| boolean  | true       | Re-initialize curses after opening an e-mail link |
 | history_size | unsigned int | 256k       | Maximum number of history entries |

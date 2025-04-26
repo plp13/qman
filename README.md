@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.4.1-21-g4eff824 -- [see what's new](#new-in-this-version)
+Version 1.4.1-22-gce639a9 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -27,7 +27,7 @@ Online help:
 ![Online Help](/screenshots/qman_help.png)
 
 ## Rationale
-Linux manual pages are lovely. They are concise, well-written, complete, and
+Unix manual pages are lovely. They are concise, well-written, complete, and
 downright useful. However, the standard way of accessing them from the
 command-line hasn't changed since the early days.
 
@@ -64,30 +64,11 @@ page.
 
 ## New in this version
 
-Version 1.4.0 introduces the following:
-- A new configuration subsystem that provides an `include` directive, allowing
-  Qman's configuration to be broken into multiple files
-- A basic config file, `qman.conf`, together with a number of 'theme' config
-  files, are now installed by default at `/etc/xdg/qman`. This gives Qman a
-  handsome default look and feel.
-- `hinit` is no longer a dependency
-- Qman reconfigures itself on-the-fly upon receiving SIGUSR1. This is useful for
-  integrating with programs such as [darkman](https://darkman.whynothugo.nl/).
-- Support for manual pages compressed using `xz`
-- Improved clipboard support when using the `ghostty` terminal
-- Option `-A`/`--action` lets the user specify a program action to be performed
-  upon startup
+Version 1.5.0 introduces the following:
+- Support for `mandoc`. This is a major feature that enables Qman to be used on
+  systems such as macOS, freeBSD, and Linux distributions that prefer `mandoc`
+  rather than GNU `man`.
 - Miscellaneous bug fixes and documentation updates
-
-Version 1.4.1 fixes a few bugs introduced with the on-the-fly reconfiguration
-feature, and a build failure when using `musl-libc`. It also includes some
-minor documentation updates.
-
-> **:warning: Caution**
->
-> This version changes the location of Qman's system-wide config file to
-> `/etc/xdg/qman/qman.conf`, and the location of the user-specific config file
-> to `/${HOME}/.config/qman/qman.conf`
 
 > **:bulb: Note**
 >
@@ -120,9 +101,10 @@ There are also a number of optional library dependencies:
 - `liblzma`: support for manual pages compressed with `xz`
 - `cunit`: used for unit testing
 
-Note that Qman is a front-end to GNU `man`, and therefore requires `man`,
-`apropos`, `whatis`, and `groff` to be installed. In order for it to make sense,
-a Unix manual pages database must also be present.
+Qman is a front-end to either GNU `man` or `mandoc`, and it therefore requires
+one of these two packages to be installed, and the `man`, `apropos` and `whatis`
+utilities to be present. It also requires GNU `groff`. Finally, a Unix manual
+pages database must be present and correctly configured.
 
 ## Building and installing
 Make sure that the minimum dependencies are installed, and do the following:
@@ -188,27 +170,43 @@ $ qman qman
 `~/.config/qman/qman.conf` (user-specific) or `/etc/xdg/qman/qman.conf`
 (system-wide).
 
-> **:question: Calling `qman` without any parameters fails with message
-> `Apropos '': nothing appropriate`**
+> **:question: Qman can't find any manual pages. And/or calling `qman` without
+> any parameters fails with message `Apropos '': nothing appropriate`**
 
-Your system does not have a manual page index cache. This can be fixed by
-running (as root):
+For most Linux users, this occurs because your manual pages database hasn't been
+initialized. This can be fixed by running (as root):
 
 ```
 # mandb
 ```
 
+If you are on an operating system that uses `mandoc` (such as FreeBSD or macOS),
+you must add the following to Qman's configuration file:
+
+```
+[misc]
+mandoc=true
+```
+
+The manual pages database must be initialized for `mandoc`-based systems as well.
+If your O/S doesn't do this automatically, you must run (as root):
+
+```
+# makewhatis
+```
+
 > **:question:: Some pages don't appear in the index page, or in the dialogs
 > used for opening pages or performing whatis/apropos**
 
-Again, this is probably a `mandb` issue. Qman uses the `apropos` command to
-build the array of manual pages that these features use, and `apropos` relies on
-`mandb` being correctly configured and up-to-date. If it isn't, the
-array will be incomplete and/or inaccurate.
+Again, this is probably a manual pages database issue. Qman uses the `apropos`
+command to build the array of manual pages that these features use, and
+`apropos` relies on the database being correctly configured and up-to-date. If
+it isn't, the array will be incomplete and/or inaccurate.
 
-Check your `man_db.conf` for correctness, and run `mandb` again as described
-above. You may also want build a script that automatically runs `mandb`
-after software updates, if your O/S distribution doesn't already do this.
+The database must be kept up-to-date, by running `mandb` or `makewhatis` as
+described above every time manual pages are installed or uninstalled.
+Regrettably, if your O/S doesn't do this automatically, you'll have to do it
+manually or create your own automation.
 
 > **:question: I'm unable to copy text to the clipboard using the mouse, and/or
 > my mouse behaves erratically**
@@ -246,12 +244,6 @@ nothing, e.g. `/usr/bin/false`.
 Use a different one of the supplied
 [themes](https://github.com/plp13/qman/config/themes). Or build your own (and
 open a pull request to to add it to the repository).
-
-> **:question: It doesn't work on my non-Linux O/S (MacOS, FreeBSD, etc.)**
-
-Qman is specific to Linux, built upon the GNU `man` toolchain. Ports to other
-operating systems are possible. However, they'd most probably require a
-non-trivial amount of effort. They'd also need to be done as separate forks.
 
 ## Contributing
 If you wish to contribute to the program's development, clone the
