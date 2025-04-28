@@ -7,6 +7,25 @@
 #include "lib.h"
 
 //
+// Compiler magic
+//
+
+// Macros used for silencing compiler warnings
+#ifdef __GNUC__
+#define CC_IGNORE_UNUSED_PARAMETER                                             \
+  _Pragma("GCC diagnostic push")                                               \
+      _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
+#define CC_IGNORE_FORMAT_TRUNCATION                                            \
+  _Pragma("GCC diagnostic push")                                               \
+      _Pragma("GCC diagnostic ignored \"-Wformat-truncation\"")
+#define CC_IGNORE_ENDS _Pragma("GCC diagnostic pop")
+#else
+#define CC_IGNORE_UNUSED_PARAMETER
+#define CC_IGNORE_FORMAT_TRUNCATION
+#define CC_IGNORE_ENDS
+#endif
+
+//
 // Types
 //
 

@@ -253,42 +253,6 @@ full_regex_t re_man, re_http, re_email;
   (got_b || got_i || got_sm || got_sb || got_bi || got_br || got_ib ||         \
    got_ir || got_rb || got_ri)
 
-// Helper of `man()`, `man_sections()` and `man_toc()`. Place the location of
-// the manual page source that corresponds to `args` into `dst`. If no such
-// location exists, return false, otherwise return true. `local_file` signifies
-// whether `args` contains a local file path, rather than a manual page name and
-// section.
-bool man_loc(char *dst, wchar_t *args, bool local_file) {
-  char cmdstr[BS_LINE]; // command to execute
-  bool ret = true;      // return value
-
-  if (config.misc.mandoc) {
-    // `mandoc` specific
-    if (local_file) {
-      wcstombs(dst, args, BS_LINE);
-      return true;
-    } else
-      snprintf(cmdstr, BS_LINE, "%s -w %ls 2>>/dev/null", config.misc.man_path,
-               args);
-  } else {
-    // GNU `man` specific
-    if (local_file)
-      snprintf(cmdstr, BS_LINE,
-               "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
-               config.misc.man_path, args);
-    else {
-      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
-               config.misc.man_path, args);
-    }
-  }
-
-  FILE *pp = xpopen(cmdstr, "r");
-  if (-1 == sreadline(dst, BS_LINE, pp))
-    ret = false;
-
-  xpclose(pp);
-  return ret;
-}
 // Helper of `man()`, `man_sections()` and `man_toc()`. If the `man` command
 // doesn't support `page(section)` style arguments, correct any of them them in
 // `src` into `section page` style arguments. Place the result into `dst`.
@@ -329,6 +293,43 @@ void correct_args(wchar_t **dst, const wchar_t *src) {
   }
   // logprintf("BEFORE: %ls", src);
   // logprintf("AFTER:  %ls", *dst);
+}
+
+// Helper of `man()`, `man_sections()` and `man_toc()`. Place the location of
+// the manual page source that corresponds to `args` into `dst`. If no such
+// location exists, return false, otherwise return true. `local_file` signifies
+// whether `args` contains a local file path, rather than a manual page name and
+// section.
+bool man_loc(char *dst, wchar_t *args, bool local_file) {
+  char cmdstr[BS_LINE]; // command to execute
+  bool ret = true;      // return value
+
+  if (config.misc.mandoc) {
+    // `mandoc` specific
+    if (local_file) {
+      wcstombs(dst, args, BS_LINE);
+      return true;
+    } else
+      snprintf(cmdstr, BS_LINE, "%s -w %ls 2>>/dev/null", config.misc.man_path,
+               args);
+  } else {
+    // GNU `man` specific
+    if (local_file)
+      snprintf(cmdstr, BS_LINE,
+               "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
+               config.misc.man_path, args);
+    else {
+      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
+               config.misc.man_path, args);
+    }
+  }
+
+  FILE *pp = xpopen(cmdstr, "r");
+  if (-1 == sreadline(dst, BS_LINE, pp))
+    ret = false;
+
+  xpclose(pp);
+  return ret;
 }
 
 // Helper of `man()` and `aprowhat_render()`. Add a link to `line`. Allocate
@@ -1470,11 +1471,10 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
       // Ugly, but will cause `man` to fail gracefully
       strlcpy(gpath, "1234567890thequickbrownfoxjumpsoverthelazydog", BS_LINE);
     }
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-truncation"
+    CC_IGNORE_FORMAT_TRUNCATION
     snprintf(cmdstr, BS_LINE, "%s -T utf8 -O width=%d -l %s 2>>/dev/null",
              config.misc.man_path, text_width, gpath);
-#pragma GCC diagnostic pop
+    CC_IGNORE_ENDS
   } else {
     // GNU `man` specific
     if (local_file)
@@ -1854,11 +1854,10 @@ unsigned sc_toc(toc_entry_t **dst, const wchar_t *const *sc,
   return en;
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
+CC_IGNORE_UNUSED_PARAMETER
 link_loc_t prev_link(const line_t *lines, unsigned lines_len,
                      link_loc_t start) {
-#pragma GCC diagnostic pop
+  CC_IGNORE_ENDS
   unsigned i;
   link_loc_t res;
 

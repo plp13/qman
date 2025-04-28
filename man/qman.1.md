@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.4.1-22-gce639a9
+footer: Qman 1.4.1-23-g549b512
 date: December 15, 2023
 ---
 
