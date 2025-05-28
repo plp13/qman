@@ -111,8 +111,8 @@ available, starting with version 1.2.1.
 
 ## Dependencies
 Qman is written in plain C, and thus requires a compiler such as `gcc` or
-`clang`, together with the `meson` build system. `cog`, a Python program for
-generating C code, is also required.
+`clang`, together with the `meson` build system. `cog`, [a Python program for
+generating C code](https://pypi.org/project/cogapp/), is also required.
 
 The program's minimum library dependencies are `glibc` and `ncurses`.
 
