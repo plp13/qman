@@ -317,7 +317,7 @@ char *xtempnam(const char *dir, const char *pfx) {
   for (unsigned i = 0; i < strlen(pfx); i++)
     if ('X' == pfx[i])
       winddown(ES_OPER_ERROR, L"Unable to xtempnam(): prefix contains 'X'");
-  if (strlen(dir) + strlen(pfx) + 2 > BS_SHORT)
+  if (strlen(dir) + strlen(pfx) + 8 > BS_SHORT)
     winddown(ES_OPER_ERROR, L"Unable to xtempnam(): prefix too long");
 
   fn = salloc(BS_SHORT);
