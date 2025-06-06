@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.4.1-26-g295cda8 -- [see what's new](#new-in-this-version)
+Version 1.4.1-27-g7bf509b -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -68,6 +68,10 @@ Version 1.5.0 introduces the following:
 - Support for `mandoc`. This is a major feature that enables Qman to be used on
   systems such as macOS, freeBSD, and Linux distributions that prefer `mandoc`
   rather than GNU `man`.
+- Three new themes:
+  - `adwaita`, designed to match the colors of dark Adwaita desktops
+  - adwaita-light, designed to match the colors of light Adwaita desktops
+  - `modernity-light`, a generic light theme to complement `modernity`
 - Miscellaneous bug fixes and documentation updates
 
 > **:bulb: Note**
@@ -244,6 +248,16 @@ nothing, e.g. `/usr/bin/false`.
 Use a different one of the supplied
 [themes](https://github.com/plp13/qman/config/themes). Or build your own (and
 open a pull request to to add it to the repository).
+
+For instructions on how to use a theme, refer to Qman's manual page or look at
+the comments in [config/qman.conf](config/qman.conf)
+
+> **:question: I modified my config file to include a theme, but Qman's colors
+> still don't look right**
+
+All provided themes require a terminal that supports 256 colors. Some themes
+(including `adwaita`, `adwaita-light` and `catpuccin_latte`) also require a
+terminal that can re-define colors from RGB values.
 
 ## Contributing
 If you wish to contribute to the program's development, clone the
