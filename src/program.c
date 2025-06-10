@@ -253,65 +253,132 @@ full_regex_t re_man, re_http, re_email;
   (got_b || got_i || got_sm || got_sb || got_bi || got_br || got_ib ||         \
    got_ir || got_rb || got_ri)
 
-// Helper of `man()`, `man_sections()` and `man_toc()`. If the `man` command
-// doesn't support `page(section)` style arguments, correct any of them them in
-// `src` into `section page` style arguments. Place the result into `dst`.
-void correct_args(wchar_t **dst, const wchar_t *src) {
-  if (config.misc.mandoc) {
-    wchar_t *srcc = walloca(wcslen(src) * 2); // copy of `src`
-    wchar_t *arg;                             // current argument
-    wchar_t **arg_dec =
-        aalloc(2, wchar_t *); // decomposed current argument (e.g. `"ls(1)"` ->
-                              // `["ls", "1"]`)
-    unsigned arg_dec_len;     // length of `arg_dec`
-    wchar_t *tmp = walloca(wcslen(src) * 2); // temporary
-    wchar_t *buf;                            // temporary
-    bool ft = true; // whether this is the first argument we're encountering
+// Helper of `man_loc()` and `man()`. Decompose command-line argument in `src`
+// into a `page` and potentially a `section` (both of length `len`). Return 2 if
+// both `page` and `section` got populated, 1 if just `page` got populated, or 0
+// of neither did.
+unsigned extract_args(wchar_t **page, wchar_t **section, unsigned len,
+                      const wchar_t *src) {
+  wchar_t *srcc = walloca(wcslen(src) * 2); // copy of `src`
+  wchar_t *arg;                             // current argument
+  wchar_t **arg_dec =
+      aalloc(2, wchar_t *); // decomposed current argument (e.g. `"ls(1)"` ->
+                            // `["ls", "1"]`)
+  unsigned arg_dec_len;     // length of `arg_dec`
+  wchar_t *buf;             // temporary
 
-    wcslcpy(*dst, L"", BS_LINE);
-    wcslcpy(srcc, src, BS_LINE);
-    arg = wcstok(srcc, L"' \t", &buf);
+  wcslcpy(srcc, src, BS_LINE);
 
-    while (NULL != arg) {
-      arg_dec_len = wsplit(&arg_dec, 2, arg, L"()");
-
-      if (2 == arg_dec_len)
-        swprintf(tmp, BS_LINE, L"'%ls' '%ls'", arg_dec[1], arg_dec[0]);
-      else
-        swprintf(tmp, BS_LINE, L"'%ls' ", arg_dec[0]);
-
-      if (ft)
-        ft = false;
-      else
-        wcslcat(*dst, L" ", BS_LINE);
-      wcslcat(*dst, tmp, BS_LINE);
-
+  arg = wcstok(srcc, L"' \t", &buf);
+  if (NULL != arg) {
+    // Argument #1 exists...
+    arg_dec_len = wsplit(&arg_dec, 2, arg, L"()");
+    if (2 == arg_dec_len) {
+      // ...and is in page(sec) format; decompose it into `page` and `section`
+      wcslcpy(*page, arg_dec[0], len);
+      wcslcpy(*section, arg_dec[1], len);
+      return 2;
+    } else if (1 == arg_dec_len) {
+      // ...and is not in page(sec) format; provisionally set argument #1 as
+      // `page` and <empty string> as `section`
+      wcslcpy(*page, arg_dec[0], len);
+      wcslcpy(*section, L"", len);
+      // However...
       arg = wcstok(NULL, L"' \t", &buf);
+      if (NULL != arg) {
+        // ...if argument #2 exists...
+        arg_dec_len = wsplit(&arg_dec, 2, arg, L"()");
+        if (1 == arg_dec_len) {
+          // ...and is not in page(sec) format, set argument #1 as `section` and
+          // argument #2 as `page`
+          wcslcpy(*section, *page, len);
+          wcslcpy(*page, arg_dec[0], len);
+          return 2;
+        }
+      }
+      return 1;
     }
-  } else {
-    wcslcpy(*dst, src, BS_LINE);
   }
-  // logprintf("BEFORE: %ls", src);
-  // logprintf("AFTER:  %ls", *dst);
+
+  return 0;
 }
 
-// Helper of `man()`, `man_sections()` and `man_toc()`. Place the location of
-// the manual page source that corresponds to `args` into `dst`. If no such
-// location exists, return false, otherwise return true. `local_file` signifies
-// whether `args` contains a local file path, rather than a manual page name and
+// Helper of `man_sections()` and `man_toc()`. Place the location of the manual
+// page source that corresponds to `args` into `dst`. If no such location
+// exists, return false, otherwise return true. `local_file` signifies whether
+// `args` contains a local file path, rather than a manual page name and
 // section.
-bool man_loc(char *dst, wchar_t *args, bool local_file) {
+bool man_loc(char *dst, const wchar_t *args, bool local_file) {
   char cmdstr[BS_LINE]; // command to execute
-  bool ret = true;      // return value
+  bool ret;             // return value
 
   if (config.misc.mandoc) {
     // `mandoc` specific
+    unsigned args_len = wcslen(args);     // length of `args`
+    wchar_t *page = walloca(args_len);    // man page extracted from `args`
+    wchar_t *section = walloca(args_len); // man section extracted from `args`
+    char *combo = salloca(2 * args_len);  // `page`.`section` combination
+    char *combo_ptr, combo_post;          // used for analyzing `combo`
+    unsigned extracted;                   // return value of `extract_args()`
+    int searched;                         // return value of `aprowhat_search()`
+
+    extracted = extract_args(&page, &section, args_len, args);
+    switch (extracted) {
+    case 2:
+      snprintf(combo, BS_LINE, "%ls.%ls", page, section);
+      break;
+    case 1:
+      searched = aprowhat_search(page, aw_all, aw_all_len, 0, false);
+      if (searched > -1)
+        snprintf(combo, BS_LINE, "%ls.%ls", aw_all[searched].page,
+                 aw_all[searched].section);
+      else
+          xwcstombs(combo, page, args_len);
+      break;
+    case 0:
+      return false;
+    }
+
     if (local_file) {
-      wcstombs(dst, args, BS_LINE);
+      wcstombs(dst, page, BS_LINE);
       return true;
-    } else
-      snprintf(cmdstr, BS_LINE, "%s -w %ls 2>>/dev/null", config.misc.man_path,
-               args);
+    } else {
+      if (2 == extracted)
+        snprintf(cmdstr, BS_LINE, "%s -w '%ls' '%ls' 2>>/dev/null",
+                 config.misc.man_path, section, page);
+      else
+        snprintf(cmdstr, BS_LINE, "%s -w '%ls' 2>>/dev/null",
+                 config.misc.man_path, page);
+
+      // Try to return the 'man -w' result that ends in `combo` (barring a
+      // filename extension)
+      ret = false;
+      FILE *pp = xpopen(cmdstr, "r");
+      while (-1 != sreadline(dst, BS_LINE, pp)) {
+        combo_ptr = strcasestr(dst, combo);
+        if (NULL != combo_ptr) {
+          combo_post = combo_ptr[strlen(combo)];
+          if ('.' == combo_post || '\0' == combo_post) {
+            ret = true;
+            break;
+          }
+        }
+      }
+
+      // If not found, execute 'man -w' again and return the first line of its
+      // output
+      if (false == ret) {
+        xpclose(pp);
+        ret = true;
+        pp = xpopen(cmdstr, "r");
+        if (-1 == sreadline(dst, BS_LINE, pp))
+          ret = false;
+      }
+
+      xpclose(pp);
+      logprintf("%s", dst);
+      return ret;
+    }
   } else {
     // GNU `man` specific
     if (local_file)
@@ -322,19 +389,20 @@ bool man_loc(char *dst, wchar_t *args, bool local_file) {
       snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
                config.misc.man_path, args);
     }
+
+    ret = true;
+    FILE *pp = xpopen(cmdstr, "r");
+    if (-1 == sreadline(dst, BS_LINE, pp))
+      ret = false;
+
+    xpclose(pp);
+    return ret;
   }
-
-  FILE *pp = xpopen(cmdstr, "r");
-  if (-1 == sreadline(dst, BS_LINE, pp))
-    ret = false;
-
-  xpclose(pp);
-  return ret;
 }
 
 // Helper of `man()` and `aprowhat_render()`. Add a link to `line`. Allocate
-// memory using `line_realloc_link()` to do so. Use `start`, `end`, `link_next`,
-// `type`, and `trgt` to populate the new link's members.
+// memory using `line_realloc_link()` to do so. Use `start`, `end`,
+// `link_next`, `type`, and `trgt` to populate the new link's members.
 void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
               unsigned start_next, unsigned end_next, link_type_t type,
               const wchar_t *trgt) {
@@ -475,10 +543,10 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
 // argument, every time `man()` is invoked.
 bool section_header_level(line_t *line) {
   static unsigned lnme_set[] = {
-      0, 0, 0, 0, 0,
-      0, 0, 0}; // unique and (hopefully) ordered `lnme` values for all section
-                // headers encountered so far
-  unsigned i;   // iterator
+      0, 0, 0, 0,
+      0, 0, 0, 0}; // unique and (hopefully) ordered `lnme` values for all
+                   // section headers encountered so far
+  unsigned i;      // iterator
 
   // `line` is NULL; re-initialize `lnme_set` and return -1
   if (NULL == line) {
@@ -717,7 +785,8 @@ int parse_options(int argc, char *const *argv) {
       history_replace(RT_WHATIS, NULL);
       break;
     case 'l':
-      // -l or --local-file was passed; try to show a man page from a local file
+      // -l or --local-file was passed; try to show a man page from a local
+      // file
       history_replace(RT_MAN_LOCAL, NULL);
       break;
     case 'K':
@@ -828,8 +897,8 @@ void parse_args(int argc, char *const *argv) {
       }
     }
 
-    // Surround all members of `argv` with single quotes, and flatten them into
-    // `tmp`
+    // Surround all members of `argv` with single quotes, and flatten them
+    // into `tmp`
     for (i = 0; i < argc; i++) {
       swprintf(tmp2, BS_SHORT, L"'%s'", argv[i]);
       if (tmp_len + wcslen(tmp2) < BS_LINE) {
@@ -924,8 +993,8 @@ void history_push(request_type_t rt, const wchar_t *args) {
   // Make `history_top` equal to `history_cur`
   history_top = history_cur;
 
-  // Failsafe: in the unlikely case `history_top` exceeds history size, free all
-  // memory used by `history` and start over
+  // Failsafe: in the unlikely case `history_top` exceeds history size, free
+  // all memory used by `history` and start over
   if (history_top >= config.misc.history_size) {
     requests_free(history, config.misc.history_size);
     history_top = 0;
@@ -1049,9 +1118,8 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
                pages[i], section);
       res[res_i].descr = walloc(descr_len);
       wcslcpy(res[res_i].descr, descr, descr_len + 1);
-      // logprintf("%d. %ls(%ls)", res_i, res[res_i].page, res[res_i].section);
-      // logprintf("%ls", res[res_i].descr);
-      // loggit("");
+      // logprintf("%d. %ls(%ls)", res_i, res[res_i].page,
+      // res[res_i].section); logprintf("%ls", res[res_i].descr); loggit("");
 
       // Increase `res_i`, and reallocate `res` if necessary
       res_i++;
@@ -1064,8 +1132,8 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
 
   int status = xpclose(pp);
 
-  // If no results were returned by the command, set `err` to true and describe
-  // the error in `err_msg`. Otherwise, set `err` to false.
+  // If no results were returned by the command, set `err` to true and
+  // describe the error in `err_msg`. Otherwise, set `err` to false.
   err = false;
   if (0 == res_i || 0 != status) {
     err = true;
@@ -1327,7 +1395,6 @@ bool aprowhat_has(const wchar_t *needle, const aprowhat_t *hayst,
 }
 
 unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
-  wchar_t *argsc = walloca(wcslen(args) * 2); // corrected copy of `args`
   char gpath[BS_LINE];    // path to groff document for manual page
   int glen;               // length of current line in groff document
   wchar_t gline[BS_LINE]; // current line in groff document
@@ -1337,9 +1404,8 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
   unsigned res_len = BS_SHORT;                // result buffer length
   wchar_t **res = aalloc(res_len, wchar_t *); // result buffer
 
-  // Correct arguments and use `man` to figure out `gpath`
-  correct_args(&argsc, args);
-  if (false == man_loc(gpath, argsc, local_file))
+  // Use `man` to figure out `gpath`
+  if (false == man_loc(gpath, args, local_file))
     winddown(ES_OPER_ERROR, L"Failed to locate manual page source file");
 
   // Open `gpath`
@@ -1423,12 +1489,11 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   const unsigned text_width =
       line_width - lmargin_width - rmargin_width; // main text area
 
-  unsigned ln = 0;                            // current line number
-  int len;                                    // length of current line text
-  unsigned i, j;                              // iterators
-  wchar_t *argsc = walloca(wcslen(args) * 2); // corrected copy of `args`
-  wchar_t *tmpw = walloc(BS_LINE);            // temporary
-  char *tmps = salloc(BS_LINE);               // temporary
+  unsigned ln = 0;                 // current line number
+  int len;                         // length of current line text
+  unsigned i, j;                   // iterators
+  wchar_t *tmpw = walloc(BS_LINE); // temporary
+  char *tmps = salloc(BS_LINE);    // temporary
 
   bool ilink = false;   // we are inside an embedded HTTP link
   unsigned ilink_ln;    // embedded link line
@@ -1462,28 +1527,39 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   }
 
   // Prepare `man` command
-  correct_args(&argsc, args);
   char cmdstr[BS_LINE];
   if (config.misc.mandoc) {
     // `mandoc` specific
-    char gpath[BS_LINE]; // path to groff document for manual page
-    if (false == man_loc(gpath, argsc, local_file)) {
-      // Ugly, but will cause `man` to fail gracefully
-      strlcpy(gpath, "1234567890thequickbrownfoxjumpsoverthelazydog", BS_LINE);
+    unsigned args_len = wcslen(args);     // length of `args`
+    wchar_t *page = walloca(args_len);    // man page extracted from `args`
+    wchar_t *section = walloca(args_len); // man section extracted from `args`
+    unsigned extracted;                   // return value of `extract_args()`
+
+    extracted = extract_args(&page, &section, args_len, args);
+    if (0 == extracted)
+      winddown(ES_CHILD_ERROR, L"Unable to parse command-line arguments");
+
+    if (local_file)
+      snprintf(cmdstr, BS_LINE, "%s -T utf8 -O width=%d -l '%ls' 2>>/dev/null",
+               config.misc.man_path, text_width, page);
+    else {
+      if (2 == extracted)
+        snprintf(cmdstr, BS_LINE,
+                 "%s -T utf8 -O width=%d '%ls' '%ls' 2>>/dev/null",
+                 config.misc.man_path, text_width, section, page);
+      else
+        snprintf(cmdstr, BS_LINE, "%s -T utf8 -O width=%d '%ls' 2>>/dev/null",
+                 config.misc.man_path, text_width, page);
     }
-    CC_IGNORE_FORMAT_TRUNCATION
-    snprintf(cmdstr, BS_LINE, "%s -T utf8 -O width=%d -l %s 2>>/dev/null",
-             config.misc.man_path, text_width, gpath);
-    CC_IGNORE_ENDS
   } else {
     // GNU `man` specific
     if (local_file)
       snprintf(cmdstr, BS_LINE,
                "%s --warnings='!all' --local-file %ls 2>>/dev/null",
-               config.misc.man_path, argsc);
+               config.misc.man_path, args);
     else
       snprintf(cmdstr, BS_LINE, "%s --warnings='!all' %ls 2>>/dev/null",
-               config.misc.man_path, argsc);
+               config.misc.man_path, args);
   }
 
   // Execute `man`
@@ -1569,8 +1645,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     for (j = 0; j < config.layout.lmargin; j++)
       res[ln].text[j] = L' ';
 
-    // Read the contents of `tmpw` one character at a time, and build the line's
-    // `text`, `reg`, `bold`, `italic`, and `uline` members
+    // Read the contents of `tmpw` one character at a time, and build the
+    // line's `text`, `reg`, `bold`, `italic`, and `uline` members
     bool bold_nosgr = false;  // a 'bold' typewriter sequence has been seen
     bool uline_nosgr = false; // a 'underline' typewriter sequence has been seen
     for (i = 0; i < len; i++) {
@@ -1700,7 +1776,6 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 }
 
 unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
-  wchar_t *argsc = walloca(wcslen(args) * 2); // corrected copy of `args`
   char gpath[BS_LINE];    // path to groff document for manual page
   int glen;               // length of current line in groff document
   wchar_t gline[BS_LINE]; // current line in groff document
@@ -1721,8 +1796,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   }
 
   // Correct arguments and use `man` to figure out `gpath`
-  correct_args(&argsc, args);
-  if (false == man_loc(gpath, argsc, local_file))
+  if (false == man_loc(gpath, args, local_file))
     winddown(ES_OPER_ERROR, L"Failed to locate manual page source file");
 
   // Open `gpath`
@@ -1764,8 +1838,8 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       if (!areof(gp)) {
         glen = xmbstowcs(gline, tmp, BS_LINE);
         {
-          // Edge case: the tag line contains only a comment or a line that must
-          // otherwise be skipped; skip to next line
+          // Edge case: the tag line contains only a comment or a line that
+          // must otherwise be skipped; skip to next line
           while (got_comment || got_tp || got_pd) {
             argets(gp, tmp, BS_LINE);
             if (areof(gp))
@@ -1774,8 +1848,8 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
           }
         }
         {
-          // Edge case: the tag line starts with a formatting command that sets
-          // a trap for the next line; skip to the next line
+          // Edge case: the tag line starts with a formatting command that
+          // sets a trap for the next line; skip to the next line
           while (got_trap && wmargtrim(gline, NULL) < 4) {
             argets(gp, tmp, BS_LINE);
             if (areof(gp))
@@ -1797,8 +1871,8 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
         wcslcpy(res[en].text, &gline[textsp], BS_LINE);
         glen = wmargtrim(res[en].text, L"\n");
         {
-          // Edge case: there's a line escape at the end of the tag line; remove
-          // it
+          // Edge case: there's a line escape at the end of the tag line;
+          // remove it
           if (glen >= 1 && L'\\' == res[en].text[glen - 1])
             res[en].text[glen - 1] = L'\0';
           if (glen >= 2 && L'\\' == res[en].text[glen - 2] &&
@@ -2158,8 +2232,8 @@ void populate_page() {
 }
 
 void populate_toc() {
-  // If the TOC doesn't exist yet, use `man_toc()` or `sc_toc()` to generate it
-  // now
+  // If the TOC doesn't exist yet, use `man_toc()` or `sc_toc()` to generate
+  // it now
   if (NULL == toc || 0 == toc_len) {
     request_type_t rt =
         history[history_cur].request_type;     // current request type
