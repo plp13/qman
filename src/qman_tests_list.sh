@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # List all configured tests (used by meson)
 
 FILE="qman_tests.c"

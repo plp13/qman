@@ -33,7 +33,7 @@ src = [
 
 # Dependencies
 deps = [
-  dependency('ncursesw', required: true),
+  dependency('ncurses', required: true),
 ]
 if get_option('gzip').enabled() or get_option('gzip').auto()
   gzip = dependency('zlib', required: true)
