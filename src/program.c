@@ -333,7 +333,7 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
         snprintf(combo, BS_LINE, "%ls.%ls", aw_all[searched].page,
                  aw_all[searched].section);
       else
-          xwcstombs(combo, page, args_len);
+        xwcstombs(combo, page, args_len);
       break;
     case 0:
       return false;
@@ -1057,14 +1057,14 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
       salloc(BS_LONG); // current line of text, as returned by the command
   wchar_t *wline = walloc(BS_LONG);             // `wchar_t *` version of `line`
   wchar_t **pages = aalloc(BS_LINE, wchar_t *); // pages (in `line`)
-  wchar_t *section;                             // section (in `line`)
-  wchar_t *descr = walloca(BS_LINE);            // description (in `line`)
-  wchar_t *buf;                                 // temporary
-  unsigned pages_len, cur_page_len, section_len,
+  wchar_t **sections = aalloc(BS_LINE, wchar_t *); // sections (in `line`)
+  wchar_t *descr = walloca(BS_LINE);               // description (in `line`)
+  wchar_t *tmp, *buf;                              // temporary
+  unsigned pages_len, sections_len, cur_page_len, cur_section_len,
       descr_len;      // lengths of `pages`, `cur_page`, `section`, and `descr`
   int wline_len;      // length of `wline`
   unsigned res_i = 0; // current result
-  unsigned i;         // iterators
+  unsigned i, j;      // iterators
 
   // Execute the command
   FILE *pp = xpopen(cmdstr, "r");
@@ -1083,7 +1083,7 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
     }
     wline[wline_len - 1] = L'\0';
 
-    // Extract `pages`, `section, and `descr`
+    // Extract `descr`
     descr = wcsstr(wline, L" - ");
     if (NULL == descr) {
       if (0 == res_i)
@@ -1094,38 +1094,52 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
     descr[0] = L'\0';
     descr = &descr[3];
     descr_len = wcslen(descr);
-    wcstok(wline, L"(", &buf);
-    section = wcstok(NULL, L"(, \")", &buf);
-    if (NULL == section) {
+
+    // Extract `pages`
+    tmp = wcstok(wline, L"(", &buf);
+    if (NULL == tmp) {
       if (0 == res_i)
         break;
       else
         winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
     }
-    section_len = wcslen(section);
     pages_len = wsplit(&pages, BS_LINE, wline, L",");
+
+    // Extract `sections`
+    tmp = wcstok(NULL, L")", &buf);
+    if (NULL == tmp) {
+      if (0 == res_i)
+        break;
+      else
+        winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
+    }
+    sections_len = wsplit(&sections, BS_LINE, tmp, L",");
 
     // For each page described by line...
     for (i = 0; i < pages_len; i++) {
-      // Populate the `res_i`th element of `res`
-      cur_page_len = wcslen(pages[i]);
-      res[res_i].page = walloc(cur_page_len);
-      wcslcpy(res[res_i].page, pages[i], cur_page_len + 1);
-      res[res_i].section = walloc(section_len);
-      wcslcpy(res[res_i].section, section, section_len + 1);
-      res[res_i].ident = walloc(cur_page_len + section_len + 3);
-      swprintf(res[res_i].ident, cur_page_len + section_len + 3, L"%ls(%ls)",
-               pages[i], section);
-      res[res_i].descr = walloc(descr_len);
-      wcslcpy(res[res_i].descr, descr, descr_len + 1);
-      // logprintf("%d. %ls(%ls)", res_i, res[res_i].page,
-      // res[res_i].section); logprintf("%ls", res[res_i].descr); loggit("");
+      for (j = 0; j < sections_len; j++) {
+        // Populate the `res_i`th element of `res`
+        cur_page_len = wcslen(pages[i]);
+        cur_section_len = wcslen(sections[j]);
+        res[res_i].page = walloc(cur_page_len);
+        wcslcpy(res[res_i].page, pages[i], cur_page_len + 1);
+        res[res_i].section = walloc(cur_section_len);
+        wcslcpy(res[res_i].section, sections[j], cur_section_len + 1);
+        res[res_i].ident = walloc(cur_page_len + cur_section_len + 3);
+        swprintf(res[res_i].ident, cur_page_len + cur_section_len + 3,
+                 L"%ls(%ls)", pages[i], sections[j]);
+        res[res_i].descr = walloc(descr_len);
+        wcslcpy(res[res_i].descr, descr, descr_len + 1);
+        // logprintf("%d. %ls(%ls)", res_i, res[res_i].page, res[res_i].section);
+        // logprintf("%ls", res[res_i].descr);
+        // loggit("");
 
-      // Increase `res_i`, and reallocate `res` if necessary
-      res_i++;
-      if (res_i == res_len) {
-        res_len += BS_LINE;
-        res = xreallocarray(res, res_len, sizeof(aprowhat_t));
+        // Increase `res_i`, and reallocate `res` if necessary
+        res_i++;
+        if (res_i == res_len) {
+          res_len += BS_LINE;
+          res = xreallocarray(res, res_len, sizeof(aprowhat_t));
+        }
       }
     }
   }
