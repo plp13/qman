@@ -5,7 +5,6 @@
 #define LIB_H
 
 #include <assert.h>
-#include <alloca.h>
 #include <errno.h>
 #include <getopt.h>
 #include <stdbool.h>
@@ -41,6 +40,7 @@
 #endif
 
 #if defined(__GLIBC__)
+#include <alloca.h>
 extern char *program_invocation_short_name;
 #endif
 
