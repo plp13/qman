@@ -20,6 +20,7 @@
 #include <sys/param.h>
 #include <locale.h>
 #include <string.h>
+#include <wctype.h>
 #include <wchar.h>
 #include <time.h>
 #include <regex.h>
