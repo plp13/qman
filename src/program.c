@@ -397,6 +397,30 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
       logprintf("%s", dst);
       return ret;
     }
+  } else if (st_freebsd == config.misc.system_type) {
+    // FreeBSD `man` specific
+    unsigned args_len = wcslen(args);     // length of `args`
+    wchar_t *page = walloca(args_len);    // man page extracted from `args`
+    wchar_t *section = walloca(args_len); // man section extracted from `args`
+    unsigned extracted;                   // return value of `extract_args()`
+					  //
+    extracted = extract_args(&page, &section, args_len, args);
+    if (2 == extracted)
+      snprintf(cmdstr, BS_LINE, "%s -w '%ls' '%ls' 2>>/dev/null",
+	       config.misc.man_path, section, page);
+    else if (1 == extracted)
+      snprintf(cmdstr, BS_LINE, "%s -w '%ls' 2>>/dev/null",
+               config.misc.man_path, page);
+    else
+      return false;
+
+    ret = true;
+    FILE *pp = xpopen(cmdstr, "r");
+    if (-1 == sreadline(dst, BS_LINE, pp))
+      ret = false;
+
+    xpclose(pp);
+    return ret;
   }
 
   return false;
@@ -731,7 +755,11 @@ void init() {
 
 void late_init() {
   // Initialize `aw_all` and `sc_all`
-  aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"''");
+  if (st_freebsd == config.misc.system_type)
+    aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"'.'");
+  else
+    aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"''");
+
   sc_all_len = aprowhat_sections(&sc_all, aw_all, aw_all_len);
 }
 
@@ -1044,7 +1072,7 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   char *longopt;
   if (st_gnu == config.misc.system_type)
     longopt = "-l";
-  else if (st_mandoc == config.misc.system_type)
+  else if (st_mandoc == config.misc.system_type || st_freebsd == config.misc.system_type)
     longopt = "";
   if (AW_WHATIS == cmd)
     snprintf(cmdstr, BS_LINE, "%s %s %ls 2>>/dev/null", config.misc.whatis_path,
@@ -1539,6 +1567,11 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     unsetenv("GROFF_NO_SGR");
   } else if (st_mandoc == config.misc.system_type) {
     // `mandoc` specific
+  } else if (st_freebsd == config.misc.system_type) {
+    // FreeBSD `man` specific
+    sprintf(tmps, "%d", 1 + text_width);
+    setenv("MANWIDTH", tmps, true);
+    unsetenv("MANCOLOR");
   }
 
   // Prepare `man` command
@@ -1575,6 +1608,22 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
         snprintf(cmdstr, BS_LINE, "%s -T utf8 -O width=%d '%ls' 2>>/dev/null",
                  config.misc.man_path, text_width, page);
     }
+  } else if (st_freebsd == config.misc.system_type) {
+    // FreeBSD `man` specific
+    unsigned args_len = wcslen(args);     // length of `args`
+    wchar_t *page = walloca(args_len);    // man page extracted from `args`
+    wchar_t *section = walloca(args_len); // man section extracted from `args`
+    unsigned extracted;                   // return value of `extract_args()`
+
+    extracted = extract_args(&page, &section, args_len, args);
+    if (1 == extracted)
+      snprintf(cmdstr, BS_LINE, "%s '%ls' 2>>/dev/null",
+               config.misc.man_path, page);
+    else if (2 == extracted)
+      snprintf(cmdstr, BS_LINE, "%s '%ls' '%ls' 2>>/dev/null",
+               config.misc.man_path, section, page);
+    else
+      winddown(ES_CHILD_ERROR, L"Unable to parse command-line arguments");
   }
 
   // Execute `man`
