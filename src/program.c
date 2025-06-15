@@ -403,11 +403,11 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
     wchar_t *page = walloca(args_len);    // man page extracted from `args`
     wchar_t *section = walloca(args_len); // man section extracted from `args`
     unsigned extracted;                   // return value of `extract_args()`
-					  //
+    
     extracted = extract_args(&page, &section, args_len, args);
     if (2 == extracted)
       snprintf(cmdstr, BS_LINE, "%s -w '%ls' '%ls' 2>>/dev/null",
-	       config.misc.man_path, section, page);
+               config.misc.man_path, section, page);
     else if (1 == extracted)
       snprintf(cmdstr, BS_LINE, "%s -w '%ls' 2>>/dev/null",
                config.misc.man_path, page);
@@ -1072,7 +1072,8 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   char *longopt;
   if (st_gnu == config.misc.system_type)
     longopt = "-l";
-  else if (st_mandoc == config.misc.system_type || st_freebsd == config.misc.system_type)
+  else if (st_mandoc == config.misc.system_type ||
+           st_freebsd == config.misc.system_type)
     longopt = "";
   if (AW_WHATIS == cmd)
     snprintf(cmdstr, BS_LINE, "%s %s %ls 2>>/dev/null", config.misc.whatis_path,
@@ -1617,8 +1618,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 
     extracted = extract_args(&page, &section, args_len, args);
     if (1 == extracted)
-      snprintf(cmdstr, BS_LINE, "%s '%ls' 2>>/dev/null",
-               config.misc.man_path, page);
+      snprintf(cmdstr, BS_LINE, "%s '%ls' 2>>/dev/null", config.misc.man_path,
+               page);
     else if (2 == extracted)
       snprintf(cmdstr, BS_LINE, "%s '%ls' '%ls' 2>>/dev/null",
                config.misc.man_path, section, page);
