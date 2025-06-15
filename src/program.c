@@ -312,7 +312,25 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
   char cmdstr[BS_LINE]; // command to execute
   bool ret;             // return value
 
-  if (config.misc.mandoc) {
+  if (st_gnu == config.misc.system_type) {
+    // GNU `man` specific
+    if (local_file)
+      snprintf(cmdstr, BS_LINE,
+               "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
+               config.misc.man_path, args);
+    else {
+      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
+               config.misc.man_path, args);
+    }
+
+    ret = true;
+    FILE *pp = xpopen(cmdstr, "r");
+    if (-1 == sreadline(dst, BS_LINE, pp))
+      ret = false;
+
+    xpclose(pp);
+    return ret;
+  } else if (st_mandoc == config.misc.system_type) {
     // `mandoc` specific
     unsigned args_len = wcslen(args);     // length of `args`
     wchar_t *page = walloca(args_len);    // man page extracted from `args`
@@ -379,25 +397,9 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
       logprintf("%s", dst);
       return ret;
     }
-  } else {
-    // GNU `man` specific
-    if (local_file)
-      snprintf(cmdstr, BS_LINE,
-               "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
-               config.misc.man_path, args);
-    else {
-      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
-               config.misc.man_path, args);
-    }
-
-    ret = true;
-    FILE *pp = xpopen(cmdstr, "r");
-    if (-1 == sreadline(dst, BS_LINE, pp))
-      ret = false;
-
-    xpclose(pp);
-    return ret;
   }
+
+  return false;
 }
 
 // Helper of `man()` and `aprowhat_render()`. Add a link to `line`. Allocate
@@ -1040,10 +1042,10 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   // Prepare `apropos`/`whatis` command
   char cmdstr[BS_LINE];
   char *longopt;
-  if (config.misc.mandoc)
-    longopt = "";
-  else
+  if (st_gnu == config.misc.system_type)
     longopt = "-l";
+  else if (st_mandoc == config.misc.system_type)
+    longopt = "";
   if (AW_WHATIS == cmd)
     snprintf(cmdstr, BS_LINE, "%s %s %ls 2>>/dev/null", config.misc.whatis_path,
              longopt, args);
@@ -1524,9 +1526,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // Set up the environment for `man` to create its output as we want it
   char *old_term = getenv("TERM");
   setenv("TERM", "xterm", true);
-  if (config.misc.mandoc) {
-    // `mandoc` specific
-  } else {
+  if (st_gnu == config.misc.system_type) {
     // GNU `man` specific
     sprintf(tmps, "%d", 1 + text_width);
     setenv("MANWIDTH", tmps, true);
@@ -1537,11 +1537,22 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     setenv("MANROFFOPT", "", true);
     setenv("GROFF_SGR", "1", true);
     unsetenv("GROFF_NO_SGR");
+  } else if (st_mandoc == config.misc.system_type) {
+    // `mandoc` specific
   }
 
   // Prepare `man` command
   char cmdstr[BS_LINE];
-  if (config.misc.mandoc) {
+  if (st_gnu == config.misc.system_type) {
+    // GNU `man` specific
+    if (local_file)
+      snprintf(cmdstr, BS_LINE,
+               "%s --warnings='!all' --local-file %ls 2>>/dev/null",
+               config.misc.man_path, args);
+    else
+      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' %ls 2>>/dev/null",
+               config.misc.man_path, args);
+  } else if (st_mandoc == config.misc.system_type) {
     // `mandoc` specific
     unsigned args_len = wcslen(args);     // length of `args`
     wchar_t *page = walloca(args_len);    // man page extracted from `args`
@@ -1564,15 +1575,6 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
         snprintf(cmdstr, BS_LINE, "%s -T utf8 -O width=%d '%ls' 2>>/dev/null",
                  config.misc.man_path, text_width, page);
     }
-  } else {
-    // GNU `man` specific
-    if (local_file)
-      snprintf(cmdstr, BS_LINE,
-               "%s --warnings='!all' --local-file %ls 2>>/dev/null",
-               config.misc.man_path, args);
-    else
-      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' %ls 2>>/dev/null",
-               config.misc.man_path, args);
   }
 
   // Execute `man`
