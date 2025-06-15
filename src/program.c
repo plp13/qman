@@ -1130,9 +1130,8 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
                  L"%ls(%ls)", pages[i], sections[j]);
         res[res_i].descr = walloc(descr_len);
         wcslcpy(res[res_i].descr, descr, descr_len + 1);
-        // logprintf("%d. %ls(%ls)", res_i, res[res_i].page, res[res_i].section);
-        // logprintf("%ls", res[res_i].descr);
-        // loggit("");
+        // logprintf("%d. %ls(%ls)", res_i, res[res_i].page,
+        // res[res_i].section); logprintf("%ls", res[res_i].descr); loggit("");
 
         // Increase `res_i`, and reallocate `res` if necessary
         res_i++;
