@@ -312,8 +312,8 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
   char cmdstr[BS_LINE]; // command to execute
   bool ret;             // return value
 
-  if (st_gnu == config.misc.system_type) {
-    // GNU `man` specific
+  if (st_mandb == config.misc.system_type) {
+    // `mandb` specific
     if (local_file)
       snprintf(cmdstr, BS_LINE,
                "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
@@ -403,7 +403,7 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
     wchar_t *page = walloca(args_len);    // man page extracted from `args`
     wchar_t *section = walloca(args_len); // man section extracted from `args`
     unsigned extracted;                   // return value of `extract_args()`
-    
+
     extracted = extract_args(&page, &section, args_len, args);
     if (2 == extracted)
       snprintf(cmdstr, BS_LINE, "%s -w '%ls' '%ls' 2>>/dev/null",
@@ -1070,7 +1070,7 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   // Prepare `apropos`/`whatis` command
   char cmdstr[BS_LINE];
   char *longopt;
-  if (st_gnu == config.misc.system_type)
+  if (st_mandb == config.misc.system_type)
     longopt = "-l";
   else if (st_mandoc == config.misc.system_type ||
            st_freebsd == config.misc.system_type)
@@ -1555,8 +1555,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // Set up the environment for `man` to create its output as we want it
   char *old_term = getenv("TERM");
   setenv("TERM", "xterm", true);
-  if (st_gnu == config.misc.system_type) {
-    // GNU `man` specific
+  if (st_mandb == config.misc.system_type) {
+    // `mandb` specific
     sprintf(tmps, "%d", 1 + text_width);
     setenv("MANWIDTH", tmps, true);
     sprintf(tmps, "%s %s", config.misc.hyphenate ? "" : "--nh",
@@ -1577,8 +1577,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 
   // Prepare `man` command
   char cmdstr[BS_LINE];
-  if (st_gnu == config.misc.system_type) {
-    // GNU `man` specific
+  if (st_mandb == config.misc.system_type) {
+    // `mandb` specific
     if (local_file)
       snprintf(cmdstr, BS_LINE,
                "%s --warnings='!all' --local-file %ls 2>>/dev/null",

@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.4.1-36-g7f43116
+footer: Qman 1.4.1-37-gb98e7e7
 date: December 15, 2023
 ---
 
@@ -358,19 +358,25 @@ This section contains various miscellaneous options:
 
 | Option       | Type         | Def. value | Description                       |
 |--------------|--------------|------------|-----------------------------------|
+| system_type  | string       | mandb      | Manual system type                |
 | man_path     | string       | /usr/bin/man | Path to the **man(1)** command  |
 | groff_path   | string       | /usr/bin/groff | Path to the **groff(1)** command |
 | whatis_path  | string       | /usr/bin/whatis | Path to the **whatis(1)** command |
 | apropos_path | string       | /usr/bin/apropos | Path to the **apropos(1)** command |
 | browser_path | string       | /usr/bin/xdg-open | Path to the command that will be used to open HTTP links (i.e. your web browser) |
 | mailer_path  | string       | /usr/bin/xdg-email | Path to the command that will be used to open e-mail links (i.e. your e-mail software) |
-| mandoc       | boolean      | false      | Whether the operating system uses **mandoc(1)** (as opposed to GNU **man(1)**)
 | reset_after_http | boolean  | true       | Re-initialize curses after opening an http(s) link |
 | reset_after_email| boolean  | true       | Re-initialize curses after opening an e-mail link |
 | history_size | unsigned int | 256k       | Maximum number of history entries |
 | hyphenate    | boolean      | true       | Whether to hyphenate long words in manual pages |
 | justify      | boolean      | true       | Whether to justify text in manual pages |
 | sp_substrings | boolean     | true       | Include substring matches in incremental search results |
+
+_system_type_ must match the Unix manual system used by your O/S:
+
+- **[mandb](https://gitlab.com/man-db/man-db)** - most Linux distributions
+- **[mandoc](https://mandoc.bsd.lv/)** - Void Linux, others?
+- **[freebsd](https://www.freebsd.org/)** - FreeBSD
 
 When using a horizontally narrow terminal, setting _hyphenate_ to **true**
 and/or _justify_ to **false** can improve the program's output.

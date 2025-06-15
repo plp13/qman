@@ -13,9 +13,9 @@
 // System type
 typedef enum {
   st_error,  // parse error
-  st_gnu,    // GNU man
-  st_mandoc, // mandoc
-  st_freebsd // FreeBSD man
+  st_mandb,  // `mandb`
+  st_mandoc, // `mandoc`
+  st_freebsd // FreeBSD `man`
 } systype_t;
 
 // A ternary bit, i.e. one that can take one of 3 values: `true`, `false`, or
