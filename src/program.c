@@ -118,9 +118,14 @@ full_regex_t re_man, re_http, re_email;
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'1') && (tmpw[i + 3] == L'm'))
 
+// attachment to `got_bold_nosgr` that fixes a quirk in `mandoc`'s output
+#define got_bold_nosgr_mandoc_quirk_fix                                        \
+  (!(st_mandoc == config.misc.system_type && tmpw[i] == '_' && uline_nosgr))
+
 // true if `tmpw[i]` contains a 'bold' typewriter (NO_SGR) sequence
 #define got_bold_nosgr                                                         \
-  ((i + 3 < len) && (tmpw[i] == tmpw[i + 2]) && (tmpw[i + 1] == L'\b'))
+  ((i + 3 < len) && (tmpw[i] == tmpw[i + 2]) && (tmpw[i + 1] == L'\b') &&      \
+   got_bold_nosgr_mandoc_quirk_fix)
 
 // true if `tmpw[i]` contains a 'not bold' terminal escape sequence
 #define got_not_bold                                                           \
