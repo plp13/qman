@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.4.1-29-g355e9a2 -- [see what's new](#new-in-this-version)
+Version 1.4.1-37-gb98e7e7 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -105,10 +105,15 @@ There are also a number of optional library dependencies:
 - `liblzma`: support for manual pages compressed with `xz`
 - `cunit`: used for unit testing
 
-Qman is a front-end to either GNU `man` or `mandoc`, and it therefore requires
-one of these two packages to be installed, and the `man`, `apropos` and `whatis`
-utilities to be present. It also requires GNU `groff`. Finally, a Unix manual
-pages database must be present and correctly configured.
+Qman is a front-end of the Unix manual system provided by the O/S. The following
+systems are supported:
+- `mandb`: most Linux distributions
+- `mandoc`: Void Linux, others?
+- `freebsd`: FreeBSD
+
+For the program to work, your system's `man`, `apropos` and `whatis` utilities
+must be present and properly functioning. GNU `groff` must also be installed,
+and a Unix manual pages database must be present and correctly configured.
 
 ## Building and installing
 Make sure that the minimum dependencies are installed, and do the following:
@@ -162,8 +167,15 @@ Qman on some popular Linux distributions.
 If you have created a package, let me know and I'll add it to this list.
 
 ## Troubleshooting
+
 Always make sure you are up-to-date with the
-[main](https://github.com/plp13/qman/tree/main) branch. And, of course, RTFM:
+[main](https://github.com/plp13/qman/tree/main) branch.
+
+
+Read the [Dependencies](#dependencies) and
+[Building and Installing](#building-and-installing) sections above.
+
+And, of course, RTFM:
 
 ```
 $ qman qman
@@ -174,26 +186,36 @@ $ qman qman
 `~/.config/qman/qman.conf` (user-specific) or `/etc/xdg/qman/qman.conf`
 (system-wide).
 
-> **:question: Qman can't find any manual pages. And/or calling `qman` without
-> any parameters fails with message `Apropos '': nothing appropriate`**
+> **:question: I'm using FreeBSD and/or a minority Linux distro. Qman doesn't
+> work.**
 
-For most Linux users, this occurs because your manual pages database hasn't been
-initialized. This can be fixed by running (as root):
+You need to modify the following to match your O/S, and add it to your config
+file:
+
+```
+[misc]
+system_type=...
+man_path=/path/to/man
+apropos_path=/path/to/apropos
+whatis_path=/path/to/whatis
+groff_path=/path/to/groff
+```
+
+`system_type` should be set to either `mandoc` or `freebsd`, depending on what
+you are using.
+
+> **:question: Calling `qman` without any parameters still fails with message
+> `Apropos '': nothing appropriate`**
+
+If Qman is correctly configured, this behavior can still occur if your manual
+pages database hasn't been initialized. For most Linux users this can be fixed
+by running (as root):
 
 ```
 # mandb
 ```
 
-If you are on an operating system that uses `mandoc` (such as FreeBSD or macOS),
-you must add the following to Qman's configuration file:
-
-```
-[misc]
-mandoc=true
-```
-
-The manual pages database must be initialized for `mandoc`-based systems as well.
-If your O/S doesn't do this automatically, you must run (as root):
+Users of other operating systems may need to run the following instead:
 
 ```
 # makewhatis
@@ -207,10 +229,9 @@ command to build the array of manual pages that these features use, and
 `apropos` relies on the database being correctly configured and up-to-date. If
 it isn't, the array will be incomplete and/or inaccurate.
 
-The database must be kept up-to-date, by running `mandb` or `makewhatis` as
-described above every time manual pages are installed or uninstalled.
-Regrettably, if your O/S doesn't do this automatically, you'll have to do it
-manually or create your own automation.
+The database must be updated, by running `mandb` or `makewhatis`, every time
+manual pages are installed or uninstalled. Regrettably, if your O/S doesn't do
+this automatically, you'll have to do it manually or create your own automation.
 
 > **:question: I'm unable to copy text to the clipboard using the mouse, and/or
 > my mouse behaves erratically**

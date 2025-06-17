@@ -138,10 +138,14 @@ range_t match(regex_t re, char *src) {
 //
 
 void eini_init() {
-  regcomp(&eini_re_include, "\\s*include\\s*", REG_EXTENDED);
-  regcomp(&eini_re_section, "\\s*\\[\\s*[a-zA-Z][a-zA-Z0-9_]*\\s*\\]\\s*",
+  regcomp(&eini_re_include, "[[:space:]]*include[[:space:]]*", REG_EXTENDED);
+  regcomp(&eini_re_section,
+          "[[:space:]]*\\[[[:space:]]*[a-zA-Z][a-zA-Z0-9_]*[[:space:]]*\\][[:"
+          "space:]]*",
           REG_EXTENDED);
-  regcomp(&eini_re_value, "\\s*[a-zA-Z][a-zA-Z0-9_]*\\s*=\\s*", REG_EXTENDED);
+  regcomp(&eini_re_value,
+          "[[:space:]]*[a-zA-Z][a-zA-Z0-9_]*[[:space:]]*=[[:space:]]*",
+          REG_EXTENDED);
 }
 
 eini_t eini_parse(char *src) {

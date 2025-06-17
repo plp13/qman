@@ -79,6 +79,7 @@ void test_eini_parse() {
   CU_ASSERT(0 == wcscmp(parsed.value, L"/usr/share/foo"));
 
   parsed = eini_parse("\t include\t\t/usr/share/foo ");
+  logprintf("parsed type=%d value=%ls", parsed.type, parsed.value);
   CU_ASSERT_EQUAL(parsed.type, EINI_INCLUDE);
   CU_ASSERT(0 == wcscmp(parsed.value, L"/usr/share/foo"));
 
@@ -156,14 +157,12 @@ void test_eini_parse() {
   parsed = eini_parse("se7en=\"in double \\\" quotes\\r\"");
   CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
   CU_ASSERT(0 == wcscmp(parsed.key, L"se7en"));
-  CU_ASSERT(0 ==
-            wcscmp(parsed.value, L"in double \" quotes\r"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"in double \" quotes\r"));
 
   parsed = eini_parse("se7enUp=  \'in single \\' quotes\\\\\'");
   CU_ASSERT_EQUAL(parsed.type, EINI_VALUE);
   CU_ASSERT(0 == wcscmp(parsed.key, L"se7enUp"));
-  CU_ASSERT(0 ==
-            wcscmp(parsed.value, L"in single \' quotes\\"));
+  CU_ASSERT(0 == wcscmp(parsed.value, L"in single \' quotes\\"));
 
   parsed = eini_parse("");
   CU_ASSERT_EQUAL(parsed.type, EINI_NONE);

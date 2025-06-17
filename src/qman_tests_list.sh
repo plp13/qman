@@ -1,9 +1,9 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # List all configured tests (used by meson)
 
 FILE="qman_tests.c"
-MATCH="^\s*add_test("
-LTRIM="s/\s*add_test(//g"
+MATCH="^[[:space:]]*add_test("
+LTRIM="s/[[:space:]]*add_test(//g"
 RTRIM="s/);//g"
 
 exit_on_error() {

@@ -5,7 +5,6 @@
 #define LIB_H
 
 #include <assert.h>
-#include <alloca.h>
 #include <errno.h>
 #include <getopt.h>
 #include <stdbool.h>
@@ -21,6 +20,7 @@
 #include <sys/param.h>
 #include <locale.h>
 #include <string.h>
+#include <wctype.h>
 #include <wchar.h>
 #include <time.h>
 #include <regex.h>
@@ -41,6 +41,7 @@
 #endif
 
 #if defined(__GLIBC__)
+#include <alloca.h>
 extern char *program_invocation_short_name;
 #endif
 

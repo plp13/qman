@@ -78,6 +78,25 @@ bool wcs2bool(const wchar_t *src) {
   }
 }
 
+// Helper of various `conf_...()` functions and methods. Return the appropriate
+// member of `systype_t` depending on `src`. "mandb" results in `st_mandb`,
+// "mandoc" in `st_mandoc`, "freebsd" in `st_freebsd` and so on.
+systype_t wcs2systype(const wchar_t *src) {
+  if (0 == wcscasecmp(src, L"mandb")) {
+    errno = 0;
+    return st_mandb;
+  } else if (0 == wcscasecmp(src, L"mandoc")) {
+    errno = 0;
+    return st_mandoc;
+  } else if (0 == wcscasecmp(src, L"freebsd")) {
+    errno = 0;
+    return st_freebsd;
+  } else {
+    errno = -1;
+    return st_error;
+  }
+}
+
 // Helper of various `conf_...()` functions and methods. Return `t_true` if
 // `src` is equal to 'true', 'yes', or '1'. Return `t_false` if it's equal to
 // 'false', 'no', or '0'. Return `t_auto` if it's equal to 'auto' or '-'. Set
@@ -272,6 +291,21 @@ int wcs2ch(const wchar_t *src) {
     return;                                                                    \
   }
 
+// Helper of `conf_handler()`. Set `trgt` to the `systype_t` stored in `value`,
+// using `wcs2systype()`, if `name` is equal to `n`.
+#define conf_set_systype(n, trgt)                                              \
+  if (0 == wcscmp(name, n)) {                                                  \
+    const systype_t val = wcs2systype(value);                                  \
+    if (0 != errno) {                                                          \
+      swprintf(errmsg, BS_SHORT,                                               \
+               L"Error in %s line %d: '%ls' is not a supported system type",   \
+               path, line, value);                                             \
+      winddown(ES_CONFIG_ERROR, errmsg);                                       \
+    }                                                                          \
+    trgt = val;                                                                \
+    return;                                                                    \
+  }                                                                            \
+
 // Helper of `conf_handler()`. Set `trgt` to the `trit_t` stored in `value`,
 // using `wcs2trit()`, if `name` is equal to `n`.
 #define conf_set_trit(n, trgt)                                                 \
@@ -462,6 +496,8 @@ for section, options in config_def.config_def.items():
     # Option is allowed in the config file
     if type[0] == "bool":
       cog.outl("    conf_set_bool(L\"" + option + "\", config." + section + "." + option + ");")
+    if type[0] == "systype":
+      cog.outl("    conf_set_systype(L\"" + option + "\", config." + section + "." + option + ");")
     if type[0] == "trit":
       cog.outl("    conf_set_trit(L\"" + option + "\", config." + section + "." + option + ");")
     elif type[0] == "int":
@@ -516,6 +552,8 @@ for section, options in config_def.config_def.items():
 
       if type[0] == "bool":
         cog.outl("  config." + section + "." + option + " = wcs2bool(L\"" + default_value[0] + "\");")
+      elif type[0] == "systype":
+        cog.outl("  config." + section + "." + option + " = wcs2systype(L\"" + default_value[0] + "\");")
       elif type[0] == "trit":
         cog.outl("  config." + section + "." + option + " = wcs2trit(L\"" + default_value[0] + "\");")
       elif type[0] == "int":
@@ -575,6 +613,8 @@ for section, options in config_def.config_def.items():
 
     if type[0] == "bool":
       cog.outl("  config." + section + "." + option + " = wcs2bool(L\"" + default_value[0] + "\");")
+    elif type[0] == "systype":
+      cog.outl("  config." + section + "." + option + " = wcs2systype(L\"" + default_value[0] + "\");")
     elif type[0] == "trit":
       cog.outl("  config." + section + "." + option + " = wcs2trit(L\"" + default_value[0] + "\");")
     elif type[0] == "int":
