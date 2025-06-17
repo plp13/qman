@@ -120,7 +120,9 @@ full_regex_t re_man, re_http, re_email;
 
 // attachment to `got_bold_nosgr` that fixes a quirk in `mandoc`'s output
 #define got_bold_nosgr_mandoc_quirk_fix                                        \
-  (!(ST_MANDOC == config.misc.system_type && tmpw[i] == '_' && uline_nosgr))
+  (!((ST_MANDOC == config.misc.system_type ||                                  \
+      ST_FREEBSD == config.misc.system_type) &&                                \
+     tmpw[i] == '_' && uline_nosgr))
 
 // true if `tmpw[i]` contains a 'bold' typewriter (NO_SGR) sequence
 #define got_bold_nosgr                                                         \
