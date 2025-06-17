@@ -15,6 +15,8 @@ if get_option('config').enabled() or get_option('config').auto()
     [
       'themes/modernity.conf',
       'themes/modernity-light.conf',
+      'themes/adwaita.conf',
+      'themes/adwaita-light.conf',
       'themes/catppuccin_latte.conf'
     ],
     install_dir: get_option('configdir') + '/themes',
