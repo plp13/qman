@@ -120,7 +120,7 @@ full_regex_t re_man, re_http, re_email;
 
 // attachment to `got_bold_nosgr` that fixes a quirk in `mandoc`'s output
 #define got_bold_nosgr_mandoc_quirk_fix                                        \
-  (!(st_mandoc == config.misc.system_type && tmpw[i] == '_' && uline_nosgr))
+  (!(ST_MANDOC == config.misc.system_type && tmpw[i] == '_' && uline_nosgr))
 
 // true if `tmpw[i]` contains a 'bold' typewriter (NO_SGR) sequence
 #define got_bold_nosgr                                                         \
@@ -317,7 +317,7 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
   char cmdstr[BS_LINE]; // command to execute
   bool ret;             // return value
 
-  if (st_mandb == config.misc.system_type) {
+  if (ST_MANDB == config.misc.system_type) {
     // `mandb` specific
     if (local_file)
       snprintf(cmdstr, BS_LINE,
@@ -335,7 +335,7 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
 
     xpclose(pp);
     return ret;
-  } else if (st_mandoc == config.misc.system_type) {
+  } else if (ST_MANDOC == config.misc.system_type) {
     // `mandoc` specific
     unsigned args_len = wcslen(args);     // length of `args`
     wchar_t *page = walloca(args_len);    // man page extracted from `args`
@@ -402,7 +402,7 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
       logprintf("%s", dst);
       return ret;
     }
-  } else if (st_freebsd == config.misc.system_type) {
+  } else if (ST_FREEBSD == config.misc.system_type) {
     // FreeBSD `man` specific
     unsigned args_len = wcslen(args);     // length of `args`
     wchar_t *page = walloca(args_len);    // man page extracted from `args`
@@ -760,7 +760,7 @@ void init() {
 
 void late_init() {
   // Initialize `aw_all` and `sc_all`
-  if (st_freebsd == config.misc.system_type)
+  if (ST_FREEBSD == config.misc.system_type)
     aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"'.'");
   else
     aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"''");
@@ -1075,10 +1075,10 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   // Prepare `apropos`/`whatis` command
   char cmdstr[BS_LINE];
   char *longopt;
-  if (st_mandb == config.misc.system_type)
+  if (ST_MANDB == config.misc.system_type)
     longopt = "-l";
-  else if (st_mandoc == config.misc.system_type ||
-           st_freebsd == config.misc.system_type)
+  else if (ST_MANDOC == config.misc.system_type ||
+           ST_FREEBSD == config.misc.system_type)
     longopt = "";
   if (AW_WHATIS == cmd)
     snprintf(cmdstr, BS_LINE, "%s %s %ls 2>>/dev/null", config.misc.whatis_path,
@@ -1560,7 +1560,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // Set up the environment for `man` to create its output as we want it
   char *old_term = getenv("TERM");
   setenv("TERM", "xterm", true);
-  if (st_mandb == config.misc.system_type) {
+  if (ST_MANDB == config.misc.system_type) {
     // `mandb` specific
     sprintf(tmps, "%d", 1 + text_width);
     setenv("MANWIDTH", tmps, true);
@@ -1571,9 +1571,9 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     setenv("MANROFFOPT", "", true);
     setenv("GROFF_SGR", "1", true);
     unsetenv("GROFF_NO_SGR");
-  } else if (st_mandoc == config.misc.system_type) {
+  } else if (ST_MANDOC == config.misc.system_type) {
     // `mandoc` specific
-  } else if (st_freebsd == config.misc.system_type) {
+  } else if (ST_FREEBSD == config.misc.system_type) {
     // FreeBSD `man` specific
     sprintf(tmps, "%d", 1 + text_width);
     setenv("MANWIDTH", tmps, true);
@@ -1582,7 +1582,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 
   // Prepare `man` command
   char cmdstr[BS_LINE];
-  if (st_mandb == config.misc.system_type) {
+  if (ST_MANDB == config.misc.system_type) {
     // `mandb` specific
     if (local_file)
       snprintf(cmdstr, BS_LINE,
@@ -1591,7 +1591,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     else
       snprintf(cmdstr, BS_LINE, "%s --warnings='!all' %ls 2>>/dev/null",
                config.misc.man_path, args);
-  } else if (st_mandoc == config.misc.system_type) {
+  } else if (ST_MANDOC == config.misc.system_type) {
     // `mandoc` specific
     unsigned args_len = wcslen(args);     // length of `args`
     wchar_t *page = walloca(args_len);    // man page extracted from `args`
@@ -1614,7 +1614,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
         snprintf(cmdstr, BS_LINE, "%s -T utf8 -O width=%d '%ls' 2>>/dev/null",
                  config.misc.man_path, text_width, page);
     }
-  } else if (st_freebsd == config.misc.system_type) {
+  } else if (ST_FREEBSD == config.misc.system_type) {
     // FreeBSD `man` specific
     unsigned args_len = wcslen(args);     // length of `args`
     wchar_t *page = walloca(args_len);    // man page extracted from `args`

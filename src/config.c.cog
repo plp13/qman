@@ -79,21 +79,21 @@ bool wcs2bool(const wchar_t *src) {
 }
 
 // Helper of various `conf_...()` functions and methods. Return the appropriate
-// member of `systype_t` depending on `src`. "mandb" results in `st_mandb`,
-// "mandoc" in `st_mandoc`, "freebsd" in `st_freebsd` and so on.
+// member of `systype_t` depending on `src`. "mandb" results in `ST_MANDB`,
+// "mandoc" in `ST_MANDOC`, "freebsd" in `ST_FREEBSD` and so on.
 systype_t wcs2systype(const wchar_t *src) {
   if (0 == wcscasecmp(src, L"mandb")) {
     errno = 0;
-    return st_mandb;
+    return ST_MANDB;
   } else if (0 == wcscasecmp(src, L"mandoc")) {
     errno = 0;
-    return st_mandoc;
+    return ST_MANDOC;
   } else if (0 == wcscasecmp(src, L"freebsd")) {
     errno = 0;
-    return st_freebsd;
+    return ST_FREEBSD;
   } else {
     errno = -1;
-    return st_error;
+    return ST_ERROR;
   }
 }
 
