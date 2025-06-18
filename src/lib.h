@@ -31,10 +31,10 @@
 // I can't understand why these are not defined in macOS X; they are definitely
 // included in the library. As a workaround, let's re-define them here
 #define BUTTON5_PRESSED         NCURSES_MOUSE_MASK(5, NCURSES_BUTTON_PRESSED)
-extern NCURSES_EXPORT(int) mvwaddnwstr (WINDOW *, int, int, const wchar_t *, int);
+extern NCURSES_EXPORT(int)
+    mvwaddnwstr (WINDOW *, int, int, const wchar_t *, int);
 extern NCURSES_EXPORT(int) mvwgetn_wstr (WINDOW *, int, int, wint_t *, int);
 extern NCURSES_EXPORT(int) mvwget_wch (WINDOW *, int, int, wint_t *);
-extern NCURSES_EXPORT(void) reset_color_pairs (void);
 #endif
 
 #undef lines
