@@ -26,6 +26,15 @@
 #include <regex.h>
 #include <curses.h>
 #include <term.h>
+
+#ifdef QMAN_DARWIN
+// I can't understand why these are not defined in macOS X; they are definitely
+// included in the library. As a workaround, let's re-define them here
+extern NCURSES_EXPORT(int) mvwaddnwstr (WINDOW *, int, int, const wchar_t *, int);
+extern NCURSES_EXPORT(int) mvwgetn_wstr (WINDOW *, int, int, wint_t *, int);
+extern NCURSES_EXPORT(int) mvwget_wch (WINDOW *, int, int, wint_t *);
+#endif
+
 #undef lines
 
 #ifdef QMAN_GZIP
@@ -41,7 +50,6 @@
 #endif
 
 #if defined(__GLIBC__)
-#include <alloca.h>
 extern char *program_invocation_short_name;
 #endif
 
