@@ -2,9 +2,6 @@
 
 # Compiler
 cc = meson.get_compiler('c')
-if 'darwin' == build_machine.system()
-  add_global_arguments('-DQMAN_DARWIN=true', language: 'c')
-endif
 # Uncomment the following to expose extra warnings
 # add_global_arguments(['-Wall', '-Wextra', '-Wno-sign-compare'], language: 'c')
 # add_global_arguments('-O2', '-D_FORTIFY_SOURCE=2', language: 'c')

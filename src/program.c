@@ -121,7 +121,8 @@ full_regex_t re_man, re_http, re_email;
 // attachment to `got_bold_nosgr` that fixes a quirk in `mandoc`'s output
 #define got_bold_nosgr_mandoc_quirk_fix                                        \
   (!((ST_MANDOC == config.misc.system_type ||                                  \
-      ST_FREEBSD == config.misc.system_type) &&                                \
+      ST_FREEBSD == config.misc.system_type ||                                 \
+      ST_DARWIN == config.misc.system_type) &&                                 \
      tmpw[i] == '_' && uline_nosgr))
 
 // true if `tmpw[i]` contains a 'bold' typewriter (NO_SGR) sequence
@@ -498,12 +499,14 @@ unsigned aprowhat_exec_darwin(aprowhat_t **dst, aprowhat_cmd_t cmd,
     // For each ident described by line...
     for (i = 0; i < idents_len; i++) {
       // Extract the corresponding `page` and `section`
-      // (Error-checking here is a bit hacky, to account for darwin's flaky
-      // `apropos` output)
+      // (Formatting and error handling here is a bit hacky, to account for
+      // darwin's flaky `apropos` output)
       page = wcstok(idents[i], L"(", &buf);
-      if (NULL == page || NULL != wcschr(page, L' '))
+      page = &page[wmargend(page, NULL)];
+      wmargtrim(page, NULL);
+      if (NULL == page || L'/' == page[0] || NULL != wcschr(page, L' '))
         continue;
-      section = wcstok(NULL, L"", &buf);
+      section = wcstok(NULL, L")", &buf);
       if (NULL == section || L'(' == section[0])
         continue;
 
