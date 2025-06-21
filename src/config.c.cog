@@ -91,7 +91,10 @@ systype_t wcs2systype(const wchar_t *src) {
   } else if (0 == wcscasecmp(src, L"freebsd")) {
     errno = 0;
     return ST_FREEBSD;
-  } else {
+  } else if (0 == wcscasecmp(src, L"darwin")) {
+    errno = 0;
+    return ST_DARWIN;
+  }else {
     errno = -1;
     return ST_ERROR;
   }
