@@ -202,7 +202,7 @@ int ls_discover(wchar_t *trgt, unsigned sln) {
   unsigned max_score = 0;        // maximum score
   unsigned i, j;                 // iterators
 
-  trgt_words_len = wsplit(&trgt_words, BS_SHORT, trgt, NULL);
+  trgt_words_len = wsplit(&trgt_words, BS_SHORT, trgt, NULL, false);
   if (0 == trgt_words_len)
     return -1;
 
@@ -223,7 +223,7 @@ int ls_discover(wchar_t *trgt, unsigned sln) {
       // exactly match the words in `trgt`. An extra point is added to said
       // score if the last word in `trgt` matches just the beginning of its
       // corresponding word in `cand`
-      cand_words_len = wsplit(&cand_words, BS_SHORT, text, NULL);
+      cand_words_len = wsplit(&cand_words, BS_SHORT, text, NULL, false);
       for (i = 0; i < MIN(trgt_words_len, cand_words_len); i++)
         if (0 == wcscmp(cand_words[i], trgt_words[i]))
           line_scores[j] += 2;

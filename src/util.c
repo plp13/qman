@@ -786,7 +786,7 @@ unsigned wmaxlen(const wchar_t *const *src, unsigned src_len) {
 }
 
 unsigned wsplit(wchar_t ***dst, unsigned dst_len, wchar_t *src,
-                const wchar_t *extras) {
+                const wchar_t *extras, bool skipws) {
   wchar_t **res = *dst; // results
   unsigned res_cnt = 0; // number of results
   bool ws = true;    // whether current character is whitespace or in `extras`
@@ -800,7 +800,7 @@ unsigned wsplit(wchar_t ***dst, unsigned dst_len, wchar_t *src,
     pws = ws;
 
     ws = false;
-    if (iswspace(src[i]))
+    if (!skipws && iswspace(src[i]))
       ws = true;
     for (j = 0; L'\0' != extras[j]; j++)
       if (src[i] == extras[j])

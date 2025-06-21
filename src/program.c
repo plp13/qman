@@ -279,7 +279,7 @@ unsigned extract_args(wchar_t **page, wchar_t **section, unsigned len,
   arg = wcstok(srcc, L"' \t", &buf);
   if (NULL != arg) {
     // Argument #1 exists...
-    arg_dec_len = wsplit(&arg_dec, 2, arg, L"()");
+    arg_dec_len = wsplit(&arg_dec, 2, arg, L"()", false);
     if (2 == arg_dec_len) {
       // ...and is in page(sec) format; decompose it into `page` and `section`
       wcslcpy(*page, arg_dec[0], len);
@@ -294,7 +294,7 @@ unsigned extract_args(wchar_t **page, wchar_t **section, unsigned len,
       arg = wcstok(NULL, L"' \t", &buf);
       if (NULL != arg) {
         // ...if argument #2 exists...
-        arg_dec_len = wsplit(&arg_dec, 2, arg, L"()");
+        arg_dec_len = wsplit(&arg_dec, 2, arg, L"()", false);
         if (1 == arg_dec_len) {
           // ...and is not in page(sec) format, set argument #1 as `section` and
           // argument #2 as `page`
@@ -493,17 +493,19 @@ unsigned aprowhat_exec_darwin(aprowhat_t **dst, aprowhat_cmd_t cmd,
     descr_len = wcslen(descr);
 
     // Extract `idents`
-    idents_len = wsplit(&idents, BS_LINE, wline, L",");
+    idents_len = wsplit(&idents, BS_LINE, wline, L",", true);
 
     // For each ident described by line...
     for (i = 0; i < idents_len; i++) {
       // Extract the corresponding `page` and `section`
+      // (Error-checking here is a bit hacky, to account for darwin's flaky
+      // `apropos` output)
       page = wcstok(idents[i], L"(", &buf);
-      if (NULL == page)
-        winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
-      section = wcstok(NULL, L")", &buf);
-      if (NULL == section)
-        winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
+      if (NULL == page || NULL != wcschr(page, L' '))
+        continue;
+      section = wcstok(NULL, L"", &buf);
+      if (NULL == section || L'(' == section[0])
+        continue;
 
       // Populate the `res_i`th element of `res`
       page_len = wcslen(page);
@@ -1269,7 +1271,7 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
       else
         winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
     }
-    pages_len = wsplit(&pages, BS_LINE, wline, L",");
+    pages_len = wsplit(&pages, BS_LINE, wline, L",", false);
 
     // Extract `sections`
     tmp = wcstok(NULL, L")", &buf);
@@ -1279,7 +1281,7 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
       else
         winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
     }
-    sections_len = wsplit(&sections, BS_LINE, tmp, L",");
+    sections_len = wsplit(&sections, BS_LINE, tmp, L",", false);
 
     // For each page described by line...
     for (i = 0; i < pages_len; i++) {
