@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.4.1-51-g6db40a1 -- [see what's new](#new-in-this-version)
+Version 1.4.1-52-gfb27f52 -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -65,12 +65,15 @@ page.
 ## New in this version
 
 Version 1.5.0 introduces the following:
-- Support for `mandoc`. This is a major feature that enables Qman to be used on
-  systems such as macOS, freeBSD, and Linux distributions that prefer `mandoc`
-  rather than GNU `man`.
+- Support for several different operating systems. Qman is no longer just for
+  Linux. The following manual systems are currently supported:
+  - **[mandb](https://gitlab.com/man-db/man-db)** - most Linux distributions
+  - **[mandoc](https://mandoc.bsd.lv/)** - Void Linux, others?
+  - **[freebsd](https://www.freebsd.org/)** - FreeBSD
+  - **[darwin](https://www.apple.com/macos/)** - macOS X
 - Three new themes:
   - `adwaita`, designed to match the colors of dark Adwaita desktops
-  - adwaita-light, designed to match the colors of light Adwaita desktops
+  - `adwaita-light`, designed to match the colors of light Adwaita desktops
   - `modernity-light`, a generic light theme to complement `modernity`
 - Miscellaneous bug fixes and documentation updates
 
