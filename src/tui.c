@@ -1323,6 +1323,10 @@ void editcopy(wchar_t *src) {
       FILE *pp = xpopen("/usr/bin/wl-copy", "w");
       fputs(srcs, pp);
       xpclose(pp);
+    } else if (stat("/usr/bin/pbcopy", &sb) == 0 && sb.st_mode & S_IXUSR) {
+      FILE *pp = xpopen("/usr/bin/pbcopy", "w");
+      fputs(srcs, pp);
+      xpclose(pp);
     }
   }
 
