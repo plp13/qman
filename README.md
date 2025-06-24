@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.4.1-53-g2b95c63 -- [see what's new](#new-in-this-version)
+Version 1.4.1-55-gc10619e -- [see what's new](#new-in-this-version)
 
 ## Screenshots
 
@@ -75,6 +75,8 @@ Version 1.5.0 introduces the following:
   - `adwaita`, designed to match the colors of dark Adwaita desktops
   - `adwaita-light`, designed to match the colors of light Adwaita desktops
   - `modernity-light`, a generic light theme to complement `modernity`
+- Improved error messages, esp. when it comes to errors caused by
+  misconfigured `system_type` or paths to essential commands
 - Miscellaneous bug fixes and documentation updates
 
 > **:bulb: Note**

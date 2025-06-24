@@ -1324,8 +1324,14 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
     err = true;
     if (AW_WHATIS == cmd)
       swprintf(err_msg, BS_LINE, L"Whatis %ls: nothing apropriate", args);
-    else
-      swprintf(err_msg, BS_LINE, L"Apropos %ls: nothing apropriate", args);
+    else {
+      if (0 == wcscmp(args, L"''") || 0 == wcscmp(args, L"'.'"))
+        swprintf(err_msg, BS_LINE,
+                 L"Apropos database is empty; did you run mandb/makewhatis?",
+                 args);
+      else
+        swprintf(err_msg, BS_LINE, L"Apropos %ls: nothing apropriate", args);
+    }
   }
 
   // Deallocate unused memory and return
