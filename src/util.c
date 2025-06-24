@@ -13,6 +13,29 @@ void serror(wchar_t *dst, const wchar_t *s) {
     swprintf(dst, BS_SHORT, L"%s", strerror(errno));
 }
 
+void is_executable(const char *path) {
+  struct stat sb;
+  if (stat(path, &sb) != 0 || !(sb.st_mode & S_IXUSR)) {
+    static wchar_t errpre[BS_LINE];
+    swprintf(errpre, BS_LINE, L"Cannot execute '%s'", path);
+    static wchar_t errmsg[BS_LINE];
+    serror(errmsg, errpre);
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+}
+
+void is_readable(const char *path) {
+  struct stat sb;
+  if (stat(path, &sb) != 0 || !(sb.st_mode & S_IRUSR)) {
+    static wchar_t errpre[BS_LINE];
+    swprintf(errpre, BS_LINE, L"Cannot read '%s'", path);
+    static wchar_t errmsg[BS_LINE];
+    serror(errmsg, errpre);
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+
+}
+
 void *xcalloc(size_t nmemb, size_t size) {
   void *const res = calloc(nmemb, size);
 
@@ -51,8 +74,10 @@ FILE *xpopen(const char *command, const char *type) {
   FILE *const pipe = popen(command, type);
 
   if (NULL == pipe) {
-    static wchar_t errmsg[BS_SHORT];
-    serror(errmsg, L"Unable to popen()");
+    static wchar_t errpre[BS_LINE];
+    swprintf(errpre, BS_LINE, L"Unable to popen('%s')", command);
+    static wchar_t errmsg[BS_LINE];
+    serror(errmsg, errpre);
     winddown(ES_OPER_ERROR, errmsg);
   }
 
@@ -73,11 +98,15 @@ int xpclose(FILE *stream) {
 
 #ifdef QMAN_GZIP
 gzFile xgzopen(const char *path, const char *mode) {
+  is_readable(path);
+
   gzFile gzfp = gzopen(path, mode);
 
   if (NULL == gzfp) {
-    static wchar_t errmsg[BS_SHORT];
-    serror(errmsg, L"Unable to gzopen()");
+    static wchar_t errpre[BS_LINE];
+    swprintf(errpre, BS_LINE, L"Unable to gzopen('%s')", path);
+    static wchar_t errmsg[BS_LINE];
+    serror(errmsg, errpre);
     winddown(ES_OPER_ERROR, errmsg);
   }
 
@@ -100,11 +129,15 @@ int xgzclose(gzFile file) {
 #endif
 
 FILE *xfopen(const char *pathname, const char *mode) {
+  is_readable(pathname);
+
   FILE *const file = fopen(pathname, mode);
 
   if (NULL == file) {
-    static wchar_t errmsg[BS_SHORT];
-    serror(errmsg, L"Unable to fopen()");
+    static wchar_t errpre[BS_LINE];
+    swprintf(errpre, BS_LINE, L"Unable to xfopen('%s')", pathname);
+    static wchar_t errmsg[BS_LINE];
+    serror(errmsg, errpre);
     winddown(ES_OPER_ERROR, errmsg);
   }
 
@@ -786,7 +819,7 @@ unsigned wmaxlen(const wchar_t *const *src, unsigned src_len) {
 }
 
 unsigned wsplit(wchar_t ***dst, unsigned dst_len, wchar_t *src,
-                const wchar_t *extras) {
+                const wchar_t *extras, bool skipws) {
   wchar_t **res = *dst; // results
   unsigned res_cnt = 0; // number of results
   bool ws = true;    // whether current character is whitespace or in `extras`
@@ -800,7 +833,7 @@ unsigned wsplit(wchar_t ***dst, unsigned dst_len, wchar_t *src,
     pws = ws;
 
     ws = false;
-    if (iswspace(src[i]))
+    if (!skipws && iswspace(src[i]))
       ws = true;
     for (j = 0; L'\0' != extras[j]; j++)
       if (src[i] == extras[j])

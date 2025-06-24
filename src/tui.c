@@ -202,7 +202,7 @@ int ls_discover(wchar_t *trgt, unsigned sln) {
   unsigned max_score = 0;        // maximum score
   unsigned i, j;                 // iterators
 
-  trgt_words_len = wsplit(&trgt_words, BS_SHORT, trgt, NULL);
+  trgt_words_len = wsplit(&trgt_words, BS_SHORT, trgt, NULL, false);
   if (0 == trgt_words_len)
     return -1;
 
@@ -223,7 +223,7 @@ int ls_discover(wchar_t *trgt, unsigned sln) {
       // exactly match the words in `trgt`. An extra point is added to said
       // score if the last word in `trgt` matches just the beginning of its
       // corresponding word in `cand`
-      cand_words_len = wsplit(&cand_words, BS_SHORT, text, NULL);
+      cand_words_len = wsplit(&cand_words, BS_SHORT, text, NULL, false);
       for (i = 0; i < MIN(trgt_words_len, cand_words_len); i++)
         if (0 == wcscmp(cand_words[i], trgt_words[i]))
           line_scores[j] += 2;
@@ -1323,6 +1323,10 @@ void editcopy(wchar_t *src) {
       FILE *pp = xpopen("/usr/bin/wl-copy", "w");
       fputs(srcs, pp);
       xpclose(pp);
+    } else if (stat("/usr/bin/pbcopy", &sb) == 0 && sb.st_mode & S_IXUSR) {
+      FILE *pp = xpopen("/usr/bin/pbcopy", "w");
+      fputs(srcs, pp);
+      xpclose(pp);
     }
   }
 
@@ -1343,7 +1347,9 @@ void winddown_tui() {
     delwin(wstat);
   wstat = NULL;
 
+#ifndef QMAN_DARWIN
   reset_color_pairs();
+#endif
 
   // Initialize terminal to disable drag-and-drop
   char *term = getenv("TERM");

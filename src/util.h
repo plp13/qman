@@ -184,6 +184,12 @@ typedef struct {
 // message, place it in `dst`
 void serror(wchar_t *dst, const wchar_t *s);
 
+// Fail and `winddown()` if `path` doesn't point to an executable file
+void is_executable(const char *path);
+
+// Fail and `winddown()` if `path` doesn't point to a readable file
+void is_readable(const char *path);
+
 // The purpose of all of all `x...()` functions is to fail gracefully using
 // `winddown()` whenever an error is detected. Otherwise, their behavior is
 // identical to that of the standard functions they replace.
@@ -364,10 +370,10 @@ extern unsigned wmaxlen(const wchar_t *const *src, unsigned src_len);
 
 // Split `src` into a list of words, and place said list in `dst` (of maximum
 // length `dst_len`). Words can be separated by either whitespace or any of the
-// characters in `extras`. Return the number of words. This function modifies
-// `src`.
+// characters in `extras` (only by those in `extras` if `skipws` is true).
+// Return the number of words. This function modifies `src`.
 extern unsigned wsplit(wchar_t ***dst, unsigned dst_len, wchar_t *src,
-                       const wchar_t *extras);
+                       const wchar_t *extras, bool skipws);
 
 // Return the position of the first character in `src` that is not whitespace,
 // and not one of the characters in `extras`

@@ -121,7 +121,8 @@ full_regex_t re_man, re_http, re_email;
 // attachment to `got_bold_nosgr` that fixes a quirk in `mandoc`'s output
 #define got_bold_nosgr_mandoc_quirk_fix                                        \
   (!((ST_MANDOC == config.misc.system_type ||                                  \
-      ST_FREEBSD == config.misc.system_type) &&                                \
+      ST_FREEBSD == config.misc.system_type ||                                 \
+      ST_DARWIN == config.misc.system_type) &&                                 \
      tmpw[i] == '_' && uline_nosgr))
 
 // true if `tmpw[i]` contains a 'bold' typewriter (NO_SGR) sequence
@@ -279,7 +280,7 @@ unsigned extract_args(wchar_t **page, wchar_t **section, unsigned len,
   arg = wcstok(srcc, L"' \t", &buf);
   if (NULL != arg) {
     // Argument #1 exists...
-    arg_dec_len = wsplit(&arg_dec, 2, arg, L"()");
+    arg_dec_len = wsplit(&arg_dec, 2, arg, L"()", false);
     if (2 == arg_dec_len) {
       // ...and is in page(sec) format; decompose it into `page` and `section`
       wcslcpy(*page, arg_dec[0], len);
@@ -294,7 +295,7 @@ unsigned extract_args(wchar_t **page, wchar_t **section, unsigned len,
       arg = wcstok(NULL, L"' \t", &buf);
       if (NULL != arg) {
         // ...if argument #2 exists...
-        arg_dec_len = wsplit(&arg_dec, 2, arg, L"()");
+        arg_dec_len = wsplit(&arg_dec, 2, arg, L"()", false);
         if (1 == arg_dec_len) {
           // ...and is not in page(sec) format, set argument #1 as `section` and
           // argument #2 as `page`
@@ -404,8 +405,9 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
       logprintf("%s", dst);
       return ret;
     }
-  } else if (ST_FREEBSD == config.misc.system_type) {
-    // FreeBSD `man` specific
+  } else if (ST_FREEBSD == config.misc.system_type ||
+             ST_DARWIN == config.misc.system_type) {
+    // FreeBSD and macOS X `man` specific
     unsigned args_len = wcslen(args);     // length of `args`
     wchar_t *page = walloca(args_len);    // man page extracted from `args`
     wchar_t *section = walloca(args_len); // man section extracted from `args`
@@ -431,6 +433,130 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
   }
 
   return false;
+}
+
+// macOS X specific version of `aprowhat_exec()`
+unsigned aprowhat_exec_darwin(aprowhat_t **dst, aprowhat_cmd_t cmd,
+                              const wchar_t *args) {
+  // Prepare `apropos`/`whatis` command
+  char cmdstr[BS_LINE];
+  if (AW_WHATIS == cmd)
+    snprintf(cmdstr, BS_LINE, "%s %ls 2>>/dev/null", config.misc.whatis_path,
+             args);
+  else
+    snprintf(cmdstr, BS_LINE, "%s %ls 2>>/dev/null", config.misc.apropos_path,
+             args);
+
+  unsigned res_len = BS_LINE;                    // result length
+  aprowhat_t *res = aalloc(res_len, aprowhat_t); // result
+  char *line =
+      salloc(BS_LONG); // current line of text, as returned by the command
+  wchar_t *wline = walloc(BS_LONG); // `wchar_t *` version of `line`
+  wchar_t **idents =
+      aalloc(BS_LINE, wchar_t *);    // manual page / section combos (in `line`)
+  wchar_t *descr = walloca(BS_LINE); // description (in `line`)
+  wchar_t *page,
+      *section; // manual page and section in current entry of `idents`
+  wchar_t *buf; // temporary
+  unsigned idents_len, descr_len, page_len,
+      section_len;    // lengths of `idents`, `descr`, `page` and `section`
+  int wline_len;      // length of `wline`
+  unsigned res_i = 0; // current result
+  unsigned i;         // iterators
+
+  // Execute the command
+  FILE *pp = xpopen(cmdstr, "r");
+
+  // For each line returned by the command...
+  while (!feof(pp)) {
+    xfgets(line, BS_LONG, pp);
+    // loggit(line);
+
+    wline_len = xmbstowcs(wline, line, BS_LONG);
+    if (-1 == wline_len) {
+      if (0 == res_i)
+        break;
+      else
+        winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
+    }
+    wline[wline_len - 1] = L'\0';
+
+    // Extract `descr`
+    descr = wcsstr(wline, L" - ");
+    if (NULL == descr) {
+      if (0 == res_i)
+        break;
+      else
+        winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
+    }
+    descr[0] = L'\0';
+    descr = &descr[3];
+    descr_len = wcslen(descr);
+
+    // Extract `idents`
+    idents_len = wsplit(&idents, BS_LINE, wline, L",", true);
+
+    // For each ident described by line...
+    for (i = 0; i < idents_len; i++) {
+      // Extract the corresponding `page` and `section`
+      // (Formatting and error handling here is a bit hacky, to account for
+      // darwin's flaky `apropos` output)
+      page = wcstok(idents[i], L"(", &buf);
+      page = &page[wmargend(page, NULL)];
+      wmargtrim(page, NULL);
+      if (NULL == page || L'/' == page[0] || NULL != wcschr(page, L' '))
+        continue;
+      section = wcstok(NULL, L")", &buf);
+      if (NULL == section || L'(' == section[0])
+        continue;
+
+      // Populate the `res_i`th element of `res`
+      page_len = wcslen(page);
+      section_len = wcslen(section);
+      res[res_i].page = walloc(page_len);
+      wcslcpy(res[res_i].page, page, page_len + 1);
+      res[res_i].section = walloc(section_len);
+      wcslcpy(res[res_i].section, section, section_len + 1);
+      res[res_i].ident = walloc(page_len + section_len + 3);
+      swprintf(res[res_i].ident, page_len + section_len + 3, L"%ls(%ls)", page,
+               section);
+      res[res_i].descr = walloc(descr_len);
+      wcslcpy(res[res_i].descr, descr, descr_len + 1);
+      // logprintf("%d. %ls(%ls)", res_i, res[res_i].page,
+      // res[res_i].section); logprintf("%ls", res[res_i].descr)
+      // loggit("");
+
+      // Increase `res_i`, and reallocate `res` if necessary
+      res_i++;
+      if (res_i == res_len) {
+        res_len += BS_LINE;
+        res = xreallocarray(res, res_len, sizeof(aprowhat_t));
+      }
+    }
+  }
+
+  int status = xpclose(pp);
+
+  // If no results were returned by the command, set `err` to true and
+  // describe the error in `err_msg`. Otherwise, set `err` to false.
+  err = false;
+  if (0 == res_i || 0 != status) {
+    err = true;
+    if (AW_WHATIS == cmd)
+      swprintf(err_msg, BS_LINE, L"Whatis %ls: nothing apropriate", args);
+    else
+      swprintf(err_msg, BS_LINE, L"Apropos %ls: nothing apropriate", args);
+  }
+
+  // Deallocate unused memory and return
+  if (res_i > 0)
+    res = xreallocarray(res, res_i, sizeof(aprowhat_t));
+  free(line);
+  free(wline);
+  free(idents);
+  *dst = res;
+  // logprintf("%d", res_i);
+  return res_i;
 }
 
 // Helper of `man()` and `aprowhat_render()`. Add a link to `line`. Allocate
@@ -762,7 +888,8 @@ void init() {
 
 void late_init() {
   // Initialize `aw_all` and `sc_all`
-  if (ST_FREEBSD == config.misc.system_type)
+  if (ST_FREEBSD == config.misc.system_type ||
+      ST_DARWIN == config.misc.system_type)
     aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"'.'");
   else
     aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"''");
@@ -1074,6 +1201,11 @@ void history_reset() {
 
 unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
                        const wchar_t *args) {
+  if (ST_DARWIN == config.misc.system_type) {
+    // macOS X requires its own special `aprowhat_exec()`
+    return aprowhat_exec_darwin(dst, cmd, args);
+  }
+
   // Prepare `apropos`/`whatis` command
   char cmdstr[BS_LINE];
   char *longopt;
@@ -1099,8 +1231,9 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   wchar_t *descr = walloca(BS_LINE);               // description (in `line`)
   wchar_t *tmp, *buf;                              // temporary
   unsigned pages_len, sections_len, cur_page_len, cur_section_len,
-      descr_len;      // lengths of `pages`, `cur_page`, `section`, and `descr`
-  int wline_len;      // length of `wline`
+      descr_len; // lengths of `pages`, `sections`, current entry in `pages`,
+                 // current entry in `sections` and `descr`
+  int wline_len; // length of `wline`
   unsigned res_i = 0; // current result
   unsigned i, j;      // iterators
 
@@ -1141,7 +1274,7 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
       else
         winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
     }
-    pages_len = wsplit(&pages, BS_LINE, wline, L",");
+    pages_len = wsplit(&pages, BS_LINE, wline, L",", false);
 
     // Extract `sections`
     tmp = wcstok(NULL, L")", &buf);
@@ -1151,7 +1284,7 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
       else
         winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
     }
-    sections_len = wsplit(&sections, BS_LINE, tmp, L",");
+    sections_len = wsplit(&sections, BS_LINE, tmp, L",", false);
 
     // For each page described by line...
     for (i = 0; i < pages_len; i++) {
@@ -1169,7 +1302,8 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
         res[res_i].descr = walloc(descr_len);
         wcslcpy(res[res_i].descr, descr, descr_len + 1);
         // logprintf("%d. %ls(%ls)", res_i, res[res_i].page,
-        // res[res_i].section); logprintf("%ls", res[res_i].descr); loggit("");
+        // res[res_i].section); logprintf("%ls", res[res_i].descr);
+        // loggit("");
 
         // Increase `res_i`, and reallocate `res` if necessary
         res_i++;
@@ -1200,6 +1334,7 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   free(line);
   free(wline);
   free(pages);
+  free(sections);
   *dst = res;
   // logprintf("%d", res_i);
   return res_i;
@@ -1575,8 +1710,9 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     unsetenv("GROFF_NO_SGR");
   } else if (ST_MANDOC == config.misc.system_type) {
     // `mandoc` specific
-  } else if (ST_FREEBSD == config.misc.system_type) {
-    // FreeBSD `man` specific
+  } else if (ST_FREEBSD == config.misc.system_type ||
+             ST_DARWIN == config.misc.system_type) {
+    // FreeBSD and macOS X `man` specific
     sprintf(tmps, "%d", 1 + text_width);
     setenv("MANWIDTH", tmps, true);
     unsetenv("MANCOLOR");
@@ -1616,8 +1752,9 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
         snprintf(cmdstr, BS_LINE, "%s -T utf8 -O width=%d '%ls' 2>>/dev/null",
                  config.misc.man_path, text_width, page);
     }
-  } else if (ST_FREEBSD == config.misc.system_type) {
-    // FreeBSD `man` specific
+  } else if (ST_FREEBSD == config.misc.system_type ||
+             ST_DARWIN == config.misc.system_type) {
+    // FreeBSD and macOS X `man` specific
     unsigned args_len = wcslen(args);     // length of `args`
     wchar_t *page = walloca(args_len);    // man page extracted from `args`
     wchar_t *section = walloca(args_len); // man section extracted from `args`

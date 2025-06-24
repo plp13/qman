@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.4.1-42-ga32e96b
+footer: Qman 1.4.1-53-g2b95c63
 date: December 15, 2023
 ---
 
@@ -119,9 +119,9 @@ The above behavior can be customized. For more information, see
 : There is no reliable method for terminal clients to copy data to the
   clipboard. An escape code (OSC 52) does exist but is only reliably supported
   by **kitty(1)** and **ghostty(1)**. For all other terminals, **Qman** will
-  default to using **xclip(1)** and/or **wl-clipboard(1)**. However, these will
-  only work when running locally and within a desktop environment (not when
-  using SSH).
+  default to using commands such as **xclip(1)**, **wl-clipboard(1)**, or
+  **pbcopy(1)**. However, these will only work when running locally and within a
+  desktop environment (not when using SSH).
 
 **NOTE 2**
 : Some terminals may report mouse cursor position inaccurately, causing
@@ -377,6 +377,7 @@ _system_type_ must match the Unix manual system used by your O/S:
 - **[mandb](https://gitlab.com/man-db/man-db)** - most Linux distributions
 - **[mandoc](https://mandoc.bsd.lv/)** - Void Linux, others?
 - **[freebsd](https://www.freebsd.org/)** - FreeBSD
+- **[darwin](https://www.apple.com/macos/)** - macOS X
 
 When using a horizontally narrow terminal, setting _hyphenate_ to **true**
 and/or _justify_ to **false** can improve the program's output.

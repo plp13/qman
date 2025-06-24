@@ -26,6 +26,7 @@
 #include <regex.h>
 #include <curses.h>
 #include <term.h>
+
 #undef lines
 
 #ifdef QMAN_GZIP
@@ -41,7 +42,6 @@
 #endif
 
 #if defined(__GLIBC__)
-#include <alloca.h>
 extern char *program_invocation_short_name;
 #endif
 

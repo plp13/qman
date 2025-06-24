@@ -91,7 +91,10 @@ systype_t wcs2systype(const wchar_t *src) {
   } else if (0 == wcscasecmp(src, L"freebsd")) {
     errno = 0;
     return ST_FREEBSD;
-  } else {
+  } else if (0 == wcscasecmp(src, L"darwin")) {
+    errno = 0;
+    return ST_DARWIN;
+  }else {
     errno = -1;
     return ST_ERROR;
   }
@@ -593,6 +596,15 @@ for section, options in config_def.config_def.items():
   set_transition_colours;
 }
 
+// Helper of `configure()`. Make sure that the configured paths of the `man`,
+// `apropos`, `whatis` and `groff` commands point to executables.
+void check_paths() {
+  is_executable(config.misc.man_path);
+  is_executable(config.misc.groff_path);
+  is_executable(config.misc.whatis_path);
+  is_executable(config.misc.apropos_path);
+}
+
 //
 // Functions
 //
@@ -744,4 +756,5 @@ void configure() {
     eini_winddown();
   }
   set_transition_colours;
+  check_paths();
 }
