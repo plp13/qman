@@ -184,6 +184,12 @@ typedef struct {
 // message, place it in `dst`
 void serror(wchar_t *dst, const wchar_t *s);
 
+// Fail and `winddown()` if `path` doesn't point to an executable file
+void is_executable(const char *path);
+
+// Fail and `winddown()` if `path` doesn't point to a readable file
+void is_readable(const char *path);
+
 // The purpose of all of all `x...()` functions is to fail gracefully using
 // `winddown()` whenever an error is detected. Otherwise, their behavior is
 // identical to that of the standard functions they replace.
