@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.4.1-56-ge6036e9 -- [see what's new](#new-in-this-version)
+Version 1.4.1-57-g0211cbf -- [see what's new](#new-in-this-version)
 
 ![Opening a Manual Page](/screenshots/qman_open.png)
 
@@ -72,8 +72,7 @@ Version 1.5.0 introduces the following:
 >
 > Users using custom config files might need to update them when a new version
 > of Qman comes out. For more information, please refer to Qman's manual page
-> and the documentation in
-> [config](config/README.md].
+> and the documentation in [config/README.md](config/README.md).
 
 ## More screenshots
 

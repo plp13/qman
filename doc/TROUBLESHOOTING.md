@@ -1,9 +1,9 @@
-## Troubleshooting
+# Troubleshooting
 
 1. Always make sure you are up-to-date with the
-[main](https://github.com/plp13/qman) branch.
+[main](https://github.com/plp13/qman/tree/main) branch.
 
-2. Read [BUILDING.md](BUILDING.md) and [OS_SPECIFIC.md](OS_SPECIFIC.md)
+2. Read [BUILDING.md](BUILDING.md) and [OS_SPECIFIC.md](OS_SPECIFIC.md).
 
 3. And, of course, RTFM:
 
@@ -29,7 +29,7 @@ Users of other operating systems may need to run the following instead:
 # makewhatis
 ```
 
----
+## Frequently Asked Questions
 
 > **:question:: Some manual pages don't show up, or manual pages of software
 > that I have uninstalled still do show up**
@@ -84,9 +84,8 @@ that does nothing, e.g. `/usr/bin/false`.
 
 > **:question: I don't like the way Qman looks**
 
-Use a different one of the supplied
-[themes](https://github.com/plp13/qman/config/themes). Or build your own (and
-open a pull request to to add it to the repository).
+Use a different one of the supplied [themes](../config/themes). Or build your
+own theme (and open a pull request to to add it to the repository).
 
 For instructions on how to use themes, refer to Qman's manual page or look
 inside [config/qman.conf](../config/qman.conf)

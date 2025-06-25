@@ -83,7 +83,7 @@ The following optional arguments can be passed to `meson setup`:
 
 Qman should work without additional configuration on most Linux distributions.
 However, for some operating systems and Linux distros you may need to add
-certain directives to Qman's config file. See [OS_SPECIFIC.md](OS_SPECIFIC.md).
+extra directives to Qman's config file. See [OS_SPECIFIC.md](OS_SPECIFIC.md).
 
 The config file is located at `~/.config/qman/qman.conf` (user-specific) or
 `/etc/xdg/qman/qman.conf` (system-wide).

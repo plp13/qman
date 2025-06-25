@@ -10,5 +10,5 @@ code:
 $ git clone -b devel https://github.com/plp13/qman qman
 ```
 
-Also make sure you read [DEBUGGING.md](DUBUGGING.md) and
+Also make sure you read [DEBUGGING.md](DEBUGGING.md) and
 [TESTING.md](TESTING.md).

@@ -30,7 +30,7 @@ $ sudo meson install
 
 > **:bulb: Note**
 >
-> On Intel-based macs, substitute `/opt/homebrew` with `/usr/local/opt/ncurses/`
+> On Intel-based macs, substitute `/opt/homebrew` with `/usr/local/opt/`
 
 Then add the following to your [config file](BUILDING.md#configuration):
 
@@ -109,17 +109,17 @@ Finally, run the `mkfakewhatis.sh` as root:
 # mkfakewhatis.sh
 ```
 
-This must be ran this regularly, to ensure that
+This command must be executed regularly, to ensure that
 `/usr/local/share/fakewhatis.txt` is kept up-to-date.
 
 ## FreeBSD
 
 Install all [dependencies](BUILDING.md#dependencies) using `pkg`. Then use the
-instructions in [BUILDING.md](BUILDING.md#building-and-installing) to build and
+[standard instructions](BUILDING.md#building-and-installing) to build and
 install Qman.
 
-Te FreeBSD-supplied `ncursesw` is known to cause compiler warnings, but
-otherwise works. You can also use the
+FreeBSD-supplied `ncursesw` is known to cause compiler warnings, but otherwise
+works. You can also use the
 [Linux version](https://invisible-island.net/ncurses/) of `ncursesw`, which
 can be installed using `pkg install ncurses`.
 
@@ -135,8 +135,8 @@ groff_path=/usr/local/bin/groff
 ## Haiku
 
 Install all [dependencies](BUILDING.md#dependencies) using `pkgman`. Then use
-the instructions in [BUILDING.md](BUILDING.md#building-and-installing) to build
-and install Qman.
+the [standard instructions](BUILDING.md#building-and-installing) to build and
+install Qman.
 
 You must also add the following to your
 [config file](BUILDING.md#configuration):
