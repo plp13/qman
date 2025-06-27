@@ -313,10 +313,10 @@ unsigned extract_args(wchar_t **page, wchar_t **section, unsigned len,
 }
 
 // Helper of `man_sections()` and `man_toc()`. Place the location of the manual
-// page source that corresponds to `args` into `dst`. If no such location
-// exists, return false, otherwise return true. `local_file` signifies whether
-// `args` contains a local file path, rather than a manual page name and
-// section.
+// page source that corresponds to `args` into `dst` (of length BS_LINE). If no
+// such location exists, return false, otherwise return true. `local_file`
+// signifies whether `args` contains a local file path, rather than a manual
+// page name and section.
 bool man_loc(char *dst, const wchar_t *args, bool local_file) {
   char cmdstr[BS_LINE]; // command to execute
   bool ret;             // return value
@@ -352,12 +352,12 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
     extracted = extract_args(&page, &section, args_len, args);
     switch (extracted) {
     case 2:
-      snprintf(combo, BS_LINE, "%ls.%ls", page, section);
+      snprintf(combo, 2 * args_len, "%ls.%ls", page, section);
       break;
     case 1:
       searched = aprowhat_search(page, aw_all, aw_all_len, 0, false);
       if (searched > -1)
-        snprintf(combo, BS_LINE, "%ls.%ls", aw_all[searched].page,
+        snprintf(combo, 2 * args_len, "%ls.%ls", aw_all[searched].page,
                  aw_all[searched].section);
       else
         xwcstombs(combo, page, args_len);
