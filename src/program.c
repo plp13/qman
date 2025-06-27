@@ -270,10 +270,10 @@ unsigned extract_args(wchar_t **page, wchar_t **section, unsigned len,
   wchar_t *srcc = walloca(wcslen(src) * 2); // copy of `src`
   wchar_t *arg;                             // current argument
   wchar_t **arg_dec =
-      aalloc(2, wchar_t *); // decomposed current argument (e.g. `"ls(1)"` ->
-                            // `["ls", "1"]`)
-  unsigned arg_dec_len;     // length of `arg_dec`
-  wchar_t *buf;             // temporary
+      aalloca(2, wchar_t *); // decomposed current argument (e.g. `"ls(1)"` ->
+                             // `["ls", "1"]`)
+  unsigned arg_dec_len;      // length of `arg_dec`
+  wchar_t *buf;              // temporary
 
   wcslcpy(srcc, src, BS_LINE);
 
