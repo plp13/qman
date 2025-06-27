@@ -267,15 +267,16 @@ full_regex_t re_man, re_http, re_email;
 // of neither did.
 unsigned extract_args(wchar_t **page, wchar_t **section, unsigned len,
                       const wchar_t *src) {
-  wchar_t *srcc = walloca(wcslen(src) * 2); // copy of `src`
-  wchar_t *arg;                             // current argument
+  unsigned src_len = wcslen(src);   // length of src
+  wchar_t *srcc = walloca(src_len); // copy of `src`
+  wchar_t *arg;                     // current argument
   wchar_t **arg_dec =
       aalloca(2, wchar_t *); // decomposed current argument (e.g. `"ls(1)"` ->
                              // `["ls", "1"]`)
   unsigned arg_dec_len;      // length of `arg_dec`
   wchar_t *buf;              // temporary
 
-  wcslcpy(srcc, src, BS_LINE);
+  wcslcpy(srcc, src, src_len);
 
   arg = wcstok(srcc, L"' \t", &buf);
   if (NULL != arg) {
