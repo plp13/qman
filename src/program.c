@@ -1702,6 +1702,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // Set up the environment for `man` to create its output as we want it
   char *old_term = getenv("TERM");
   setenv("TERM", "xterm", true);
+  char *old_manpager = getenv("MANPAGER");
+  setenv("MANPAGER", "", true);
   if (ST_MANDB == config.misc.system_type) {
     // `mandb` specific
     sprintf(tmps, "%d", 1 + text_width);
@@ -1963,6 +1965,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // Restore the environment
   if (NULL != old_term)
     setenv("TERM", old_term, true);
+  if (NULL != old_manpager)
+    setenv("MANPAGER", old_manpager, true);
 
   int status = xpclose(pp);
   free(tmpw);
