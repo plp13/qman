@@ -1,6 +1,6 @@
 # Testing
 
-Instructions on how to test Qman before creating a new release.
+How to test Qman before creating a new release.
 
 ## Preliminaries
 

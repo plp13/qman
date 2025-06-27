@@ -93,7 +93,7 @@ else
 fi
 ```
 
-The `[misc]` section of your config file must be changed as follows:
+You'll have to change the `[misc]` section of your config file as follows:
 
 ```
 [misc]
@@ -103,7 +103,7 @@ apropos=/usr/local/bin/fakeapropos.sh
 whatis=/usr/local/bin/fakewhatis.sh
 ```
 
-Finally, run the `mkfakewhatis.sh` as root:
+Then, run `mkfakewhatis.sh` as root:
 
 ```
 # mkfakewhatis.sh
@@ -111,6 +111,8 @@ Finally, run the `mkfakewhatis.sh` as root:
 
 This command must be executed regularly, to ensure that
 `/usr/local/share/fakewhatis.txt` is kept up-to-date.
+
+Qman should now be lag-free!
 
 ## FreeBSD
 
@@ -151,5 +153,5 @@ groff_path=/bin/groff
 ```
 
 An unidentified bug can cause Qman to crash on Haiku. If this happens, comment
-out the that contains `free(wline)` in function `src/program.c:aprowhat_exec()`
-and re-compile.
+out the line that contains `free(wline)` in function
+`src/program.c:aprowhat_exec()` and re-compile.

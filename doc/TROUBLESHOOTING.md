@@ -14,10 +14,10 @@ $ qman qman
 ---
 
 > **:question: Calling `qman` without any parameters fails with message
-> `Apropos database is empty; did you run mandb/makewhatis?`**
+> `'apropos .' failed; did you run mandb/makewhatis?`**
 
-Your manual pages database hasn't been initialized. For most Linux users this
-can be fixed by running (as root):
+Most probably, your manual pages database hasn't been initialized. For most
+Linux users this can be fixed by running (as root):
 
 ```
 # mandb
@@ -29,7 +29,10 @@ Users of other operating systems may need to run the following instead:
 # makewhatis
 ```
 
-## Frequently Asked Questions
+On some operating systems, this error may also be caused by Qman not having been
+correctly configured. See [OS_SPECIFIC.md](OS_SPECIFIC.md).
+
+---
 
 > **:question:: Some manual pages don't show up, or manual pages of software
 > that I have uninstalled still do show up**

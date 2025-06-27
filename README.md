@@ -1,16 +1,18 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.4.1-57-g0211cbf -- [see what's new](#new-in-this-version)
+Version 1.4.1-58-ga927310 -- [see what's new](#new-in-this-version)
 
-![Opening a Manual Page](/screenshots/qman_open.png)
+![Screenshot -- Opening a Manual Page](/screenshots/qman_open.png)
 
 ## Get started
 
 - [Generic build instructions](doc/BUILDING.md) (works for most Linux distros)
 - [O/S specific instructions](doc/OS_SPECIFIC.md)
 - [Troubleshooting](doc/TROUBLESHOOTING.md)
+- [Packages](doc/PACKAGES.md)
 - [Configuration and themes](config/)
+- [Contributing](doc/CONTRIBUTING.md)
 
 ## Rationale
 
@@ -47,8 +49,9 @@ plain C and has only minimal dependencies.
 ## Project status 
 
 All basic functionality has been completed. The software has been in use since
-late 2023 and should considered stable. New bugs should be reported using
-[issues](https://github.com/plp13/qman/issues).
+late 2023 and is considered to be stable. Bugs, of course, still happen. If
+believe you have found one, please open an
+[issue](https://github.com/plp13/qman/issues).
 
 ## New in this version
 
@@ -65,22 +68,19 @@ Version 1.5.0 introduces the following:
   - `modernity-light`, a generic light theme to complement `modernity`
 - Re-organized and extended documentation
 - Improved error messages, esp. when it comes to errors caused by
-  misconfigured `system_type` or paths to essential commands
+  a misconfiguration or a missing manual pages database
 - Miscellaneous bug fixes and documentation updates
 
 > **:bulb: Note**
 >
-> Users using custom config files might need to update them when a new version
-> of Qman comes out. For more information, please refer to Qman's manual page
-> and the documentation in [config/README.md](config/README.md).
+> Users using custom config files may need to update them after a new release.
+> For more information, please refer to Qman's manual page and the documentation
+> in [config/README.md](config/README.md).
 
 ## More screenshots
 
 Index page:
 ![Index Page](/screenshots/qman_index.png)
-
-Opening a manual page:
-![Opening a Manual Page](/screenshots/qman_open.png)
 
 Viewing a manual page:
 ![Viewing a Manual Page](/screenshots/qman_man.png)

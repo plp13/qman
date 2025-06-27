@@ -1,4 +1,4 @@
-# Build instructions
+# Building, Installing and Configuring Qman
 
 These generic instructions should work with most Linux distributions. For other
 operating systems, see [OS_SPECIFIC.md](OS_SPECIFIC.md).
@@ -18,7 +18,7 @@ available, starting with version 1.2.1.
 ## Dependencies
 
 Qman was designed to be portable. Because of this, it was written in plain C
-and only has minimal dependencies.
+and only has the following minimal dependencies:
 
 Runtime dependencies:
 - A Unix O/S that provides the standard `man`, `apropos` and `whatis` commands
@@ -63,8 +63,11 @@ $ sudo meson install
 
 > **:bulb: Note**
 >
-> These instructions might differ for certain operating systems. See
-> [OS_SPECIFIC.md](OS_SPECIFIC.md).
+> If you opted not to install one or more optional dependencies, you must append
+> the [corresponding options](#meson-options) to `meson setup build/`
+
+Build instructions might differ for certain operating systems. See
+[OS_SPECIFIC.md](OS_SPECIFIC.md).
 
 ### Meson options
 
