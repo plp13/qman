@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.4.1-57-g1ab6080
+footer: Qman 1.4.1-58-ga927310
 date: December 15, 2023
 ---
 
@@ -375,9 +375,9 @@ This section contains various miscellaneous options:
 _system_type_ must match the Unix manual system used by your O/S:
 
 - **[mandb](https://gitlab.com/man-db/man-db)** - most Linux distributions
-- **[mandoc](https://mandoc.bsd.lv/)** - Void Linux, others?
+- **[mandoc](https://mandoc.bsd.lv/)** - Void Linux, Haiku, others?
 - **[freebsd](https://www.freebsd.org/)** - FreeBSD
-- **[darwin](https://www.apple.com/macos/)** - macOS X
+- **[darwin](https://www.apple.com/macos/)** - macOS
 
 When using a horizontally narrow terminal, setting _hyphenate_ to **true**
 and/or _justify_ to **false** can improve the program's output.

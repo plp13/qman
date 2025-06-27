@@ -1327,8 +1327,7 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
     else {
       if (0 == wcscmp(args, L"''") || 0 == wcscmp(args, L"'.'"))
         swprintf(err_msg, BS_LINE,
-                 L"Apropos database is empty; did you run mandb/makewhatis?",
-                 args);
+                 L"'apropos .' failed; did you run mandb/makewhatis?", args);
       else
         swprintf(err_msg, BS_LINE, L"Apropos %ls: nothing apropriate", args);
     }
