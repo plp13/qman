@@ -634,9 +634,9 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
   memset(ltext, 0, sizeof(wchar_t) * BS_LINE * 2);
   const bool lhyph =
       line->text[line->length - 2] == L'‐'; // whether `line` is hyphenated
-  unsigned loff = 0;     // offset (in `ltext`) to start searching for links
-  range_t lrng;          // location of link in `ltext`
-  wchar_t trgt[BS_LINE]; // link target
+  unsigned loff = 0;         // offset (in `ltext`) to start searching for links
+  range_t lrng;              // location of link in `ltext`
+  wchar_t trgt[BS_LINE * 2]; // link target
 
   // Prepare `ltext`
   wcsncpy(ltext, line->text, line->length - 1);
