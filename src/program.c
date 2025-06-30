@@ -468,9 +468,9 @@ unsigned aprowhat_exec_darwin(aprowhat_t **dst, aprowhat_cmd_t cmd,
   // Execute the command
   FILE *pp = xpopen(cmdstr, "r");
 
-  // For each line returned by the command...
+  // For each `line` returned by the command...
+  xfgets(line, BS_LONG, pp);
   while (!feof(pp)) {
-    xfgets(line, BS_LONG, pp);
     // loggit(line);
 
     wline_len = xmbstowcs(wline, line, BS_LONG);
@@ -534,6 +534,8 @@ unsigned aprowhat_exec_darwin(aprowhat_t **dst, aprowhat_cmd_t cmd,
         res = xreallocarray(res, res_len, sizeof(aprowhat_t));
       }
     }
+
+    xfgets(line, BS_LONG, pp);
   }
 
   int status = xpclose(pp);
@@ -1241,10 +1243,9 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   // Execute the command
   FILE *pp = xpopen(cmdstr, "r");
 
-  // For each line returned by the command...
+  // For each `line` returned by the command...
+  xfgets(line, BS_LONG, pp);
   while (!feof(pp)) {
-    xfgets(line, BS_LONG, pp);
-    // loggit(line);
 
     wline_len = xmbstowcs(wline, line, BS_LONG);
     if (-1 == wline_len) {
@@ -1314,6 +1315,8 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
         }
       }
     }
+
+    xfgets(line, BS_LONG, pp);
   }
 
   int status = xpclose(pp);
@@ -1653,6 +1656,9 @@ unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const wchar_t *args,
                   const wchar_t *key, const wchar_t *title) {
   aprowhat_t *aw;
   unsigned aw_len = aprowhat_exec(&aw, cmd, args);
+  logprintf("aw_len=%d", aw_len);
+  for (unsigned i = 0; i < aw_len; i++)
+    logprintf("aw[%d]=%ls", i, aw[i].ident);
 
   wchar_t **sc;
   unsigned sc_len = aprowhat_sections(&sc, aw, aw_len);
