@@ -746,6 +746,18 @@ void configure() {
       strlcpy(path, "/etc/qman/qman.conf", BS_LINE);
       fp = fopen(path, "r");
     }
+
+    // /usr/local/etc/xdg/qman/qman.conf
+    if (NULL == fp) {
+      strlcpy(path, "/usr/local/etc/xdg/qman/qman.conf", BS_LINE);
+      fp = fopen(path, "r");
+    }
+
+    // /usr/local/etc/qman/qman.conf
+    if (NULL == fp) {
+      strlcpy(path, "/usr/local/etc/qman/qman.conf", BS_LINE);
+      fp = fopen(path, "r");
+    }
   }
 
   // If we have a config file, process it
