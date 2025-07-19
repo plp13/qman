@@ -4,7 +4,7 @@
 if get_option('config').enabled() or get_option('config').auto()
   install_data(
     ['qman.conf'],
-    install_dir: get_option('configdir'),
+    install_dir: get_option('prefix') + '/' + get_option('sysconfdir') + '/' + get_option('configdir'),
     install_tag: 'config'
   )
 endif
@@ -19,7 +19,7 @@ if get_option('config').enabled() or get_option('config').auto()
       'themes/adwaita-light.conf',
       'themes/catppuccin_latte.conf'
     ],
-    install_dir: get_option('configdir') + '/themes',
+    install_dir: get_option('prefix') + '/' + get_option('sysconfdir') + '/' + get_option('configdir') + '/themes',
     install_tag: 'config'
   )
 endif
@@ -28,7 +28,7 @@ endif
 if get_option('docs').enabled() or get_option('docs').auto()
   install_data(
     ['README.md'],
-    install_dir: get_option('docdir') + '/config',
+    install_dir: get_option('prefix') + '/' + get_option('docdir') + '/config',
     install_tag: 'doc'
   )
 endif

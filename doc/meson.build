@@ -12,7 +12,7 @@ if get_option('docs').enabled() or get_option('docs').auto()
       'TESTING.md',
       'TROUBLESHOOTING.md'
     ],
-    install_dir: get_option('docdir') + '/doc',
+    install_dir: get_option('prefix') + '/' + get_option('docdir') + '/doc',
     install_tag: 'doc'
   )
 endif
