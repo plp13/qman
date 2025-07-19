@@ -89,7 +89,7 @@ However, for some operating systems and Linux distros you may need to add
 extra directives to Qman's config file. See [OS_SPECIFIC.md](OS_SPECIFIC.md).
 
 The config file is located at `~/.config/qman/qman.conf` (user-specific) or
-`/etc/xdg/qman/qman.conf` (system-wide).
+`/usr/local/etc/xdg/qman/qman.conf` (system-wide, this value changes with the installation prefix).
 
 All configuration directives are documented in Qman's manual page:
 
