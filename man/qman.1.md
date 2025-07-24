@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.4.1-67-gf46ce4a
+footer: Qman 1.4.1-68-g16b4e80
 date: December 15, 2023
 ---
 
@@ -185,7 +185,9 @@ The following locations are searched in sequence:
 - Any file specified using **-C** or **\-\-config\-path**
 - _\${XDG_CONFIG_HOME}/qman/qman.conf_
 - _\${HOME}/.config/qman/qman.conf_
-- _\${D}/qman/qman.conf_ where _\${D}_ is an entry in _\${XDG_CONFIG_DIRS}_
+- _\<path\>/qman/qman.conf_ where _\<path\>_ is an entry in
+  _\${XDG_CONFIG_DIRS}_
+- _\<configdir\>/qman.conf_ where _\<configdir\>_ is a compile-time option
 - _/etc/xdg/qman/qman.conf_
 - _/etc/qman/qman.conf_
 

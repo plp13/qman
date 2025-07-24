@@ -735,6 +735,12 @@ void configure() {
       }
     }
 
+    // <configdir>/qman.conf
+    if (NULL == fp) {
+      strlcpy(path, QMAN_CONFIGDIR "/qman.conf", BS_LINE);
+      fp = fopen(path, "r");
+    }
+
     // /etc/xdg/qman/qman.conf
     if (NULL == fp) {
       strlcpy(path, "/etc/xdg/qman/qman.conf", BS_LINE);

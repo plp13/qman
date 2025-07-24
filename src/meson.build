@@ -2,6 +2,7 @@
 
 # Compiler
 cc = meson.get_compiler('c')
+add_global_arguments('-DQMAN_CONFIGDIR="' + get_option('configdir') + '"', language: 'c')
 # Uncomment the following to expose extra warnings
 # add_global_arguments(['-Wall', '-Wextra', '-Wno-sign-compare'], language: 'c')
 # add_global_arguments('-O2', '-D_FORTIFY_SOURCE=2', language: 'c')
