@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.4.1-69-gb1267c7
+footer: Qman 1.4.1-70-gbd0b2d8
 date: December 15, 2023
 ---
 
@@ -43,8 +43,8 @@ also to be fast and tiny, so that it can be used everywhere.
 **Qman**'s reactions to user input are similar to what one would expect from a
 pager such as **less(1)**, and from an ncurses-based browser such as
 **links(1)**. Manual, apropos, and whatis pages are adorned with links to other
-pages, HTTP locations, e-mail addresses, or (sub)sections within the current
-page. These links can be selected and opened.
+pages, HTTP locations, e-mail addresses, files in the local filesystem, or
+(sub)sections within the current page. These links can be selected and opened.
 
 The program provides a scrollbar, a status line, incremental search facilities
 for locating manual pages, and facilities for searching through the text of the
@@ -246,6 +246,8 @@ Options in this section specify the user interface colors:
 | link_http_f       | HTTP links (focused)                                     |
 | link_email        | e-mail links                                             |
 | link_email_f      | e-mail links (focused)                                   |
+| link_file         | links to files in the local filesystem                   |
+| link_file_f       | links to files in the local filesystem (focused)         |
 | link_ls           | in-page links                                            |
 | link_ls_f         | in-page links (focused)                                  |
 | sb_line           | scrollbar track line                                     |
@@ -367,8 +369,10 @@ This section contains various miscellaneous options:
 | apropos_path | string       | /usr/bin/apropos | Path to the **apropos(1)** command |
 | browser_path | string       | /usr/bin/xdg-open | Path to the command that will be used to open HTTP links (i.e. your web browser) |
 | mailer_path  | string       | /usr/bin/xdg-email | Path to the command that will be used to open e-mail links (i.e. your e-mail software) |
+| viewer_path  | string       | /usr/bin/xdg-open | Path to the command that will be used to open links to files in the local filesystem |
 | reset_after_http | boolean  | true       | Re-initialize curses after opening an http(s) link |
 | reset_after_email| boolean  | true       | Re-initialize curses after opening an e-mail link |
+| reset_after_viewer | boolean | true      | Re-initialize curses after opening a link to a local filesystem file |
 | history_size | unsigned int | 256k       | Maximum number of history entries |
 | hyphenate    | boolean      | true       | Whether to hyphenate long words in manual pages |
 | justify      | boolean      | true       | Whether to justify text in manual pages |
@@ -384,10 +388,10 @@ _system_type_ must match the Unix manual system used by your O/S:
 When using a horizontally narrow terminal, setting _hyphenate_ to **true**
 and/or _justify_ to **false** can improve the program's output.
 
-To avoid an annoying screen redraw, option _reset_after_http_ should be set to
-**false** when using a GUI web browser for handling http(s) links. Similarly,
-_reset_after_email_ should be set to **false** when using a GUI email client for
-e-mail links.
+To avoid an annoying screen redraw, options _reset_after_http_,
+_reset_after_email_, or _reset_after_viewer_ can be set to **false** whenever
+_browser_path_, _mailer_path_, or _viewer_path_ point to a GUI program
+respectively.
 
 Setting _sp_substrings_ to **false** causes incremental search results to
 only include pages whose names start with the user's input. Setting it to
