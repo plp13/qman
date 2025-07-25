@@ -223,6 +223,12 @@ void eini(eini_handler_t hf, eini_error_t ef, const char *path) {
 
   fp = xfopen(path, "r");
 
+  // If this is an empty file, do nothing
+  fseek(fp, 0, SEEK_END);
+  if (0 == ftell(fp))
+    return;
+  rewind(fp);
+
   while (!feof(fp)) {
     xfgets(ln, BS_LINE, fp);
     i++;
