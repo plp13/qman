@@ -326,7 +326,7 @@ size_t xmbstowcs(wchar_t *dest, const char *src, size_t n) {
   return res;
 }
 
-void xsystem(const char *cmd, bool fail) {
+int xsystem(const char *cmd, bool fail) {
   int res = system(cmd);
 
   if (fail && 0 != res) {
@@ -334,6 +334,8 @@ void xsystem(const char *cmd, bool fail) {
     swprintf(errmsg, BS_SHORT, L"Failed to execute: %s", cmd);
     winddown(ES_CHILD_ERROR, errmsg);
   }
+
+  return res;
 }
 
 char *xtempnam(const char *dir, const char *pfx) {

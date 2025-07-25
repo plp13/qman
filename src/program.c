@@ -78,7 +78,7 @@ unsigned results_len = 0;
 
 mark_t mark = {false, 0, 0, 0, 0};
 
-full_regex_t re_man, re_http, re_email;
+full_regex_t re_man, re_http, re_email, re_file;
 
 //
 // Helper macros and functions
@@ -639,6 +639,7 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
   unsigned loff = 0;         // offset (in `ltext`) to start searching for links
   range_t lrng;              // location of link in `ltext`
   wchar_t trgt[BS_LINE * 2]; // link target
+  char strgt[BS_LINE * 2];   // char* version of `trgt`
 
   // Prepare `ltext`
   wcsncpy(ltext, line->text, line->length - 1);
@@ -680,11 +681,18 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
       // Add the link to `line`
       if (LT_MAN == type) {
         if (aprowhat_has(trgt, aw_all, aw_all_len))
-          add_link(line, loff + lrng.beg, loff + lrng.end, //
-                   false, 0, 0, type, trgt);
+          add_link(line, loff + lrng.beg, loff + lrng.end, false, 0, 0, type,
+                   trgt);
+      }
+      if (LT_FILE == type) {
+        struct stat sb;
+        xwcstombs(strgt, trgt, BS_LINE * 2);
+        if (stat(strgt, &sb) == 0 && sb.st_mode & S_IRUSR)
+          add_link(line, loff + lrng.beg, loff + lrng.end, false, 0, 0, type,
+                   trgt);
       } else
-        add_link(line, loff + lrng.beg, loff + lrng.end, //
-                 false, 0, 0, type, trgt);
+        add_link(line, loff + lrng.beg, loff + lrng.end, false, 0, 0, type,
+                 trgt);
     }
 
     // Calculate next offset
@@ -887,6 +895,7 @@ void init() {
       "\\?\\^\\|\\.!#%&'=_`{}~-]*@[a-zA-Z0-9-][a-zA-Z0-9-]+\\.[a-zA-Z0-9-][a-"
       "zA-Z0-9\\.-]+[a-zA-Z0-9-]",
       L"@");
+  fr_init(&re_file, "(\\/[a-zA-Z0-9_\\.-]+)+\\/?", L"/");
 }
 
 void late_init() {
@@ -1985,6 +1994,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
       discover_links(&re_man, &res[i], &res[i + 1], LT_MAN);
       discover_links(&re_http, &res[i], &res[i + 1], LT_HTTP);
       discover_links(&re_email, &res[i], &res[i + 1], LT_EMAIL);
+      discover_links(&re_file, &res[i], &res[i + 1], LT_FILE);
     }
   }
 

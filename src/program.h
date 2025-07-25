@@ -72,6 +72,7 @@ typedef enum {
   LT_MAN,   // manual page
   LT_HTTP,  // http(s) URL
   LT_EMAIL, // email address
+  LT_FILE,  // file in the local filesystem
   LT_LS     // local search: find `trgt` in the current document
 } link_type_t;
 
@@ -215,7 +216,8 @@ extern mark_t mark;
 // Regular expressions for a link to...
 extern full_regex_t re_man, // a manual page
     re_url,                 // an http(s) URL
-    re_email;               // an email address
+    re_email,               // an email address
+    re_file;                // a file in the local filesystem
 
 //
 // Macros

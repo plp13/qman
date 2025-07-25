@@ -44,6 +44,9 @@ mouse_t mouse_status = MS_EMPTY;
     case LT_EMAIL:                                                             \
       col = config.colours.link_email_f;                                       \
       break;                                                                   \
+    case LT_FILE:                                                              \
+      col = config.colours.link_file_f;                                        \
+      break;                                                                   \
     case LT_LS:                                                                \
     default:                                                                   \
       col = config.colours.link_ls_f;                                          \
@@ -58,6 +61,9 @@ mouse_t mouse_status = MS_EMPTY;
       break;                                                                   \
     case LT_EMAIL:                                                             \
       col = config.colours.link_email;                                         \
+      break;                                                                   \
+    case LT_FILE:                                                              \
+      col = config.colours.link_file;                                          \
       break;                                                                   \
     case LT_LS:                                                                \
     default:                                                                   \
@@ -567,6 +573,8 @@ void init_tui_colours() {
     init_colour(config.colours.link_http_f);
     init_colour(config.colours.link_email);
     init_colour(config.colours.link_email_f);
+    init_colour(config.colours.link_file);
+    init_colour(config.colours.link_file_f);
     init_colour(config.colours.link_ls);
     init_colour(config.colours.link_ls_f);
     init_colour(config.colours.sb_line);
@@ -1570,6 +1578,8 @@ bool tui_end() {
 }
 
 bool tui_open() {
+  int res; // External handler subprocess exit code
+
   error_on_invalid_flink;
 
   // Open the link
@@ -1577,8 +1587,8 @@ bool tui_open() {
   case LT_MAN:
     // The link is a manual page; add a new page request to show it
     {
-      wchar_t trgt[BS_SHORT];
-      swprintf(trgt, BS_SHORT, L"'%ls'",
+      wchar_t trgt[BS_LINE];
+      swprintf(trgt, BS_LINE, L"'%ls'",
                page[page_flink.line].links[page_flink.link].trgt);
       history_push(RT_MAN, trgt);
       populate_page();
@@ -1599,32 +1609,65 @@ bool tui_open() {
   case LT_HTTP:
     // The link is http(s); open it with the external web browser
     {
-      char trgt[BS_SHORT];
-      snprintf(trgt, BS_SHORT, "%s '%ls' 2>>/dev/null",
-               config.misc.browser_path,
+      char trgt[BS_LINE];
+      snprintf(trgt, BS_LINE, "%s '%ls' 2>>/dev/null", config.misc.browser_path,
                page[page_flink.line].links[page_flink.link].trgt);
 
       // Shell out
-      xsystem(trgt, true);
+      res = xsystem(trgt, false);
 
       // Re-initialize ncurses (unless using xdg-open)
       if (config.misc.reset_after_http)
         tui_reset;
+
+      // If web browser failed, show error
+      if (0 != res) {
+        tui_error(L"Unable to open HTTP link");
+        return false;
+      }
     }
     break;
   case LT_EMAIL:
     // The link is an e-mail address; open it with the external mailer
     {
-      char trgt[BS_SHORT];
-      snprintf(trgt, BS_SHORT, "%s '%ls' 2>>/dev/null", config.misc.mailer_path,
+      char trgt[BS_LINE];
+      snprintf(trgt, BS_LINE, "%s '%ls' 2>>/dev/null", config.misc.mailer_path,
                page[page_flink.line].links[page_flink.link].trgt);
 
       // Shell out
-      xsystem(trgt, true);
+      res = xsystem(trgt, false);
 
       // Re-initialize ncurses
       if (config.misc.reset_after_email)
         tui_reset;
+
+      // If mailer failed, show error
+      if (0 != res) {
+        tui_error(L"Unable to open email link");
+        return false;
+      }
+    }
+    break;
+  case LT_FILE:
+    // The link is a file in the local filesystem; open it with the external
+    // file viewer
+    {
+      char trgt[BS_LINE];
+      snprintf(trgt, BS_LINE, "%s '%ls' 2>>/dev/null", config.misc.viewer_path,
+               page[page_flink.line].links[page_flink.link].trgt);
+
+      // Shell out
+      res = xsystem(trgt, false);
+
+      // Re-initialize ncurses
+      if (config.misc.reset_after_viewer)
+        tui_reset;
+
+      // If external viewer failed, show error
+      if (0 != res) {
+        tui_error(L"Unable to open file link");
+        return false;
+      }
     }
     break;
   case LT_LS:

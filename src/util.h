@@ -269,8 +269,9 @@ extern size_t xwcstombs(char *dest, const wchar_t *src, size_t n);
 size_t xmbstowcs(wchar_t *dest, const char *src, size_t n);
 
 // Safely call `system(cmd)`, to execute `cmd` in a new shell. If `fail` is
-// true, and the return value of `system()` is non-zero, terminate.
-extern void xsystem(const char *cmd, bool fail);
+// true, and the return value of `system()` is non-zero, terminate. Otherwise
+// return said return value.
+extern int xsystem(const char *cmd, bool fail);
 
 // A safe version of `tempnam()`, that also creates the temporary file whose
 // name it returns, avoiding potential race conditions. Unlike with `tempnam()`,
