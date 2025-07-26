@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.4.1-72-g339a299 -- [see what's new](#new-in-this-version)
+Version 1.4.1-77-gb932b66 -- [see what's new](#new-in-this-version)
 
 ![Screenhot -- Viewing a Manual Page](/screenshots/qman_man.png)
 
@@ -33,6 +33,7 @@ plain C and has only minimal dependencies.
 - Pages for apropos and whatis results
 - Hyperlinks to other manual pages
 - Hyperlinks for URLs and email addresses
+- Hyperlinks to files or directories in the local filesystem
 - In-page hyperlinks
 - A table of contents for each manual page
 - Incremental search for manual pages
@@ -62,6 +63,9 @@ Version 1.5.0 introduces the following:
   - **[mandoc](https://mandoc.bsd.lv/)** - Void Linux, Haiku, others?
   - **[freebsd](https://www.freebsd.org/)** - FreeBSD
   - **[darwin](https://www.apple.com/macos/)** - macOS
+- Hyperlinks to files or directories in the local filesystem. Config option
+  `viewer_path` can be used to set the program for opening these (default is
+  `/usr/bin/xdg-open`).
 - Three new themes:
   - `adwaita`, designed to match the colors of dark Adwaita desktops
   - `adwaita-light`, designed to match the colors of light Adwaita desktops

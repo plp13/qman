@@ -63,24 +63,26 @@ you can disable mouse support by commenting out the following lines in your
 
 ---
 
-> **:question: Trying to open an HTTP or e-mail link causes the program to
-> terminate (or does nothing)**
+> **:question: Links to HTTP URLs, e-mail addresses, or files/directories won't
+> open**
 
-By default, Qman uses `xdg-open` to open such links. On desktop Linux systems,
-this is sufficient to open them using the default browser / email client. On
-other systems you may need to specify different commands in your
-[config file](BUILDING.md#configuration).
+By default, Qman uses standard commands such as `xdg-open` and `xdg-email` to
+open such links. On desktop Linux systems, this is sufficient to open them using
+the default GUI application. On other systems you may need to specify different
+handlers in your [config file](BUILDING.md#configuration).
 
 For example, the following directives will cause Qman to open HTTP links with
-`links` and e-mail links with `mutt`:
+`/usr/bin/links`, e-mail links with `/usr/bin/mutt`, and files/directories with
+`/usr/bin/vim`:
 
 ```
 [misc]
 browser_path=/usr/bin/links
 mailer_path=/usr/bin/mutt
+viewer_path=/usr/bin/vim
 ```
 
-To avoid opening such links altogether, you can set both options to a command
+To avoid opening such links altogether, you can set these options to a command
 that does nothing, e.g. `/usr/bin/false`.
 
 ---
