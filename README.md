@@ -3,7 +3,7 @@ A more modern manual page viewer for our terminals
 
 Version 1.4.1-72-g339a299 -- [see what's new](#new-in-this-version)
 
-![Screenshot -- Opening a Manual Page](/screenshots/qman_open.png)
+![Screenhot -- Viewing a Manual Page](/screenshots/qman_man.png)
 
 ## Get started
 
@@ -82,8 +82,8 @@ Version 1.5.0 introduces the following:
 Index page:
 ![Index Page](/screenshots/qman_index.png)
 
-Viewing a manual page:
-![Viewing a Manual Page](/screenshots/qman_man.png)
+Opening a manual page using a pop-up:
+![Screenshot -- Opening a Manual Page](/screenshots/qman_open.png)
 
 Using the table of contents:
 ![Using the Table of Contents](/screenshots/qman_toc.png)
