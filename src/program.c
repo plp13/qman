@@ -403,7 +403,6 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
       }
 
       xpclose(pp);
-      logprintf("%s", dst);
       return ret;
     }
   } else if (ST_FREEBSD == config.misc.system_type ||
@@ -471,8 +470,6 @@ unsigned aprowhat_exec_darwin(aprowhat_t **dst, aprowhat_cmd_t cmd,
   // For each `line` returned by the command...
   xfgets(line, BS_LONG, pp);
   while (!feof(pp)) {
-    // loggit(line);
-
     wline_len = xmbstowcs(wline, line, BS_LONG);
     if (-1 == wline_len) {
       if (0 == res_i)
@@ -523,9 +520,6 @@ unsigned aprowhat_exec_darwin(aprowhat_t **dst, aprowhat_cmd_t cmd,
                section);
       res[res_i].descr = walloc(descr_len);
       wcslcpy(res[res_i].descr, descr, descr_len + 1);
-      // logprintf("%d. %ls(%ls)", res_i, res[res_i].page,
-      // res[res_i].section); logprintf("%ls", res[res_i].descr)
-      // loggit("");
 
       // Increase `res_i`, and reallocate `res` if necessary
       res_i++;
@@ -558,7 +552,6 @@ unsigned aprowhat_exec_darwin(aprowhat_t **dst, aprowhat_cmd_t cmd,
   free(wline);
   free(idents);
   *dst = res;
-  // logprintf("%d", res_i);
   return res_i;
 }
 
@@ -796,11 +789,6 @@ void tocgroff(toc_entry_t *toc, unsigned toc_len) {
       break;
   }
   xpclose(pp);
-
-  // Uncomment the following to log output into qman.log for debugging
-  // logprintf("tocgroff()");
-  // for (i = 0; i < toc_len; i++)
-  //   logprintf("%d: type=%d text=%ls", i, toc[i].type, toc[i].text);
 
   // Tidy up and restore the environment
   unlink(tpath);
@@ -1312,9 +1300,6 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
                  L"%ls(%ls)", pages[i], sections[j]);
         res[res_i].descr = walloc(descr_len);
         wcslcpy(res[res_i].descr, descr, descr_len + 1);
-        // logprintf("%d. %ls(%ls)", res_i, res[res_i].page,
-        // res[res_i].section); logprintf("%ls", res[res_i].descr);
-        // loggit("");
 
         // Increase `res_i`, and reallocate `res` if necessary
         res_i++;
@@ -1354,7 +1339,6 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   free(pages);
   free(sections);
   *dst = res;
-  // logprintf("%d", res_i);
   return res_i;
 }
 
@@ -1665,9 +1649,6 @@ unsigned aprowhat(line_t **dst, aprowhat_cmd_t cmd, const wchar_t *args,
                   const wchar_t *key, const wchar_t *title) {
   aprowhat_t *aw;
   unsigned aw_len = aprowhat_exec(&aw, cmd, args);
-  logprintf("aw_len=%d", aw_len);
-  for (unsigned i = 0; i < aw_len; i++)
-    logprintf("aw[%d]=%ls", i, aw[i].ident);
 
   wchar_t **sc;
   unsigned sc_len = aprowhat_sections(&sc, aw, aw_len);
@@ -2124,11 +2105,6 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   }
 
   arclose(gp);
-
-  // Uncomment the following to log output into qman.log for debugging
-  // logprintf("man_toc()");
-  // for (unsigned i = 0; i < en; i++)
-  //   logprintf("%d: type=%d text=%ls", i, res[i].type, res[i].text);
 
   tocgroff(res, en);
   *dst = res;

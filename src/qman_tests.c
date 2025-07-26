@@ -79,7 +79,6 @@ void test_eini_parse() {
   CU_ASSERT(0 == wcscmp(parsed.value, L"/usr/share/foo"));
 
   parsed = eini_parse("\t include\t\t/usr/share/foo ");
-  logprintf("parsed type=%d value=%ls", parsed.type, parsed.value);
   CU_ASSERT_EQUAL(parsed.type, EINI_INCLUDE);
   CU_ASSERT(0 == wcscmp(parsed.value, L"/usr/share/foo"));
 
