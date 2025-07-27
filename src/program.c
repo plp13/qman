@@ -1211,8 +1211,7 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   char *longopt;
   if (ST_MANDB == config.misc.system_type)
     longopt = "-l";
-  else if (ST_MANDOC == config.misc.system_type ||
-           ST_FREEBSD == config.misc.system_type)
+  else
     longopt = "";
   if (AW_WHATIS == cmd)
     snprintf(cmdstr, BS_LINE, "%s %s %ls 2>>/dev/null", config.misc.whatis_path,
