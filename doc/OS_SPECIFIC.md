@@ -22,7 +22,7 @@ Install all [dependencies](BUILDING.md#dependencies) using `brew`. Then, run the
 following to build and install Qman:
 
 ```
-$ meson setup build/ -Dpkg_config_path=/opt/homebrew/ncurses/lib/pkgconfig
+$ meson setup build/ -Dpkg_config_path=/opt/homebrew/Cellar/ncurses/6.5/lib/pkgconfig
 $ cd build/
 $ meson compile
 $ sudo meson install
@@ -30,7 +30,16 @@ $ sudo meson install
 
 > **:bulb: Note**
 >
-> On Intel-based macs, substitute `/opt/homebrew` with `/usr/local/opt/`
+> On Intel-based macs, use:
+>
+> ```
+> -Dpkg_config_path=/usr/local/Cellar/ncurses/6.5/lib/pkgconfig
+> ```
+
+> **:bulb: Note**
+>
+> You may need to substitute `6.5` with the actual version of `ncurses` that
+> you have installed
 
 Then add the following to your [config file](BUILDING.md#configuration):
 
