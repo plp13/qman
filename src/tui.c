@@ -1355,9 +1355,7 @@ void winddown_tui() {
     delwin(wstat);
   wstat = NULL;
 
-#ifndef QMAN_DARWIN
   reset_color_pairs();
-#endif
 
   // Initialize terminal to disable drag-and-drop
   char *term = getenv("TERM");
