@@ -93,8 +93,9 @@ full_regex_t re_man, re_http, re_email, re_file;
     res = xreallocarray(res, res_len, sizeof(line_t));                         \
   }
 
-// Helper of `toc()`. Increase `en`, and reallocate `res` in memory, if `en` has
-// exceeded its previously allocated size.
+// Helper of `man_sections()`, `man_toc()` and `sc_toc()`. Increase `en`, and
+// reallocate `res` in memory, if `en` has exceeded its previously allocated
+// size.
 #define inc_en                                                                 \
   en++;                                                                        \
   if (en == res_len) {                                                         \
@@ -313,11 +314,12 @@ unsigned extract_args(wchar_t **page, wchar_t **section, unsigned len,
 }
 
 // Helper of `man_sections()` and `man_toc()`. Place the location of the manual
-// page source that corresponds to `args` into `dst` (of length BS_LINE). If no
-// such location exists, return false, otherwise return true. `local_file`
+// page source that corresponds to `args` into `dst` (of length `dst_len`). If
+// no such location exists, return false, otherwise return true. `local_file`
 // signifies whether `args` contains a local file path, rather than a manual
 // page name and section.
-bool man_loc(char *dst, const wchar_t *args, bool local_file) {
+bool man_loc(char *dst, unsigned dst_len, const wchar_t *args,
+             bool local_file) {
   char cmdstr[BS_LINE]; // command to execute
   bool ret;             // return value
 
@@ -334,7 +336,7 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
 
     ret = true;
     FILE *pp = xpopen(cmdstr, "r");
-    if (-1 == sreadline(dst, BS_LINE, pp))
+    if (-1 == sreadline(dst, dst_len, pp))
       ret = false;
 
     xpclose(pp);
@@ -367,7 +369,7 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
     }
 
     if (local_file) {
-      wcstombs(dst, page, BS_LINE);
+      wcstombs(dst, page, dst_len);
       return true;
     } else {
       if (2 == extracted)
@@ -381,7 +383,7 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
       // filename extension)
       ret = false;
       FILE *pp = xpopen(cmdstr, "r");
-      while (-1 != sreadline(dst, BS_LINE, pp)) {
+      while (-1 != sreadline(dst, dst_len, pp)) {
         combo_ptr = strcasestr(dst, combo);
         if (NULL != combo_ptr) {
           combo_post = combo_ptr[strlen(combo)];
@@ -398,7 +400,7 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
         xpclose(pp);
         ret = true;
         pp = xpopen(cmdstr, "r");
-        if (-1 == sreadline(dst, BS_LINE, pp))
+        if (-1 == sreadline(dst, dst_len, pp))
           ret = false;
       }
 
@@ -425,7 +427,7 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
 
     ret = true;
     FILE *pp = xpopen(cmdstr, "r");
-    if (-1 == sreadline(dst, BS_LINE, pp))
+    if (-1 == sreadline(dst, dst_len, pp))
       ret = false;
 
     xpclose(pp);
@@ -435,7 +437,7 @@ bool man_loc(char *dst, const wchar_t *args, bool local_file) {
   return false;
 }
 
-// macOS X specific version of `aprowhat_exec()`
+// macOS X specific version of `aprowhat_exec()` (arguments are the same)
 unsigned aprowhat_exec_darwin(aprowhat_t **dst, aprowhat_cmd_t cmd,
                               const wchar_t *args) {
   // Prepare `apropos`/`whatis` command
@@ -555,9 +557,10 @@ unsigned aprowhat_exec_darwin(aprowhat_t **dst, aprowhat_cmd_t cmd,
   return res_i;
 }
 
-// Helper of `man()` and `aprowhat_render()`. Add a link to `line`. Allocate
-// memory using `line_realloc_link()` to do so. Use `start`, `end`,
-// `link_next`, `type`, and `trgt` to populate the new link's members.
+// Helper of `discover_links()`, man()` and `aprowhat_render()`. Add a link to
+// `line`. Allocate memory using `line_realloc_link()` to do so. Use `start`,
+// `end`, `in_next`, `start_next`, `end_next`, `type`, and `trgt` to populate
+// the new link's members.
 void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
               unsigned start_next, unsigned end_next, link_type_t type,
               const wchar_t *trgt) {
@@ -698,44 +701,6 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
       lrng.beg = 0;
       lrng.end = 0;
     }
-  }
-}
-
-// Helper of `man()`. If `line` is a section header, return its level.
-// Otherwise, return -1. This function must initially be called with a NULL
-// argument, every time `man()` is invoked.
-bool section_header_level(line_t *line) {
-  static unsigned lnme_set[] = {
-      0, 0, 0, 0,
-      0, 0, 0, 0}; // unique and (hopefully) ordered `lnme` values for all
-                   // section headers encountered so far
-  unsigned i;      // iterator
-
-  // `line` is NULL; re-initialize `lnme_set` and return -1
-  if (NULL == line) {
-    for (i = 0; i < 8; i++)
-      lnme_set[i] = 0;
-
-    return -1;
-  }
-
-  unsigned lnme =
-      wmargend(line->text,
-               NULL); // position in `line`'s text where margin whitespace ends
-
-  if (bget(line->bold, lnme) && bget(line->reg, line->length - 1)) {
-    // `line` is a section header; return the level that corresponds to its
-    // `lnme`
-    for (i = 0; i < 8; i++) {
-      if (0 == lnme_set[i])
-        lnme_set[i] = lnme;
-      if (lnme == lnme_set[i])
-        return i;
-    }
-    return 7;
-  } else {
-    // Not a section header
-    return -1;
   }
 }
 
@@ -887,13 +852,14 @@ void init() {
 }
 
 void late_init() {
-  // Initialize `aw_all` and `sc_all`
+  // Initialize `aw_all`
   if (ST_FREEBSD == config.misc.system_type ||
       ST_DARWIN == config.misc.system_type)
     aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"'.'");
   else
     aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"''");
 
+  // Initialize `sc_all`
   sc_all_len = aprowhat_sections(&sc_all, aw_all, aw_all_len);
 }
 
@@ -1592,7 +1558,7 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
   wchar_t **res = aalloc(res_len, wchar_t *); // result buffer
 
   // Use `man` to figure out `gpath`
-  if (false == man_loc(gpath, args, local_file))
+  if (false == man_loc(gpath, BS_LINE, args, local_file))
     winddown(ES_OPER_ERROR, L"Failed to locate manual page source file");
 
   // Open `gpath`
@@ -1776,8 +1742,6 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 
   // Execute `man`
   FILE *pp = xpopen(cmdstr, "r");
-
-  section_header_level(NULL);
 
   // Discard any empty lines on top, and read the first non-empty line into
   // `tmps`/`tmpw`
@@ -2011,7 +1975,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   }
 
   // Correct arguments and use `man` to figure out `gpath`
-  if (false == man_loc(gpath, args, local_file))
+  if (false == man_loc(gpath, BS_LINE, args, local_file))
     winddown(ES_OPER_ERROR, L"Failed to locate manual page source file");
 
   // Open `gpath`

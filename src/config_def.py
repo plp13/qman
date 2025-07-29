@@ -165,7 +165,7 @@ config_def = {
     },
     "misc": {
         "program_name": (("string",), None, False, "Program executable basename (discovered automatically)"),
-        "program_version": (("wstring",), ("Qman 1.4.1-78-g4f35836",), False, "Formal program name and version"),
+        "program_version": (("wstring",), ("Qman 1.4.1-79-g1d9cacb",), False, "Formal program name and version"),
         "system_type": (("systype", ), ("mandb", ), True, "System type: mandb, mandoc, freebsd, darwin, ..."),
         "config_path": (("string",), None, False, "Path to the configuration file"),
         "man_path": (("string",), ("/usr/bin/man",), True, "Path to the man(1) command"),

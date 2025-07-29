@@ -24,7 +24,7 @@ typedef struct {
   wchar_t *help_text; // i.e. `Print verbose output`
   option_arg_t arg;   // i.e. --config=`myconfrc`
   bool _cont;         // when false, indicates end of array
-                      // (actual values are reverse quoted)
+                      // (example values are reverse quoted)
 } option_t;
 
 // Location of a link in an array of lines
@@ -36,8 +36,8 @@ typedef struct {
 
 // Page request type
 typedef enum {
-  RT_NONE,      // empty request; set by `init()` and then replaced during
-                // program runtime
+  RT_NONE,      // empty request; only used by `init()` and later replaced by
+                // an actual request type
   RT_INDEX,     // show a list of all manual pages
   RT_MAN,       // show a manual page
   RT_MAN_LOCAL, // show a manual page stored in a local file
@@ -50,10 +50,11 @@ typedef struct {
   request_type_t request_type;
   wchar_t *args; // arguments for the man/apropos/whatis command
   // The following are used by `history_...()` functions, to record the user's
-  // last known location in history entries (which are instances of `request_t`)
-  unsigned top;     // last known `page_top`
-  unsigned left;    // last known `page_left`
-  link_loc_t flink; // last known `page_flink`
+  // location in each history entry (history entries are instances of
+  // `request_t`)
+  unsigned top;     // latest `page_top`
+  unsigned left;    // latest `page_left`
+  link_loc_t flink; // latest `page_flink`
 } request_t;
 
 // Choice between apropos and whatis
@@ -215,7 +216,7 @@ extern mark_t mark;
 
 // Regular expressions for a link to...
 extern full_regex_t re_man, // a manual page
-    re_url,                 // an http(s) URL
+    re_http,                // an http(s) URL
     re_email,               // an email address
     re_file;                // a file in the local filesystem
 
@@ -263,7 +264,7 @@ extern full_regex_t re_man, // a manual page
   free(line.italic);                                                           \
   free(line.uline);
 
-// Free memory for all members of `links` (of type `link_t*`)
+// Free memory for all members of `links` (of type `link_t`)
 #define links_free(links, links_len)                                           \
   for (unsigned link_free_i = 0; link_free_i < links_len; link_free_i++)       \
     free(links[link_free_i].trgt);                                             \
@@ -290,7 +291,8 @@ extern full_regex_t re_man, // a manual page
 // Functions
 //
 
-// Initialize all program components, except ncurses
+// Initialize all major program components. Additional initialization is later
+// performed by `late_init()`, `init_tui()` and `init_cli()`.
 extern void init();
 
 // Initialize additional program components after `configure()` has been
@@ -314,7 +316,7 @@ extern void usage();
 
 // All `history_...()` functions also save and restore `page_top` and
 // `page_flink` inside the history entries they manipulate, to keep track of the
-// user's last known position in each history entry.
+// user's location in each history entry.
 
 // Populate the current history entry (i.e. `history[history_cur]`), setting its
 // `request_type` to `rt`, and its `args` to `args`
@@ -334,6 +336,10 @@ extern bool history_jump(int pos);
 // to `history_cur`
 extern void history_reset();
 
+// In case a `man`/`apropos`/`whatis` command fails to produce any results,
+// `aprowhat_exec()` and `man()` set `err` to true and `err_msg` to an
+// appropriate error message.
+
 // Execute `apropos` or `whatis`, and place their result in `dst`. Return the
 // number of entries found. `cmd` and `args` respectively specify the command to
 // run and its arguments.
@@ -343,14 +349,14 @@ extern unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
 // Given a result of `aprowhat()` in `aw` (of length `aw_len`), extract the
 // names of its manual sections into `dst`. Return the total number of sections
 // found.
-extern unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *buf,
-                                  unsigned buf_len);
+extern unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *aw,
+                                  unsigned aw_len);
 
 // Helper of `aprowhat()` and `index_page()`. Render a result of `aprowhat()`
 // `aw` (of length `aw_len`), and a result of `aprowhat_sections()` `sc` (of
-// length `sc_len`) into into a manual page like document, and place it into
-// `dst`. Return the number of lines. `key`, `title`, `ver`, and `date` are used
-// for generating the header and footer.
+// length `sc_len`) into into a manual page like index document, and place it
+// into `dst`. Return the number of lines. `key`, `title`, `ver`, and `date`
+// are used for generating the header and footer.
 extern unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
                                 const unsigned aw_len, const wchar_t *const *sc,
                                 const unsigned sc_len, const wchar_t *key,
@@ -375,12 +381,9 @@ extern bool aprowhat_has(const wchar_t *needle, const aprowhat_t *hayst,
 extern unsigned man_sections(wchar_t ***dst, const wchar_t *args,
                              bool local_file);
 
-// Render an index of all of the system's manual pages, placing it into `dst`
+// Render an index of all of the system's manual pages, placing it into `dst`.
+// Return the number of lines rendered.
 extern unsigned index_page(line_t **dst);
-
-// In case a `man`/`apropos`/`whatis` command fails to produce any results,
-// `aprowhat()` and `man()` set `err` to true and `err_msg` to an appropriate
-// error message.
 
 // Execute `apropos` or `whatis`, and place the final rendered result in `dst`.
 // Return the number of lines in said output. `cmd` and `args` respectively
@@ -402,7 +405,7 @@ extern unsigned man_toc(toc_entry_t **dst, const wchar_t *args,
                         bool local_file);
 
 // Create the table of contents of the an apropos, whatis or index page. The
-// sections of said page must be proviced in `sc` (of length `sc_len`).
+// sections of said page must be provided in `sc` (of length `sc_len`).
 extern unsigned sc_toc(toc_entry_t **dst, const wchar_t *const *sc,
                        const unsigned sc_len);
 
@@ -428,7 +431,7 @@ extern link_loc_t last_link(const line_t *lines, unsigned lines_len,
 
 // Search for `needle` in `lines` (of length `lines_len`). Place all results
 // into `dst` and return the total number of results. `cs` siginifies whether
-// search will be case-sensitive.
+// search will be case-insensitive.
 extern unsigned search(result_t **dst, const wchar_t *needle,
                        const line_t *lines, unsigned lines_len, bool cs);
 
@@ -461,7 +464,7 @@ extern void populate_toc();
 extern void requests_free(request_t *reqs, unsigned reqs_len);
 
 // Free the memory occupied by `aw` (of length `aw_len`)
-extern void aprowhat_free(aprowhat_t *res, unsigned res_len);
+extern void aprowhat_free(aprowhat_t *aw, unsigned aw_len);
 
 // Free the memory occupied by `lines` (of length `lines_len`)
 extern void lines_free(line_t *lines, unsigned lines_len);
