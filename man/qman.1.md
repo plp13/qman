@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.4.1-82-g8e14f3c
+footer: Qman 1.4.1-83-g6dfb593
 date: December 15, 2023
 ---
 
@@ -373,6 +373,7 @@ This section contains various miscellaneous options:
 | reset_after_http | boolean  | true       | Re-initialize curses after opening an http(s) link |
 | reset_after_email| boolean  | true       | Re-initialize curses after opening an e-mail link |
 | reset_after_viewer | boolean | true      | Re-initialize curses after opening a link to a local filesystem file |
+| terminfo_reset | boolean    | false      | Reset the terminal using the strings provided by terminfo on shutdown |
 | history_size | unsigned int | 256k       | Maximum number of history entries |
 | hyphenate    | boolean      | true       | Whether to hyphenate long words in manual pages |
 | justify      | boolean      | true       | Whether to justify text in manual pages |
@@ -392,6 +393,12 @@ To avoid an annoying screen redraw, options _reset_after_http_,
 _reset_after_email_, or _reset_after_viewer_ can be set to **false** whenever
 _browser_path_, _mailer_path_, or _viewer_path_ point to a GUI program
 respectively.
+
+Setting _terminfo_reset_ to **true** will initiate a full terminal reset, using
+the strings provided by **terminfo(5)**, upon program shutdown. This may be
+necessary if your ncurses implementation doesn't completely restore terminal
+settings (e.g.  colors) upon exit, but will also clear the screen and erase your
+scroll history as a side effect.
 
 Setting _sp_substrings_ to **false** causes incremental search results to
 only include pages whose names start with the user's input. Setting it to

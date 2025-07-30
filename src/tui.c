@@ -6,11 +6,6 @@
 // Global variables
 //
 
-// Set by `sigusr1_reset()` to true if terminfo reset strings were sent to the
-// terminal. `winddown()` needs to be aware of this, in order to perform
-// additional cleanups.
-bool _terminfo_reset = false;
-
 tcap_t tcap;
 
 WINDOW *wmain = NULL;
@@ -157,7 +152,7 @@ void sigusr1_reset() {
     if ((s = tigetstr("rs3")) != NULL)
       putp(s);
     fflush(stdout);
-    _terminfo_reset = true;
+    config.misc.terminfo_reset = true;
     // The above might put the terminal in cooked mode and/or enable echo
     raw();
     noecho();
@@ -1364,7 +1359,8 @@ void winddown_tui() {
   }
 
   endwin();
-  if (_terminfo_reset) {
+
+  if (config.misc.terminfo_reset) {
     char *s;
     if ((s = tigetstr("rs1")) != NULL)
       putp(s);
