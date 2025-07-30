@@ -156,16 +156,25 @@ config_def = {
         "imm_width_wide": (("int", 0, 400), ("54",), False, "Wide pop-up dialogs width"),
         "imm_height_short": (("int", 0, 100), ("6",), False, "Short pop-up dialogs height"),
         "imm_height_long": (("int", 0, 100), ("10",), False, "Long pop-up dialogs height"),
-        "sections_on_top": (("bool",), ("true",), True, "If true, show a list of sections at the top of each page"),
         "lmargin": (("int", 0, 200), ("2",), True, "Left margin size"),
         "rmargin": (("int", 0, 200), ("2",), True, "Right margin size"),
         "tabstop": (("int", 0, 100), ("8",), True, "Number of characters in a tab stop"),
         "sbar": (("bool",), ("true",), True, "If true, show the scrollbar"),
         "beep": (("bool",), ("true",), True, "If true, beep the terminal")
     },
+    "capabilities": {
+        "sections_on_top": (("bool",), ("true",), True, "Show a list of sections at the top of each page"),
+        "http_links": (("bool",), ("true",), True, "Hyperlinks to HTTP URLs"),
+        "email_links": (("bool",), ("true",), True, "Hyperlinks to email addresses"),
+        "file_links": (("bool",), ("true",), True, "Hyperlinks to local files and directories"),
+        "hyphenate": (("bool",), ("true",), True, "Hyphenate long words in manual pages"),
+        "justify": (("bool",), ("true",), True, "Justify manual pages text"),
+        "icase_search": (("bool",), ("true",), True, "Ignore case for page text search"),
+        "sp_substrings": (("bool",), ("true",), True, "Include substring matches in incremental search results"),
+    },
     "misc": {
         "program_name": (("string",), None, False, "Program executable basename (discovered automatically)"),
-        "program_version": (("wstring",), ("Qman 1.4.1-83-g6dfb593",), False, "Formal program name and version"),
+        "program_version": (("wstring",), ("Qman 1.4.1-84-g79f0387",), False, "Formal program name and version"),
         "system_type": (("systype", ), ("mandb", ), True, "System type: mandb, mandoc, freebsd, darwin, ..."),
         "config_path": (("string",), None, False, "Path to the configuration file"),
         "man_path": (("string",), ("/usr/bin/man",), True, "Path to the man(1) command"),
@@ -180,9 +189,6 @@ config_def = {
         "reset_after_viewer": (("bool",), ("true",), True, "Re-initialize curses after viewing a file"),
         "terminfo_reset": (("bool",), ("false",), True, "Reset the terminal using the strings provided by terminfo on shutdown"),
         "history_size": (("int", 0, 256 * 1024), ("65536",), True, "Maximum number of history entries"),
-        "hyphenate": (("bool",), ("true",), True, "Hyphenate long words in manual pages"),
-        "justify": (("bool",), ("true",), True, "Justify manual pages text"),
-        "sp_substrings": (("bool",), ("true",), True, "Include substring matches in incremental search results"),
         "global_whatis": (("bool",), ("false",), False, "-a / --all option was passed"),
         "global_apropos": (("bool",), ("false",), False, "-k / --global-whatis option was passed")
     }

@@ -1380,7 +1380,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
   bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
 
   // Only if list of sections is enabled
-  if (config.layout.sections_on_top) {
+  if (config.capabilities.sections_on_top) {
     // Newline
     inc_ln;
     line_alloc(res[ln], 0);
@@ -1670,8 +1670,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     // `mandb` specific
     sprintf(tmps, "%d", 1 + text_width);
     setenv("MANWIDTH", tmps, true);
-    sprintf(tmps, "%s %s", config.misc.hyphenate ? "" : "--nh",
-            config.misc.justify ? "" : "--nj");
+    sprintf(tmps, "%s %s", config.capabilities.hyphenate ? "" : "--nh",
+            config.capabilities.justify ? "" : "--nj");
     setenv("MANOPT", tmps, true);
     setenv("MAN_KEEP_FORMATTING", "1", true);
     setenv("MANROFFOPT", "", true);
@@ -1756,7 +1756,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // For each line of `man`'s output...
   while (!feof(pp)) {
     // At line 1, insert the list of sections (if enabled)
-    if (config.layout.sections_on_top && 1 == ln) {
+    if (config.capabilities.sections_on_top && 1 == ln) {
       // Newline
       line_alloc(res[ln], 0);
 
@@ -1936,9 +1936,12 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   if (ln >= 2) {
     for (unsigned i = 2; i < ln - 1; i++) {
       discover_links(&re_man, &res[i], &res[i + 1], LT_MAN);
-      discover_links(&re_http, &res[i], &res[i + 1], LT_HTTP);
-      discover_links(&re_email, &res[i], &res[i + 1], LT_EMAIL);
-      discover_links(&re_file, &res[i], &res[i + 1], LT_FILE);
+      if (config.capabilities.http_links)
+        discover_links(&re_http, &res[i], &res[i + 1], LT_HTTP);
+      if (config.capabilities.email_links)
+        discover_links(&re_email, &res[i], &res[i + 1], LT_EMAIL);
+      if (config.capabilities.file_links)
+        discover_links(&re_file, &res[i], &res[i + 1], LT_FILE);
     }
   }
 
@@ -1967,7 +1970,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   toc_entry_t *res = aalloc(res_len, toc_entry_t); // result buffer
 
   // Section header for the list of sections (if enabled)
-  if (config.layout.sections_on_top) {
+  if (config.capabilities.sections_on_top) {
     res[en].type = TT_HEAD;
     res[en].text = walloc(BS_LINE);
     wcslcpy(res[en].text, L"SECTIONS", BS_LINE);
@@ -2083,7 +2086,7 @@ unsigned sc_toc(toc_entry_t **dst, const wchar_t *const *sc,
   toc_entry_t *res = aalloc(res_len, toc_entry_t); // result buffer
 
   // Section header for the list of sections (if enabled)
-  if (config.layout.sections_on_top) {
+  if (config.capabilities.sections_on_top) {
     res[en].type = TT_HEAD;
     res[en].text = walloc(BS_LINE);
     wcslcpy(res[en].text, L"SECTIONS", BS_LINE);

@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.4.1-83-g6dfb593
+footer: Qman 1.4.1-84-g79f0387
 date: December 15, 2023
 ---
 
@@ -332,7 +332,6 @@ interface:
 | Option   | Type         | Def. value | Description                           |
 |----------|--------------|------------|---------------------------------------|
 | sbar     | boolean      | true       | Indicates whether the scrollbar will be displayed |
-| sections_on_top | boolean | true     | Indicates whether to show a list of (links to the page's) sections at the top of each page |
 | beep     | boolean      | true       | Indicates whether to beep the terminal on error |
 | lmargin  | unsigned int | 2          | Size of margin between the left side of the screen, and the page text |
 | rmargin  | unsigned int | 2          | Size of margin between the page text and the scroll bar and/or the right side of the screen |
@@ -357,6 +356,22 @@ the **[chars]** and **[colours]** sections mentioned above. Auto-detection
 should work correctly in most cases; it's therefore recommended to not modify
 any of the options in this section, except when discovering or reporting bugs.
 
+## Section [capabilities]
+This section allows the user to disable various non-core features:
+
+| Option       | Type         | Def. value | Description                       |
+|--------------|--------------|------------|-----------------------------------|
+| sections_on_top | boolean   | true       | Show a list of (links to the page's) sections at the top of each page |
+| http_links   | boolean      | true       | Generate hyperlinks to HTTP URLs |
+| email_links  | boolean      | true       | Generate hyperlinks to email addresses |
+| file_links   | boolean      | true       | Generate hyperlinks to local files and directories |
+| hyphenate    | boolean      | true       | Hyphenate long words in manual pages |
+| justify      | boolean      | true       | Justify text in manual pages |
+| icase_search | boolean      | true       | Ignore case when performing page text search | 
+| sp_substrings | boolean     | true       | Include substring matches when performing incremental search of manual pages |
+
+All features are enabled by default.
+
 ## Section [misc]
 This section contains various miscellaneous options:
 
@@ -375,19 +390,12 @@ This section contains various miscellaneous options:
 | reset_after_viewer | boolean | true      | Re-initialize curses after opening a link to a local filesystem file |
 | terminfo_reset | boolean    | false      | Reset the terminal using the strings provided by terminfo on shutdown |
 | history_size | unsigned int | 256k       | Maximum number of history entries |
-| hyphenate    | boolean      | true       | Whether to hyphenate long words in manual pages |
-| justify      | boolean      | true       | Whether to justify text in manual pages |
-| sp_substrings | boolean     | true       | Include substring matches in incremental search results |
-
 _system_type_ must match the Unix manual system used by your O/S:
 
 - **[mandb](https://gitlab.com/man-db/man-db)** - most Linux distributions
 - **[mandoc](https://mandoc.bsd.lv/)** - Void Linux, Haiku, others?
 - **[freebsd](https://www.freebsd.org/)** - FreeBSD
 - **[darwin](https://www.apple.com/macos/)** - macOS
-
-When using a horizontally narrow terminal, setting _hyphenate_ to **true**
-and/or _justify_ to **false** can improve the program's output.
 
 To avoid an annoying screen redraw, options _reset_after_http_,
 _reset_after_email_, or _reset_after_viewer_ can be set to **false** whenever
@@ -399,6 +407,9 @@ the strings provided by **terminfo(5)**, upon program shutdown. This may be
 necessary if your ncurses implementation doesn't completely restore terminal
 settings (e.g.  colors) upon exit, but will also clear the screen and erase your
 scroll history as a side effect.
+
+When using a horizontally narrow terminal, setting _hyphenate_ to **true**
+and/or _justify_ to **false** can improve the program's output.
 
 Setting _sp_substrings_ to **false** causes incremental search results to
 only include pages whose names start with the user's input. Setting it to

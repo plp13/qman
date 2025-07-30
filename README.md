@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.4.1-83-g6dfb593 -- [see what's new](#new-in-this-version)
+Version 1.4.1-84-g79f0387 -- [see what's new](#new-in-this-version)
 
 ![Screenhot -- Viewing a Manual Page](/screenshots/qman_man.png)
 
@@ -66,6 +66,8 @@ Version 1.5.0 introduces the following:
 - Hyperlinks to files or directories in the local filesystem. Config option
   `viewer_path` can be used to set the program for opening these (default is
   `/usr/bin/xdg-open`).
+- New config file section `[capabilities]` enables users to disable several non-
+  core program features
 - Three new themes:
   - `adwaita`, designed to match the colors of dark Adwaita desktops
   - `adwaita-light`, designed to match the colors of light Adwaita desktops
@@ -80,6 +82,9 @@ Version 1.5.0 introduces the following:
 > Users using custom config files may need to update them after a new release.
 > For more information, please refer to Qman's manual page and the documentation
 > in [config/README.md](config/README.md).
+>
+> In version 1.5.0, config options `sections_on_top`, `hyphenate`, `justify` and
+> `sp_substrings` have been moved to section `[capabilities]`.
 
 ## More screenshots
 

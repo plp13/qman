@@ -286,7 +286,7 @@ wchar_t *aw_quick_search(wchar_t *needle, int last, bool qident) {
 
   // If there's space, also search for pages that contain `needle`, and add them
   // to `res` as well (only if `config.misc.sp_substrings` is true)
-  if (config.misc.sp_substrings) {
+  if (config.capabilities.sp_substrings) {
     pos = 0;
     pos = aprowhat_search(needle, aw_all, aw_all_len, pos, true);
     while (-1 != pos && ln < lines) {
@@ -2178,7 +2178,8 @@ bool tui_search(bool back) {
     } else {
       // Input is not empty; populate `results` and `results_len` from input,
       // and set `my_top` to the location of the first match
-      results_len = search(&results, inpt, page, page_len, true);
+      results_len = search(&results, inpt, page, page_len,
+                           config.capabilities.icase_search);
       if (back) {
         const int tmp = search_prev(results, results_len, my_top);
         my_top = -1 == tmp ? my_top : tmp;
