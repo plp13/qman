@@ -25,8 +25,8 @@ mouse_t mouse_status = MS_EMPTY;
 //
 
 // Helper of `draw_page()`. Set `col` to the appropriate color for link number
-// `linkno` of line number `lineno`. Consider the `type` of the link, and also
-// query `flink` to check whether it's focused.
+// `linkno` of line number `lineno`. The color depends on the link's `type`, and
+// on the value of `flink` (since the focused link is highlighted).
 #define set_link_col(lineno, linkno, type)                                     \
   if (flink.ok && flink.line == lineno && flink.link == linkno) {              \
     switch (type) {                                                            \
@@ -98,6 +98,10 @@ mouse_t mouse_status = MS_EMPTY;
 
 // Helper of `tui_toc()`. Search the current page for a line whose text matches
 // the text of the `focus`ed entry in `toc`.
+//
+// This function calls `ls_jump()`. To increase accuracy, it tries to set its
+// `trgt_prev` argument to the section or subsection that preceeds the `focus`ed
+// entry in `toc`.
 #define toc_jump(toc, focus)                                                   \
   int prev;                                                                    \
   for (prev = MAX(0, focus - 1); prev >= 0; prev--)                            \
@@ -482,7 +486,7 @@ void draw_toc(toc_entry_t *toc, unsigned toc_len, unsigned top,
 }
 
 //
-// Functions (utility)
+// Functions (generic)
 //
 
 void init_tui() {
@@ -963,8 +967,8 @@ void draw_sbar(unsigned lines_len, unsigned lines_top) {
 }
 
 void draw_stat(const wchar_t *mode, const wchar_t *name, unsigned lines_len,
-               unsigned lines_pos, const wchar_t *prompt, const wchar_t *help,
-               const wchar_t *em) {
+               unsigned lines_pos, unsigned column, const wchar_t *prompt,
+               const wchar_t *help, const wchar_t *em) {
   werase(wstat);
   wbkgd(wstat, COLOR_PAIR(config.colours.stat_input_prompt.pair));
 
@@ -985,8 +989,7 @@ void draw_stat(const wchar_t *mode, const wchar_t *name, unsigned lines_len,
   swprintf(tmp, BS_LINE, L" %-*ls", name_width - 1, name);
   change_colour(wstat, config.colours.stat_indic_name);
   mvwaddnwstr(wstat, 0, name_col, tmp, name_width);
-  swprintf(tmp2, BS_LINE, L"%d:%d /%d", lines_pos,
-           page_left / config.layout.tabstop, lines_len);
+  swprintf(tmp2, BS_LINE, L"%d:%d /%d", lines_pos, column, lines_len);
   swprintf(tmp, BS_LINE, L"%*ls ", loc_width - 1, tmp2);
   change_colour(wstat, config.colours.stat_indic_loc);
   mvwaddnwstr(wstat, 0, loc_col, tmp, loc_width);
@@ -1393,7 +1396,8 @@ void tui_redraw() {
   swprintf(help, BS_SHORT, L"Press %ls for help or %ls to quit",
            ch2name(config.keys[PA_HELP][0]), ch2name(config.keys[PA_QUIT][0]));
   draw_stat(request_type_str(history[history_cur].request_type), page_title,
-            page_len, pos + 1, L":", help, NULL);
+            page_len, pos + 1, page_left / config.layout.tabstop + 1, L":",
+            help, NULL);
 }
 
 void tui_error(wchar_t *em) {
@@ -1404,7 +1408,8 @@ void tui_error(wchar_t *em) {
     pos = page_top;
 
   draw_stat(request_type_str(history[history_cur].request_type), page_title,
-            page_len, pos + 1, L":", NULL, em);
+            page_len, pos + 1, page_left / config.layout.tabstop + 1, L":",
+            NULL, em);
 
   cbeep();
 }
@@ -2148,7 +2153,8 @@ bool tui_search(bool back) {
 
   // Get search string
   swprintf(pout, BS_SHORT, prompt);
-  draw_stat(L"SEARCH", page_title, page_len, page_top + 1, pout, help, NULL);
+  draw_stat(L"SEARCH", page_title, page_len, page_top + 1,
+            page_left / config.layout.tabstop + 1, pout, help, NULL);
   got_inpt = get_str_next(wstat, 1, 1, inpt, MIN(BS_SHORT - 3, width));
 
   // As the user types something...
@@ -2200,11 +2206,13 @@ bool tui_search(bool back) {
     draw_sbar(page_len, my_top);
     swprintf(pout, BS_SHORT, L"%ls%ls", prompt, inpt);
     if (0 == results_len) {
-      draw_stat(L"SEARCH", page_title, page_len, my_top + 1, pout, NULL,
+      draw_stat(L"SEARCH", page_title, page_len, my_top + 1,
+                page_left / config.layout.tabstop + 1, pout, NULL,
                 L"Search string not found");
       cbeep();
     } else {
-      draw_stat(L"SEARCH", page_title, page_len, my_top + 1, pout, help, NULL);
+      draw_stat(L"SEARCH", page_title, page_len, my_top + 1,
+                page_left / config.layout.tabstop + 1, pout, help, NULL);
     }
     doupdate();
 

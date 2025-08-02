@@ -36,7 +36,7 @@ typedef enum {
   WH_DOWN  // down
 } mouse_wheel_t;
 
-// Compiled mouse status (not full; only essential parametres are recorded)
+// Compiled mouse status (only includes parametres essential for us)
 typedef struct {
   mouse_button_t button; // which mouse button
   bool down;             // the button was pressed
@@ -57,7 +57,7 @@ typedef struct {
 // empty mouse status (used for initialization)
 #define MS_EMPTY {BT_NONE, false, false, false, -1, -1, WH_NONE, -1, -1}
 
-// Return values of `get_str_next()`
+// Return values of `get_str_next()` (more info in its docstring)
 #define _GSN (1 << 24)
 #define GSN_WH_DOWN (_GSN)
 #define GSN_WH_UP (_GSN + 1)
@@ -74,9 +74,6 @@ extern tcap_t tcap;
 
 // Main window where the current page is displayed
 extern WINDOW *wmain;
-
-// Width and height of the main window
-extern unsigned wmain_width, wmain_height;
 
 // Scrollbar window
 extern WINDOW *wsbar;
@@ -145,14 +142,14 @@ extern mouse_t mouse_status;
   }
 
 //
-// Functions (utility)
+// Functions (generic)
 //
 
 // Initialize and set up ncurses
 extern void init_tui();
 
 // Initialize `tcap` with the correct terminal capabilities. These are normally
-// sniffed, but this can be overridden in the `[tcap]` configuration section.
+// sniffed, but can be overridden in the `[tcap]` configuration section.
 extern void init_tui_tcap();
 
 // Initialize ncurses color pairs
@@ -211,13 +208,14 @@ extern void draw_sbar(unsigned lines_len, unsigned lines_top);
 // name -- current page name
 // lines_len -- total number of lines in page
 // lines_pos -- focused line number in page
+// column -- column where the portion of the page the user sees begins
 // prompt -- cursor prompt
 // help -- help text
 // em -- error message
 // (Normally, we will display `help`. If, however, help is NULL, we'll display
 // `em`.)
 extern void draw_stat(const wchar_t *mode, const wchar_t *name,
-                      unsigned lines_len, unsigned lines_pos,
+                      unsigned lines_len, unsigned lines_pos, unsigned column,
                       const wchar_t *prompt, const wchar_t *help,
                       const wchar_t *em);
 
