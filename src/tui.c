@@ -774,7 +774,8 @@ wchar_t *ch2name(int k) {
 }
 
 void termsize_adjust() {
-  if (page_top + config.layout.main_height > page_len) {
+  if (page_len > config.layout.main_height &&
+      page_top + config.layout.main_height > page_len) {
     page_top = page_len - config.layout.main_height;
     const link_loc_t ll = last_link(page, page_len, page_top,
                                     page_top + config.layout.main_height - 1);
