@@ -7,7 +7,7 @@
 #include "lib.h"
 
 //
-// Functions (utility)
+// Functions (generic)
 //
 
 // Initialize the terminal
