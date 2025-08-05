@@ -174,7 +174,7 @@ config_def = {
     },
     "misc": {
         "program_name": (("string",), None, False, "Program executable basename (discovered automatically)"),
-        "program_version": (("wstring",), ("Qman 1.4.1-87-g7640fda",), False, "Formal program name and version"),
+        "program_version": (("wstring",), ("Qman 1.4.1-88-g0c54909",), False, "Formal program name and version"),
         "system_type": (("systype", ), ("mandb", ), True, "System type: mandb, mandoc, freebsd, darwin, ..."),
         "config_path": (("string",), None, False, "Path to the configuration file"),
         "man_path": (("string",), ("/usr/bin/man",), True, "Path to the man(1) command"),
@@ -189,6 +189,7 @@ config_def = {
         "reset_after_viewer": (("bool",), ("true",), True, "Re-initialize curses after viewing a file"),
         "terminfo_reset": (("bool",), ("false",), True, "Reset the terminal using the strings provided by terminfo on shutdown"),
         "history_size": (("int", 0, 256 * 1024), ("65536",), True, "Maximum number of history entries"),
+        "cli_force_color": (("bool",), ("false",), False, "-z / --cli-force-color option was passed"),
         "global_whatis": (("bool",), ("false",), False, "-a / --all option was passed"),
         "global_apropos": (("bool",), ("false",), False, "-k / --global-whatis option was passed")
     }

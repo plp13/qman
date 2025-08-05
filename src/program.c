@@ -26,7 +26,12 @@ option_t options[] = {
     {"all", 'a',
      L"Show the contents of all pages whose name matches PAGE (global whatis)",
      OA_NONE, true},
-    {"cli", 'T', L"Suppress the TUI and output directly to the terminal",
+    {"cli", 'T',
+     L"Suppress the TUI and output directly to the terminal (CLI mode)",
+     OA_NONE, true},
+    {"cli-force-color", 'z',
+     L"When in CLI mode, format output using escape codes even when not "
+     L"running inside a terminal",
      OA_NONE, true},
     {"action", 'A', L"Automatically perform program action ARG upon startup",
      OA_REQUIRED, true},
@@ -931,6 +936,10 @@ int parse_options(int argc, char *const *argv) {
     case 'T':
       // -T or --cli was passed; do not launch the TUI
       config.layout.tui = false;
+      break;
+    case 'z':
+      // -z or --cli-force-color was passed; force-enable color for the CLI
+      config.misc.cli_force_color = true;
       break;
     case 'A':
       // -A or --action was passed; set `first_action` to the program action

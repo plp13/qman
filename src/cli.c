@@ -53,6 +53,13 @@ void init_cli() {
   }
 }
 
+bool inside_term() {
+  if (config.misc.cli_force_color)
+    return true;
+  else
+    return isatty(STDOUT_FILENO);
+}
+
 void print_page(const line_t *lines, unsigned lines_len) {
   unsigned ln, c, l;    // current line number, character number, link number
   bool in_link = false; // current character is inside a link
@@ -64,58 +71,67 @@ void print_page(const line_t *lines, unsigned lines_len) {
 
   // For each line...
   for (ln = 0; ln < lines_len; ln++) {
-    l = 0;
-    // For each line character...
-    for (c = 0; lines[ln].text[c] != L'\0' && c < lines[ln].length; c++) {
-      // Colorize text inside links
-      if (has_hyph_link && c == hyph_link.start_next) {
-        // Hyphenated link (from previous line) start
-        in_link = true;
-        fputws(link_escseq(hyph_link), stdout);
-      } else if (has_hyph_link && c == hyph_link.end_next) {
-        // Hyphenated link (from previous line) end
-        in_link = false;
-        has_hyph_link = false;
-        fputws(L"\e[0;39m", stdout);
-      } else if (l < lines[ln].links_length && c == cur_link.start) {
-        // Link start
-        in_link = true;
-        fputws(link_escseq(cur_link), stdout);
-      } else if (l < lines[ln].links_length && c == cur_link.end) {
-        // Link end
-        in_link = false;
-        fputws(L"\e[0;39m", stdout);
-        if (cur_link.in_next) {
-          has_hyph_link = true;
-          hyph_link = cur_link;
-        }
-        l++;
-      }
+    if (inside_term()) {
+      // If inside a terminal, format the line's text using terminal escape
+      // sequences
 
-      // For text that is outside links, make text regular/bold/italic/underline
-      // as required
-      if (!in_link) {
-        if (bget(lines[ln].reg, c)) {
-          // Regular
-          fputws(reg_escseq, stdout);
-          reg_escseq = L"";
-        } else if (bget(lines[ln].bold, c)) {
-          // Bold
-          fputws(L"\e[1m", stdout);
-          reg_escseq = L"\e[0m";
-        } else if (bget(lines[ln].italic, c)) {
-          // Italic
-          fputws(L"\e[3m", stdout);
-          reg_escseq = L"\e[23m";
-        } else if (bget(lines[ln].uline, c)) {
-          // Underline
-          fputws(L"\e[4m", stdout);
-          reg_escseq = L"\e[24m";
+      // For each line character...
+      l = 0;
+      for (c = 0; lines[ln].text[c] != L'\0' && c < lines[ln].length; c++) {
+        // Colorize text inside links
+        if (has_hyph_link && c == hyph_link.start_next) {
+          // Hyphenated link (from previous line) start
+          in_link = true;
+          fputws(link_escseq(hyph_link), stdout);
+        } else if (has_hyph_link && c == hyph_link.end_next) {
+          // Hyphenated link (from previous line) end
+          in_link = false;
+          has_hyph_link = false;
+          fputws(L"\e[0;39m", stdout);
+        } else if (l < lines[ln].links_length && c == cur_link.start) {
+          // Link start
+          in_link = true;
+          fputws(link_escseq(cur_link), stdout);
+        } else if (l < lines[ln].links_length && c == cur_link.end) {
+          // Link end
+          in_link = false;
+          fputws(L"\e[0;39m", stdout);
+          if (cur_link.in_next) {
+            has_hyph_link = true;
+            hyph_link = cur_link;
+          }
+          l++;
         }
-      }
 
-      // Print the character
-      fputwc(lines[ln].text[c], stdout);
+        // For text that is outside links, make text
+        // regular/bold/italic/underline as required
+        if (!in_link) {
+          if (bget(lines[ln].reg, c)) {
+            // Regular
+            fputws(reg_escseq, stdout);
+            reg_escseq = L"";
+          } else if (bget(lines[ln].bold, c)) {
+            // Bold
+            fputws(L"\e[1m", stdout);
+            reg_escseq = L"\e[0m";
+          } else if (bget(lines[ln].italic, c)) {
+            // Italic
+            fputws(L"\e[3m", stdout);
+            reg_escseq = L"\e[23m";
+          } else if (bget(lines[ln].uline, c)) {
+            // Underline
+            fputws(L"\e[4m", stdout);
+            reg_escseq = L"\e[24m";
+          }
+        }
+
+        // Print the character
+        fputwc(lines[ln].text[c], stdout);
+      }
+    } else {
+      // Otherwise, print the line's text without formatting
+
+      fputws(lines[ln].text, stdout);
     }
 
     // At line end, restore text to regular and print a newline
