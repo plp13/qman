@@ -39,18 +39,26 @@ wchar_t *link_escseq(link_t link) {
 void init_cli() {
   unsigned cols; // terminal width according to the environment
 
-  // Set `config.layout.main_width` to the value indicated by the environment
+  // Set `cols` to the value indicated by the environment
   cols = getenvi("MANWIDTH");
   if (0 == cols)
     cols = getenvi("COLUMNS");
-  if (0 != cols)
-    config.layout.main_width = cols;
-  else {
-    // Can't read anything from the environment; use ncurses to set `main_width`
-    newterm(NULL, stderr, stdin);
-    config.layout.main_width = getmaxx(stdscr);
-    endwin();
+
+  // If unable to read anything from the environment, set `cols` using an
+  // `ioctl()` call (or set it to 80 if that doesn't work either)
+  if (0 == cols) {
+    struct winsize ws;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0)
+      cols = ws.ws_col;
+    else if (ioctl(STDIN_FILENO, TIOCGWINSZ, &ws) == 0)
+      cols = ws.ws_col;
+    else if (ioctl(STDERR_FILENO, TIOCGWINSZ, &ws) == 0)
+      cols = ws.ws_col;
+    else
+      cols = 80;
   }
+
+  config.layout.main_width = cols;
 }
 
 bool inside_term() {
