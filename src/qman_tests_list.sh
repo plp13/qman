@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# List all configured tests (used by meson)
+# List all configured tests. This is a helper script used by meson.
 
 FILE="qman_tests.c"
 MATCH="^[[:space:]]*add_test("

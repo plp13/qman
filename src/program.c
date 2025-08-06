@@ -30,7 +30,7 @@ option_t options[] = {
      L"Suppress the TUI and output directly to the terminal (CLI mode)",
      OA_NONE, true},
     {"cli-force-color", 'z',
-     L"When in CLI mode, format output using escape codes even when not "
+     L"Produce colorful output using terminal escape codes, even when not "
      L"running inside a terminal",
      OA_NONE, true},
     {"action", 'A', L"Automatically perform program action ARG upon startup",

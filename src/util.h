@@ -29,12 +29,6 @@
 // Types
 //
 
-// Memory allocation type
-typedef enum {
-  AT_STACK, // in the stack
-  AT_HEAP   // in the heap
-} alloc_type_t;
-
 // Array of bits
 typedef char *bitarr_t;
 
@@ -43,7 +37,8 @@ typedef char *bitarr_t;
 typedef struct {
   char *str;     // string version
   regex_t re;    // `regex_t` version
-  wchar_t *snpt; // a snippet of text that's always contained in matches
+  wchar_t *snpt; // a snippet of text that's always contained in matches (used
+                 // to improve performance, as `regexec()` is quite expensive)
 } full_regex_t;
 
 // A range
@@ -60,7 +55,7 @@ typedef enum {
   AR_LZMA   // xz
 } archive_type_t;
 
-// A 'fat' file pointer to a compressed archive, that supports multiple
+// A "fat" file pointer to a compressed archive, that supports multiple
 // compression types
 typedef struct {
   archive_type_t type; // archive type
@@ -178,7 +173,8 @@ typedef struct {
 // Functions
 //
 
-// Many functions call `winddown()` to fail gracefully in case of error
+// `x...()` functions, and also some other functions, will call `winddown()` to
+// fail gracefully in case of error
 
 // Perform the same function as `perror()` but, rather than printing the error
 // message, place it in `dst`
@@ -381,8 +377,8 @@ extern unsigned wsplit(wchar_t ***dst, unsigned dst_len, wchar_t *src,
 extern unsigned wmargend(const wchar_t *src, const wchar_t *extras);
 
 // Trim all characters at the end of `trgt` that are either whitespace or one of
-// the charactes in `extras`. (Trimming is done by inserting 0 or more NULL
-// characters at the end of `trgt`.) Return the new length of `trgt`.
+// the charactes in `extras`. Trimming is done by inserting 0 or more NULL
+// characters at the end of `trgt`. Return the new length of `trgt`.
 extern unsigned wmargtrim(wchar_t *trgt, const wchar_t *extras);
 
 // Apply any backspace characters in `trgt`
@@ -393,7 +389,7 @@ extern wchar_t *wcscasestr(const wchar_t *haystack, const wchar_t *needle);
 
 // Copy all data in `source` into `target`, line by line. Both `source` and
 // `target` must be text files. Return the number of lines copied.
-extern unsigned scopylines(FILE *source, FILE *target);
+extern unsigned scopylines(FILE *source, FILE *trgt);
 
 // Read a line from file `fp`, and place the result in `str` (without the
 // trailing newline). `size` signifies the maximum number of characters to read.

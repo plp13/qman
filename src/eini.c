@@ -30,9 +30,9 @@ regex_t eini_re_include, eini_re_section, eini_re_value;
     ret.value = ret_value;                                                     \
   }
 
-// Helper of `eini_parse()`. Strip trailing whitespace from `src`. If it's
+// Helper of `eini_parse()`. Strip trailing whitespace from `wsrc`. If it's
 // surrounded by single or double quotes, strip those as well. Return any syntax
-// errors.
+// errors pertaining to non-terminated quotes.
 #define wsrc_strip                                                             \
   wlen = wmargtrim(wsrc, NULL);                                                \
   if (L'"' == wsrc[0]) {                                                       \
@@ -151,7 +151,7 @@ void eini_init() {
 eini_t eini_parse(char *src) {
   wchar_t *wsrc = walloca(BS_LINE); // `wchar_t*` version of `src`
   char *csrc =
-      salloca(BS_LINE); // `char*` version of `src` (after modification)
+      salloca(BS_LINE); // `char*` version of `src` (after removing comments)
   int wlen;             // length of `wsrc`
   range_t loc;          // location of regex match in `wsrc`
   eini_t ret;           // return value

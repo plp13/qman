@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.4.1-89-g1131240
+footer: Qman 1.4.1-90-gc4b8dc2
 date: December 15, 2023
 ---
 
@@ -163,6 +163,11 @@ The program accepts the following non-argument options:
 : Suppress the text user interface and output directly to the terminal. This
   option can be used to redirect the program's formatted output to a text file
   or to another command.
+
+**-z, \-\-cli\-force\-color**
+: Produce colorful output using terminal escape codes, even when not running
+  inside a terminal. This must be used in conjunction with **-T** and otherwise
+  will be ignored.
 
 **-A, \-\-action** _action_name_
 : Automatically perform program action _action_name_ upon startup. The list of

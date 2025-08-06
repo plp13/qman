@@ -136,6 +136,17 @@ void print_page(const line_t *lines, unsigned lines_len) {
         // Print the character
         fputwc(lines[ln].text[c], stdout);
       }
+
+      // The code above might ignore links that end at the very end of their
+      // line, therefore we handle them here
+      if (in_link) {
+        in_link = false;
+        fputws(L"\e[0;39m", stdout);
+        if (cur_link.in_next) {
+          has_hyph_link = true;
+          hyph_link = cur_link;
+        }
+      }
     } else {
       // Otherwise, print the line's text without formatting
 

@@ -23,7 +23,7 @@ extern int base64_modt[];
 // Functions
 // 
 
-// Return the base64-encoded version of `data` (of size `input_lenght`) in a
+// Return the base64-encoded version of `data` (of size `input_length`) in a
 // freshly allocated buffer, and put the size of said buffer in `output_length`
 extern char *base64_encode(const unsigned char *data,
                     size_t input_length,
