@@ -1,5 +1,8 @@
 # O/S specific instructions
 
+Unless otherwise specified, instructions are for the latest version of the
+respective O/S.
+
 ## Linux
 
 The instructions in [BUILDING.md](BUILDING.md) should be sufficient for most
@@ -140,9 +143,16 @@ groff_path=/usr/local/bin/groff
 
 ## Haiku
 
-Install all [dependencies](BUILDING.md#dependencies) using `pkgman`. Then use
-the [standard instructions](BUILDING.md#building-and-installing) to build and
-install Qman.
+Haiku doesn't provide optional dependency `cunit`. Install all other
+[dependencies](BUILDING.md#dependencies) using `pkgman`, and build
+and install Qman using the following:
+
+```
+$ meson setup build/ -D
+$ cd build/
+$ meson compile
+$ sudo meson install
+```
 
 You must also add the following to your
 [config file](BUILDING.md#configuration):
