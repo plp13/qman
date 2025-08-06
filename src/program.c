@@ -641,6 +641,7 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
   range_t lrng;              // location of link in `ltext`
   wchar_t trgt[BS_LINE * 2]; // link target
   char strgt[BS_LINE * 2];   // char* version of `trgt`
+  struct stat sb;            // used for verifying file links
 
   // Prepare `ltext`
   wcsncpy(ltext, line->text, line->length - 1);
@@ -674,6 +675,10 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
       if (LT_MAN == type) {
         if (aprowhat_has(trgt, aw_all, aw_all_len))
           add_link(line, lstart, lend, true, nlstart, nlend, type, trgt);
+      } else if (LT_FILE == type) {
+        xwcstombs(strgt, trgt, BS_LINE * 2);
+        if (stat(strgt, &sb) == 0 && sb.st_mode & S_IRUSR)
+          add_link(line, lstart, lend, true, nlstart, nlend, type, trgt);
       } else
         add_link(line, lstart, lend, true, nlstart, nlend, type, trgt);
     } else if (loff + lrng.end < line->length) {
@@ -684,9 +689,7 @@ void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
         if (aprowhat_has(trgt, aw_all, aw_all_len))
           add_link(line, loff + lrng.beg, loff + lrng.end, false, 0, 0, type,
                    trgt);
-      }
-      if (LT_FILE == type) {
-        struct stat sb;
+      } else if (LT_FILE == type) {
         xwcstombs(strgt, trgt, BS_LINE * 2);
         if (stat(strgt, &sb) == 0 && sb.st_mode & S_IRUSR)
           add_link(line, loff + lrng.beg, loff + lrng.end, false, 0, 0, type,
