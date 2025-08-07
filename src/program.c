@@ -1366,8 +1366,6 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
   line_t *res = aalloc(res_len, line_t); // result buffer
 
   // Header
-  line_alloc(res[ln], 0);
-  inc_ln;
   line_alloc(res[ln], line_width);
   const unsigned title_len = wcslen(title); // `title` length
   const unsigned key_len = wcslen(key);     // `key` length
