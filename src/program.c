@@ -2556,6 +2556,8 @@ void winddown(int ec, const wchar_t *em) {
     free(config.chars.arrow_up);
   if (NULL != config.chars.arrow_down)
     free(config.chars.arrow_down);
+  if (NULL != config.chars.arrow_lr)
+    free(config.chars.arrow_lr);
   if (NULL != config.misc.program_version)
     free(config.misc.program_version);
   if (NULL != config.misc.config_path)
@@ -2572,6 +2574,8 @@ void winddown(int ec, const wchar_t *em) {
     free(config.misc.browser_path);
   if (NULL != config.misc.mailer_path)
     free(config.misc.mailer_path);
+  if (NULL != config.misc.viewer_path)
+    free(config.misc.viewer_path);
 
   // Deallocate memory used by `history` global
   requests_free(history, config.misc.history_size);
@@ -2600,6 +2604,7 @@ void winddown(int ec, const wchar_t *em) {
   regfree(&re_man.re);
   regfree(&re_http.re);
   regfree(&re_email.re);
+  regfree(&re_file.re);
 
   // (Optionally print `em` and) exit
   if (NULL != em)
