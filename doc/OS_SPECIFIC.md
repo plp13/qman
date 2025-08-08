@@ -100,7 +100,7 @@ else
 fi
 ```
 
-You'll have to change the `[misc]` section of your config file as follows:
+Then, change the `[misc]` section of your config file as follows:
 
 ```
 [misc]
@@ -110,7 +110,7 @@ apropos=/usr/local/bin/fakeapropos.sh
 whatis=/usr/local/bin/fakewhatis.sh
 ```
 
-Then, run `mkfakewhatis.sh` as root:
+And, finally, run `mkfakewhatis.sh` as root:
 
 ```
 # mkfakewhatis.sh
@@ -144,8 +144,8 @@ groff_path=/usr/local/bin/groff
 ## Haiku
 
 Haiku doesn't provide optional dependency `cunit`. Install all other
-[dependencies](BUILDING.md#dependencies) using `pkgman`, and build
-and install Qman using the following:
+[dependencies](BUILDING.md#dependencies) using `pkgman`, and then build
+and install Qman using:
 
 ```
 $ meson setup build/ -D
@@ -154,8 +154,7 @@ $ meson compile
 $ sudo meson install
 ```
 
-You must also add the following to your
-[config file](BUILDING.md#configuration):
+Then, add the following to your [config file](BUILDING.md#configuration):
 
 ```
 [misc]

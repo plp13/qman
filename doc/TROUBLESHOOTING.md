@@ -38,8 +38,8 @@ correctly configured. See [OS_SPECIFIC.md](OS_SPECIFIC.md).
 > that I have uninstalled still do show up**
 
 Again, this is probably a manual pages database issue. Qman uses your operating
-system's `apropos` to discover manual pages. If the database is out of date,
-`apropos` (and therefore Qman) will produce inaccurate results.
+system's `apropos` command to discover manual pages. If the database is out of
+date, `apropos` (and therefore Qman) will produce inaccurate results.
 
 The database must be updated by running `mandb` or `makewhatis` every time
 manual pages are installed or uninstalled. Regrettably, some O/S fail to do this
@@ -82,8 +82,14 @@ mailer_path=/usr/bin/mutt
 viewer_path=/usr/bin/vim
 ```
 
-To avoid opening such links altogether, you can set these options to a command
-that does nothing, e.g. `/usr/bin/false`.
+You can also disable these kinds of links using the following:
+
+```
+[capabilities]
+http_links=false   ; disable links to HTTP URLs
+email_links=false  ; disable links to e-mail addresses
+file_links=false   ; disable links to files or directories
+```
 
 ---
 
@@ -103,3 +109,10 @@ inside [config/qman.conf](../config/qman.conf)
 All provided themes require a terminal that supports 256 colors. Some themes,
 such as `adwaita`, `adwaita-light` and `catpuccin_latte`, also require a
 terminal that can re-define colors from RGB values.
+
+Qman autodetects the terminal's capabilities, and will disable certain features
+if it detects a terminal that doesn't support them. This can be overridden using
+the options in the config file's `[tcap]` section, which are documented in the
+program's manual. Feel free to play with these, and also to
+[report an issue](https://github.com/plp13/qman/issues) if it looks like your
+terminal's capabilities are being misidentified.
