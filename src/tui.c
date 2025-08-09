@@ -2572,6 +2572,12 @@ void tui() {
   swprintf(errmsg, BS_SHORT, L"Invalid keystroke; press %ls for help",
            ch2name(config.keys[PA_HELP][0]));
 
+  // Reset config options that get set by command-line options but are ignored
+  // when using the TUI
+  config.misc.cli_force_color = false;
+  config.misc.global_whatis = false;
+  config.misc.global_apropos = false;
+
   // Initialize TUI
   init_tui();
   configure();

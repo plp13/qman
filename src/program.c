@@ -1689,7 +1689,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   if (ST_MANDB == config.misc.system_type) {
     // `mandb` specific
     wchar_t *gargs = L""; // `man` arguments for global apropos/whatis
-    
+
     if (!config.layout.tui) {
       if (config.misc.global_apropos)
         gargs = L"--global-apropos";
@@ -1762,7 +1762,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // For each line of `man`'s output...
   while (!feof(pp)) {
     // At line 1, insert the list of sections (if enabled)
-    if (config.capabilities.sections_on_top && 1 == ln) {
+    if (1 == ln && config.capabilities.sections_on_top &&
+        !config.misc.global_apropos && !config.misc.global_whatis) {
       // Newline
       line_alloc(res[ln], 0);
 
