@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.4.1-95-g4476eb7
+footer: Qman 1.4.1-96-g9c5c6a5
 date: December 15, 2023
 ---
 
@@ -41,7 +41,7 @@ also to be fast and tiny, so that it can be used everywhere.
 
 # USER INTERFACE
 **Qman**'s reactions to user input are similar to what one would expect from a
-pager such as **less(1)**, and from an ncurses-based browser such as
+pager such as **less(1)**, or from an ncurses-based browser such as
 **links(1)**. Manual, apropos, and whatis pages are adorned with links to other
 pages, HTTP locations, e-mail addresses, files in the local filesystem, or
 (sub)sections within the current page. These links can be selected and opened.
@@ -69,15 +69,15 @@ keyboard mappings:
 | OPEN_APROPOS    | Perform apropos on focused link       | **a**              |
 | OPEN_WHATIS     | Perform whatis on focused link        | **w**              |
 | SP_OPEN         | Open a manual page using a dialog     | **O**              |
-| SP_APROPOS      | Perform apropos on a manual page using a dialog | **A**    |
-| SP_WHATIS       | Perform whatis on a manual page using a dialog  | **W**    |
+| SP_APROPOS      | Perform apropos using a dialog        | **A**              |
+| SP_WHATIS       | Perform whatis using a dialog         | **W**              |
 | INDEX           | Go to index (home) page               | **i**, **I**       |
 | BACK            | Go back one step in history           | **BACKSPACE**, **[** |
 | FWRD            | Go forward one step in history        | **]**              |
 | HISTORY         | Show history menu                     | **s**, **S**       |
 | TOC             | Show table of contents                | **t**, **T**       |
-| SEARCH          | (Free text) search forward            | **/**              |
-| SEARCH_BACK     | (Free text) search backward           | **?**              |
+| SEARCH          | Forward search in current page text   | **/**              |
+| SEARCH_BACK     | Backward search in current page text  | **?**              |
 | SEARCH_NEXT     | Go to next search result              | **n**              |
 | SEARCH_PREV     | Go to previous search result          | **N**              |
 | HELP            | Show the help dialog                  | **h**, **H**       |
@@ -90,7 +90,7 @@ information, see **CONFIGURATION**.
 
 Mouse input is supported but is considered experimental and is disabled by
 default. The **CONFIGURATION** section contains instructions on how to enable
-it. Most terminal emulators still provide basic mouse support when mouse input
+it. Many terminal emulators still provide basic mouse support when mouse input
 is disabled.
 
 When mouse input is enabled:
@@ -117,7 +117,7 @@ The above behavior can be customized. For more information, see
 
 **NOTE 1**
 : There is no reliable method for terminal clients to copy data to the
-  clipboard. An escape code (OSC 52) does exist but is only reliably supported
+  clipboard. An escape code (OSC 52) does exist but is supported reliably only
   by **kitty(1)** and **ghostty(1)**. For all other terminals, **Qman** will
   default to using commands such as **xclip(1)**, **wl-clipboard(1)**, or
   **pbcopy(1)**. However, these will only work when running locally and within a
@@ -136,18 +136,18 @@ The program accepts the following non-argument options:
   launched with no command-line options and no arguments.)
 
 **-k, \-\-apropos** _regexp_ ...
-: Approximately equivalent to **apropos(1)**. Search for manual pages whose
-  names and/or short descriptions match any of the _regexp_ arguments, and
-  display their names, sections, and short descriptions.
+: Interactive equivalent to **apropos(1)**. Search for manual pages whose names
+  and/or short descriptions match any of the _regexp_ arguments, and display
+  their names, sections, and short descriptions.
 
 **-f, \-\-whatis** _page_ ...
-: Approximately equivalent to **whatis(1)**. Display the name, sections, and
-  short descriptions of each of the manual _page_ arguments.
+: Interactive equivalent to **whatis(1)**. Display the name, section, and short
+  description of each of the manual _page_ argument.
 
 **-l, \-\-local\-file** _file_ ...
-: Activate "local" mode. Format and display each local manual _file_ instead of
-  searching through the system's manual collection. Each _file_ will be
-  interpreted as an nroff source file in the correct format.
+: Activate "local" mode. Format and display each local manual _file_, rather
+  than searching through the system's manual pages. Each _file_ is interpreted
+  as the nroff source file of a manual page.
 
 **-K \-\-global\-apropos** _regexp_ ...
 : Show the contents of all manual pages whose names and/or short descriptions
@@ -228,6 +228,7 @@ user interface:
 | box_br            | dialog box bottom right corner                           |
 | arrow_up          | up arrow                                                 |
 | arrow_down        | down arrow                                               |
+| arrow_lr          | left/right arrow / equivalence sign                      |
 
 Each configuration option value must consist of a single Unicode character.
 
@@ -265,9 +266,9 @@ Options in this section specify the user interface colors:
 | stat_input_em     | status bar error message section                         |
 | imm_border        | pop-up dialogs border                                    |
 | imm_title         | pop-up dialogs title                                     |
-| sp_input          | pop-up input dialog prompt                               |
-| sp_text           | pop-up input dialog incremental search text              |
-| sp_text_f         | pop-up input dialog incremental search text (focused)    |
+| sp_input          | input dialog prompt                                      |
+| sp_text           | input dialog incremental search text                     |
+| sp_text_f         | input dialog incremental search text (focused)           |
 | help_text         | help dialog entries text                                 |
 | help_text_f       | help dialog entries text (focused)                       |
 | history_text      | history dialog entries text                              |
@@ -282,8 +283,7 @@ _foreground_ _background_ _bold_
 _foreground_ and _background_ can be one of **black**, **red**, **green**,
 **yellow**, **blue**, **magenta**, **cyan**, or **white**. Alternatively, they
 can be a number between 0 and 255, or a hexadecimal RGB value using the #RRGGBB
-notation. Users should beware that not all terminals support numeric color
-values higher than 7 and/or RGB values.
+notation.
 
 _bold_ is a boolean that signifies whether the foreground color will have a
 high (true) or low (false) intensity.
@@ -362,7 +362,7 @@ should work correctly in most cases; it's therefore recommended to not modify
 any of the options in this section, except when discovering or reporting bugs.
 
 ## Section [capabilities]
-This section allows the user to disable various non-core features:
+This section allows the user to disable various non-essential features of Qman:
 
 | Option       | Type         | Def. value | Description                       |
 |--------------|--------------|------------|-----------------------------------|
@@ -376,6 +376,10 @@ This section allows the user to disable various non-core features:
 | sp_substrings | boolean     | true       | Include substring matches when performing incremental search of manual pages |
 
 All features are enabled by default.
+
+On slow machines, performance can be improved by disabling some features. Also,
+disabling _hyphenate_ and/or _justify_ can improve legibility in narrow terminal
+windows.
 
 ## Section [misc]
 This section contains various miscellaneous options:
@@ -393,7 +397,7 @@ This section contains various miscellaneous options:
 | reset_after_http | boolean  | true       | Re-initialize curses after opening an http(s) link |
 | reset_after_email| boolean  | true       | Re-initialize curses after opening an e-mail link |
 | reset_after_viewer | boolean | true      | Re-initialize curses after opening a link to a local filesystem file |
-| terminfo_reset | boolean    | false      | Reset the terminal using the strings provided by terminfo on shutdown |
+| terminfo_reset | boolean    | false      | Reset the terminal using the strings provided by **terminfo(5)** on shutdown |
 | history_size | unsigned int | 256k       | Maximum number of history entries |
 _system_type_ must match the Unix manual system used by your O/S:
 
@@ -432,13 +436,13 @@ inclusion.
 
 ## Notes on syntax
 Include paths and option values may optionally be placed inside single or double
-quotes. They can include the following escape sequences:
+quotes. They can also include the following escape sequences:
 
-- **\\a**, **\\b**, **\\t**, **\\n**, **\\v**, **\\f**, and **\\r** are
+- **\\a**, **\\b**, **\\t**, **\\n**, **\\v**, **\\f**, and **\\r** --
   interpreted according to the ASCII standard
-- **\\e** is interpreted as an escape (0x1b) character
-- **\\\\** is interpreted as a backslash
-- **\\'** and **\\"** are interpreted as a single and double quotes respectively
+- **\\e** -- interpreted as an escape (0x1b) character
+- **\\\\** -- interpreted as a backslash
+- **\\'** and **\\"** -- interpreted as a single and a double quote respectively
 
 All text following a **;** until the end of the line is considered a comment and
 is discarded.
@@ -449,17 +453,19 @@ their virtual terminal.
 
 When invoked using **-T**, the program tries to set its page width to the value
 of the **MANWIDTH** environment variable. If **MANWIDTH** hasn't been set, it
-tries to set it to the value of **COLUMNS** and, if that also fails, it sets
-it to the default value of 80.
+tries to set it to the value of **COLUMNS**. Failing that, it tries to
+auto-detect the terminal's size using an **ioctl(2)** and, if that also fails,
+it sets it to the default value of 80.
 
 # SIGNALS
 
 Upon receiving **SIGUSR1**, the program interrupts its operation and attempts
-to locate and parse a configuration file, using the process outlined in
+to re-parse its configuration file, using the process outlined in
 **CONFIGURATION**.
 
-This feature fails to work with certain terminals, and should be considered
-experimental.
+This feature can be useful for people who wish to automatically switch themes
+depending on the time of day. It should be noted that it is experimental and has
+issues with certain terminals.
 
 # EXIT STATUS
 | Value | Description                                                          |
@@ -471,7 +477,7 @@ experimental.
 | 4     | Configuration file error                                             |
 | 16    | No manual page(s) found matching the user's request                  |
 
-The above are identical to the exit values of **man(1)**.
+The above are similar to the exit values of **man(1)**.
 
 # SEE ALSO
 **man(1)**, **apropos(1)**, **whatis(1)**, **pinfo(1)**
