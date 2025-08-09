@@ -6,9 +6,6 @@
 // Helper macros and functions
 //
 
-// Helper of `print_page()` that returns the current link
-#define cur_link lines[ln].links[l]
-
 // Helper of `print_page()`. Return a statically allocated string that contains
 // a terminal escape sequence that matches the color of `link`.
 wchar_t *link_escseq(link_t link) {
@@ -96,17 +93,18 @@ void print_page(const line_t *lines, unsigned lines_len) {
           in_link = false;
           has_hyph_link = false;
           fputws(L"\e[0;39m", stdout);
-        } else if (l < lines[ln].links_length && c == cur_link.start) {
+        } else if (l < lines[ln].links_length &&
+                   c == lines[ln].links[l].start) {
           // Link start
           in_link = true;
-          fputws(link_escseq(cur_link), stdout);
-        } else if (l < lines[ln].links_length && c == cur_link.end) {
+          fputws(link_escseq(lines[ln].links[l]), stdout);
+        } else if (l < lines[ln].links_length && c == lines[ln].links[l].end) {
           // Link end
           in_link = false;
           fputws(L"\e[0;39m", stdout);
-          if (cur_link.in_next) {
+          if (lines[ln].links[l].in_next) {
             has_hyph_link = true;
-            hyph_link = cur_link;
+            hyph_link = lines[ln].links[l];
           }
           l++;
         }
@@ -142,9 +140,10 @@ void print_page(const line_t *lines, unsigned lines_len) {
       if (in_link) {
         in_link = false;
         fputws(L"\e[0;39m", stdout);
-        if (cur_link.in_next) {
+        if (l >= 1 && l - 1 < lines[ln].links_length &&
+            lines[ln].links[l - 1].in_next) {
           has_hyph_link = true;
-          hyph_link = cur_link;
+          hyph_link = lines[ln].links[l - 1];
         }
       }
     } else {

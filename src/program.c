@@ -1026,19 +1026,6 @@ void parse_args(int argc, char *const *argv) {
     wcslcpy(tmp, L"", BS_LINE);
     tmp_len = 0;
 
-    if (history[history_cur].request_type == RT_MAN && !config.layout.tui) {
-      // If we are showing a manual page, we are in CLI mode...
-      if (config.misc.global_apropos) {
-        // ...and the user has requested global apropos, add '-K' to `tmp`
-        wcslcpy(tmp, L"-K ", BS_LINE);
-        tmp_len = 3;
-      } else if (config.misc.global_whatis) {
-        // ...and the user has requested global whatis, add '-a' to `tmp`
-        wcslcpy(tmp, L"-a ", BS_LINE);
-        tmp_len = 3;
-      }
-    }
-
     // Surround all members of `argv` with single quotes, and flatten them
     // into `tmp`
     for (i = 0; i < argc; i++) {
@@ -1701,13 +1688,22 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   char cmdstr[BS_LINE];
   if (ST_MANDB == config.misc.system_type) {
     // `mandb` specific
+    wchar_t *gargs = L""; // `man` arguments for global apropos/whatis
+    
+    if (!config.layout.tui) {
+      if (config.misc.global_apropos)
+        gargs = L"--global-apropos";
+      else if (config.misc.global_whatis)
+        gargs = L"--all";
+    }
+
     if (local_file)
       snprintf(cmdstr, BS_LINE,
                "%s --warnings='!all' --local-file %ls 2>>/dev/null",
                config.misc.man_path, args);
     else
-      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' %ls 2>>/dev/null",
-               config.misc.man_path, args);
+      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' %ls %ls 2>>/dev/null",
+               config.misc.man_path, gargs, args);
   } else if (ST_MANDOC == config.misc.system_type) {
     // `mandoc` specific
     unsigned args_len = wcslen(args);     // length of `args`
