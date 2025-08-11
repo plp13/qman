@@ -8,6 +8,20 @@ respective O/S.
 The instructions in [BUILDING.md](BUILDING.md) should be sufficient for most
 Linux distributions. (Please pay attention to the note about `libbsd`.)
 
+### Red Hat Enterprise Linux 8 / Rocky Linux 8 / AlmaLinux 8
+
+The `mandb` system provided by these Linux distributions cannot parse arguments
+in the `<manual page>(<section>)` format (e.g. `ls(1)`). This prevents Qman from
+performing certain actions, such as opening links to other man pages.
+
+To work around this problem, add the following to your
+[config file](BUILDING.md#configuration):
+
+```
+[misc]
+system_type=freebsd
+```
+
 ### Void Linux
 
 Void uses `mandoc`, therefore you must add the following to your
