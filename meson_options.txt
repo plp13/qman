@@ -30,6 +30,12 @@ option('config',
   description: 'Install the configuration files'
 )
 
+option('libbsd',
+  type: 'feature',
+  value: 'disabled',
+  description: 'Use libbsd-overlay'
+)
+
 option('gzip',
   type: 'feature',
   value: 'auto',

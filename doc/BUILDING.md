@@ -39,6 +39,7 @@ Build dependencies:
     `pip` or `pipx`
 
 Optional dependencies:
+- `libbsd`: required by Linux systems with older versions of `glibc`
 - `zlib`: support for manual pages compressed with `gzip`
 - `bzip2`: support for manual pages compressed with `bzip2`
 - `liblzma`: support for manual pages compressed with `xz`
@@ -60,6 +61,15 @@ $ sudo meson install
 >
 > If using an older version of `meson`, you may need to substitute the
 > aforementioned `meson compile` command with `ninja`
+
+> **:bulb: Note**
+>
+> Qman uses certain BSD functions such as `wcslcpy()` and `wcslcat()` that, on
+> certain Linux systems, are provided by `libbsd` rather than by `libc`. This
+> causes compilation to fail due to undefined references to the functions.
+>
+> This problem can be solved by installing `libbsd` and adding
+> `-Dlibbsd=enabled` to `meson setup build/`
 
 > **:bulb: Note**
 >

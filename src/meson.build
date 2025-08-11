@@ -37,6 +37,10 @@ src = [
 deps = [
   dependency('ncursesw', required: true),
 ]
+if get_option('libbsd').enabled() or get_option('libbsd').auto()
+  libbsd = dependency('libbsd-overlay', required: true)
+  deps += [libbsd]
+endif
 if get_option('gzip').enabled() or get_option('gzip').auto()
   gzip = dependency('zlib', required: true)
   deps += [gzip]

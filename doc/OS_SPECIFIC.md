@@ -6,7 +6,7 @@ respective O/S.
 ## Linux
 
 The instructions in [BUILDING.md](BUILDING.md) should be sufficient for most
-Linux distributions.
+Linux distributions. (Please pay attention to the note about `libbsd`.)
 
 ### Void Linux
 
