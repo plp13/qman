@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Build the manual page from its Markdown source, using pandoc
 
 MD_FILE="qman.1.md"

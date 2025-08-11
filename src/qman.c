@@ -2,7 +2,7 @@
 
 #include "lib.h"
 
-// Where the magic happens
+// Where it all begins
 int main(int argc, char **argv) {
   init();
 

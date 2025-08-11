@@ -7,14 +7,27 @@
 #include "lib.h"
 
 //
-// Types
+// Compiler magic
 //
 
-// Memory allocation type
-typedef enum {
-  AT_STACK, // in the stack
-  AT_HEAP   // in the heap
-} alloc_type_t;
+// Macros used for silencing compiler warnings
+#ifdef __GNUC__
+#define CC_IGNORE_UNUSED_PARAMETER                                             \
+  _Pragma("GCC diagnostic push")                                               \
+      _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
+#define CC_IGNORE_FORMAT_TRUNCATION                                            \
+  _Pragma("GCC diagnostic push")                                               \
+      _Pragma("GCC diagnostic ignored \"-Wformat-truncation\"")
+#define CC_IGNORE_ENDS _Pragma("GCC diagnostic pop")
+#else
+#define CC_IGNORE_UNUSED_PARAMETER
+#define CC_IGNORE_FORMAT_TRUNCATION
+#define CC_IGNORE_ENDS
+#endif
+
+//
+// Types
+//
 
 // Array of bits
 typedef char *bitarr_t;
@@ -24,7 +37,8 @@ typedef char *bitarr_t;
 typedef struct {
   char *str;     // string version
   regex_t re;    // `regex_t` version
-  wchar_t *snpt; // a snippet of text that's always contained in matches
+  wchar_t *snpt; // a snippet of text that's always contained in matches (used
+                 // to improve performance, as `regexec()` is quite expensive)
 } full_regex_t;
 
 // A range
@@ -41,7 +55,7 @@ typedef enum {
   AR_LZMA   // xz
 } archive_type_t;
 
-// A 'fat' file pointer to a compressed archive, that supports multiple
+// A "fat" file pointer to a compressed archive, that supports multiple
 // compression types
 typedef struct {
   archive_type_t type; // archive type
@@ -59,8 +73,9 @@ typedef struct {
 //
 
 // Buffer sizes
-#define BS_SHORT 128 // length of a short array
-#define BS_LINE 1024 // length of an array that is suitable for a line of text
+#define BS_SHORT 128   // length of a short array
+#define BS_LINE 1024   // length of an array that is suitable for a line of text
+#define BS_LONG 131072 // length of a long array
 
 // Rudimentary logging, used for debugging
 #define F_LOG "./qman.log" // log file
@@ -158,11 +173,18 @@ typedef struct {
 // Functions
 //
 
-// Many functions call `winddown()` to fail gracefully in case of error
+// `x...()` functions, and also some other functions, will call `winddown()` to
+// fail gracefully in case of error
 
 // Perform the same function as `perror()` but, rather than printing the error
 // message, place it in `dst`
 void serror(wchar_t *dst, const wchar_t *s);
+
+// Fail and `winddown()` if `path` doesn't point to an executable file
+void is_executable(const char *path);
+
+// Fail and `winddown()` if `path` doesn't point to a readable file
+void is_readable(const char *path);
 
 // The purpose of all of all `x...()` functions is to fail gracefully using
 // `winddown()` whenever an error is detected. Otherwise, their behavior is
@@ -231,10 +253,10 @@ extern char *xstrdup(const char *s);
 // Safely call `wcsdup()`
 extern wchar_t *xwcsdup(const wchar_t *s);
 
-// `xwcstombs()`, `xmbstowcs()`, `xwcsncpy()` and `xstrncpy()` will always
-// terminate the string in `dest`, even when the length of `n` is exceeded. If
-// you don't want this (e.g. because you're converting/copying parts of
-// strings), use their vanilla counterparts instead.
+// `xwcstombs()` and `xmbstowcs()` will always terminate the string in `dest`,
+// even when the length of `n` is exceeded. If you don't want this (e.g. because
+// you're converting/copying parts of strings), use their vanilla counterparts
+// instead.
 
 // Safely call wcstombs()
 extern size_t xwcstombs(char *dest, const wchar_t *src, size_t n);
@@ -242,15 +264,10 @@ extern size_t xwcstombs(char *dest, const wchar_t *src, size_t n);
 // Safely call mbstowcs()
 size_t xmbstowcs(wchar_t *dest, const char *src, size_t n);
 
-// Safely call wcsncpy()
-wchar_t *xwcsncpy(wchar_t *dest, const wchar_t *src, size_t n);
-
-// Safely call strncpy()
-char *xstrncpy(char *dest, const char *src, size_t n);
-
 // Safely call `system(cmd)`, to execute `cmd` in a new shell. If `fail` is
-// true, and the return value of `system()` is non-zero, terminate.
-extern void xsystem(const char *cmd, bool fail);
+// true, and the return value of `system()` is non-zero, terminate. Otherwise
+// return said return value.
+extern int xsystem(const char *cmd, bool fail);
 
 // A safe version of `tempnam()`, that also creates the temporary file whose
 // name it returns, avoiding potential race conditions. Unlike with `tempnam()`,
@@ -321,9 +338,9 @@ extern void wunescape(wchar_t *src);
 extern unsigned wccnt(const wchar_t *hayst, wchar_t needle);
 
 // Replace all occurences of `needle` in `hayst` with `repl`. Place the result
-// in `dst`.
+// in `dst` (of size `dst_len`).
 extern void wcrepl(wchar_t *dst, const wchar_t *hayst, wchar_t needle,
-                   const wchar_t *repl);
+                   const wchar_t *repl, unsigned dst_len);
 
 // Insert newlines in `trgt` so that it word-wraps before it reaches `cols`
 // columns.
@@ -350,18 +367,18 @@ extern unsigned wmaxlen(const wchar_t *const *src, unsigned src_len);
 
 // Split `src` into a list of words, and place said list in `dst` (of maximum
 // length `dst_len`). Words can be separated by either whitespace or any of the
-// characters in `extras`. Return the number of words. This function modifies
-// `src`.
+// characters in `extras` (only by those in `extras` if `skipws` is true).
+// Return the number of words. This function modifies `src`.
 extern unsigned wsplit(wchar_t ***dst, unsigned dst_len, wchar_t *src,
-                       const wchar_t *extras);
+                       const wchar_t *extras, bool skipws);
 
 // Return the position of the first character in `src` that is not whitespace,
 // and not one of the characters in `extras`
 extern unsigned wmargend(const wchar_t *src, const wchar_t *extras);
 
 // Trim all characters at the end of `trgt` that are either whitespace or one of
-// the charactes in `extras`. (Trimming is done by inserting 0 or more NULL
-// characters at the end of `trgt`.) Return the new length of `trgt`.
+// the charactes in `extras`. Trimming is done by inserting 0 or more NULL
+// characters at the end of `trgt`. Return the new length of `trgt`.
 extern unsigned wmargtrim(wchar_t *trgt, const wchar_t *extras);
 
 // Apply any backspace characters in `trgt`
@@ -372,17 +389,18 @@ extern wchar_t *wcscasestr(const wchar_t *haystack, const wchar_t *needle);
 
 // Copy all data in `source` into `target`, line by line. Both `source` and
 // `target` must be text files. Return the number of lines copied.
-extern unsigned scopylines(FILE *source, FILE *target);
+extern unsigned scopylines(FILE *source, FILE *trgt);
 
 // Read a line from file `fp`, and place the result in `str` (without the
-// trailing newline). If the read was succesful, return the resulting string's
-// length. Otherwise, return -1.
+// trailing newline). `size` signifies the maximum number of characters to read.
+// If the read was succesful, return the resulting string's length. In case of
+// EOF, return -1.
 extern int sreadline(char *str, unsigned size, FILE *fp);
 
 // Split path environment variable `src` into a list of paths, placing them into
 // `dst` (of maximum length `dst_len`). Return the number of paths found. This
 // function modifes `src`.
-extern unsigned split_path(char ***dst, unsigned dst_len, char *src);
+extern unsigned split_path(char ***dst, char *src);
 
 // Initialize full regular expression `re`, using `str` and `snpt`
 extern void fr_init(full_regex_t *re, char *str, wchar_t *snpt);

@@ -1,33 +1,22 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.4.3 -- [see what's new](#new-in-this-version)
+Version 1.5.0 -- [see what's new](#new-in-this-version)
 
-## Screenshots
+![Screenhot -- Viewing a Manual Page](/screenshots/qman_man.png)
 
-Index page:
-![Index Page](/screenshots/qman_index.png)
+## Get started
 
-Opening a manual page:
-![Opening a Manual Page](/screenshots/qman_open.png)
-
-Viewing a manual page:
-![Viewing a Manual Page](/screenshots/qman_man.png)
-
-Using the table of contents:
-![Using the Table of Contents](/screenshots/qman_toc.png)
-
-Searching incrementally:
-![Searching incrementally](/screenshots/qman_search.png)
-
-Performing apropos:
-![Performing Apropos](/screenshots/qman_apropos.png)
-
-Online help:
-![Online Help](/screenshots/qman_help.png)
+- [Generic build instructions](doc/BUILDING.md) (works for most Linux distros)
+- [O/S specific instructions](doc/OS_SPECIFIC.md)
+- [Troubleshooting](doc/TROUBLESHOOTING.md)
+- [Packages](doc/PACKAGES.md)
+- [Configuration and themes](config/)
+- [Contributing](doc/CONTRIBUTING.md)
 
 ## Rationale
-Linux manual pages are lovely. They are concise, well-written, complete, and
+
+Unix manual pages are lovely. They are concise, well-written, complete, and
 downright useful. However, the standard way of accessing them from the
 command-line hasn't changed since the early days.
 
@@ -38,11 +27,13 @@ tiny, so that it can be used everywhere. For this reason, it's been written in
 plain C and has only minimal dependencies.
 
 ## Features
+
 - Index page that displays all manual pages available on the system, sorted
   alphabetically and organised by section
 - Pages for apropos and whatis results
 - Hyperlinks to other manual pages
 - Hyperlinks for URLs and email addresses
+- Hyperlinks to files or directories in the local filesystem
 - In-page hyperlinks
 - A table of contents for each manual page
 - Incremental search for manual pages
@@ -57,213 +48,60 @@ plain C and has only minimal dependencies.
 - Manual page
 
 ## Project status 
-All basic functionality has been completed. The software has been in use for
-over a year now, and should considered stable. Bugs may still arise, of course,
-and should be reported using the [issues](https://github.com/plp13/qman/issues)
-page.
+
+All basic functionality has been completed. The software has been in use since
+late 2023 and is considered stable. Bugs, of course, still happen. If you think
+you have found one, please open an
+[issue](https://github.com/plp13/qman/issues).
 
 ## New in this version
 
-Version 1.4.0 introduces the following:
-- A new configuration subsystem that provides an `include` directive, allowing
-  Qman's configuration to be broken into multiple files
-- A basic config file, `qman.conf`, together with a number of 'theme' config
-  files, are now installed by default at `/etc/xdg/qman`. This gives Qman a
-  handsome default look and feel.
-- `hinit` is no longer a dependency
-- Qman reconfigures itself on-the-fly upon receiving SIGUSR1. This is useful for
-  integrating with programs such as [darkman](https://darkman.whynothugo.nl/).
-- Support for manual pages compressed using `xz`
-- Improved clipboard support when using the `ghostty` terminal
-- Option `-A`/`--action` lets the user specify a program action to be performed
-  upon startup
-- Miscellaneous bug fixes and documentation updates
-
-Version 1.4.1 fixes a few bugs introduced with the on-the-fly reconfiguration
-feature, and a build failure when using `musl-libc`. It also includes some
-minor documentation updates.
-
-Version 1.4.2 fixes a compiler error with `gcc` 14.
-
-Version 1.4.3 fixes a potential crash when resizing the terminal window.
-
-> **:warning: Caution**
->
-> This version changes the location of Qman's system-wide config file to
-> `/etc/xdg/qman/qman.conf`, and the location of the user-specific config file
-> to `/${HOME}/.config/qman/qman.conf`
+Version 1.5.0 introduces the following:
+- Support for several different manual page systems. Historically Qman only
+  supported `mandb`, but this is no longer the case. The program now supports
+  the following manual page systems:
+  - **[mandb](https://gitlab.com/man-db/man-db)** - most Linux distributions
+  - **[mandoc](https://mandoc.bsd.lv/)** - Void Linux, Haiku, others?
+  - **[freebsd](https://www.freebsd.org/)** - FreeBSD
+  - **[darwin](https://www.apple.com/macos/)** - macOS
+- Hyperlinks to files or directories in the local filesystem (new config
+  option `viewer_path` can be used to specify the program for opening them)
+- New `[capabilities]` config file section enables users to disable several non-
+  core program features
+- Three new themes:
+  - `adwaita`, designed to match the colors of dark Adwaita desktops
+  - `adwaita-light`, designed to match the colors of light Adwaita desktops
+  - `modernity-light`, a generic light theme to complement `modernity`
+- Re-organized and extended documentation
+- Improved error messages, especially when it comes to errors caused by
+  misconfiguration or a missing manual pages database
+- Miscellaneous other bug fixes and minor features
 
 > **:bulb: Note**
 >
-> Users using custom config files might need to update them when a new version
-> of Qman comes out. For more information, please refer to Qman's manual page
-> and the documentation in
-> [config](https://github.com/plp13/qman/blob/main/config].
-
-## Downloading
-Clone the [main](https://github.com/plp13/qman/tree/main) branch, which contains
-Qman's latest stable version:
-
-```
-$ git clone -b main https://github.com/plp13/qman qman
-```
-
-[Tagged releases](https://github.com/plp13/qman/tags) with tarballs are also
-available, starting with version 1.2.1.
-
-## Dependencies
-Qman is written in plain C, and thus requires a compiler such as `gcc` or
-`clang`, together with the `meson` build system. `cog`, [a Python program for
-generating C code](https://pypi.org/project/cogapp/), is also required.
-
-The program's minimum library dependencies are `glibc` and `ncurses`.
-
-There are also a number of optional library dependencies:
-- `zlib`: support for manual pages compressed with `gzip`
-- `bzip2`: support for manual pages compressed with `bzip2`
-- `liblzma`: support for manual pages compressed with `xz`
-- `cunit`: used for unit testing
-
-Note that Qman is a front-end to GNU `man`, and therefore requires `man`,
-`apropos`, `whatis`, and `groff` to be installed. In order for it to make sense,
-a Unix manual pages database must also be present.
-
-## Building and installing
-Make sure that the minimum dependencies are installed, and do the following:
-
-```
-$ meson setup build/
-$ cd build/
-$ meson compile
-$ sudo meson install
-```
-
-> **:bulb: Note**
+> Users using custom config files may need to update them after a new release.
+> For more information, please refer to Qman's manual page and the documentation
+> in [config/README.md](config/README.md).
 >
-> If using an older version of `meson`, you may need to substitute the
-> aforementioned `meson compile` command with `ninja`
+> In version 1.5.0, config options `sections_on_top`, `hyphenate` and `justify`
+> have been moved to section `[capabilities]`.
 
-### Meson options
+## More screenshots
 
-If building for an embedded system, the following optional arguments can be
-passed to `meson setup`, to disable certain program features that are enabled by
-default:
-- `-Dman-pages=disabled`: do not install the manual page
-- `-Ddocs=disabled`: do not install any documentation
-- `-Dconfig=disabled`: do not install any configuration files
-- `-Dgzip=disabled`: disable support for manual pages compressed with `gzip`
-- `-Dbzip2=disabled`: disable support for manual pages compressed with `bzip2`
-- `-Dlzma=disabled`: disable support for manual pages compressed with `xz`
+Index page:
+![Index Page](/screenshots/qman_index.png)
 
-Similarly, the arguments below can be used to enable features that are disabled
-by default:
-- `-Dtests=enabled`: enable unit testing
+Opening a manual page using a pop-up:
+![Screenshot -- Opening a Manual Page](/screenshots/qman_open.png)
 
-Finally, the options below can be used to specify alternative installation
-paths:
-- `-Dconfigdir=...`: where to install configuration files
-- `-Ddocdir=...`: where to install documentation
+Using the table of contents:
+![Using the Table of Contents](/screenshots/qman_toc.png)
 
-### Packages
-Arch Linux: packages [qman](https://aur.archlinux.org/packages/qman) and
-[qman-git](https://aur.archlinux.org/packages/qman-git) (which follows
-[devel](https://github.com/plp13/qman/tree/devel) are available on AUR
+Searching incrementally:
+![Searching incrementally](/screenshots/qman_search.png)
 
-Gentoo Linux: package
-[app-misc/qman](https://gitweb.gentoo.org/repo/proj/guru.git/tree/app-misc/qman)
-is available on GURU
+Performing apropos:
+![Performing Apropos](/screenshots/qman_apropos.png)
 
-Packagers for other operating systems are always welcome. To get started, please
-look at [PACKAGING.md](PACKAGING.md), which provides guidance on how to build
-Qman on some popular Linux distributions.
-
-If you have created a package, let me know and I'll add it to this list.
-
-## Troubleshooting
-Always make sure you are up-to-date with the
-[main](https://github.com/plp13/qman/tree/main) branch. And, of course, RTFM:
-
-```
-$ qman qman
-```
-
-> **:question: What is the location of the configuration file?**
-
-`~/.config/qman/qman.conf` (user-specific) or `/etc/xdg/qman/qman.conf`
-(system-wide).
-
-> **:question: Calling `qman` without any parameters fails with message
-> `Apropos '': nothing appropriate`**
-
-Your system does not have a manual page index cache. This can be fixed by
-running (as root):
-
-```
-# mandb
-```
-
-> **:question:: Some pages don't appear in the index page, or in the dialogs
-> used for opening pages or performing whatis/apropos**
-
-Again, this is probably a `mandb` issue. Qman uses the `apropos` command to
-build the array of manual pages that these features use, and `apropos` relies on
-`mandb` being correctly configured and up-to-date. If it isn't, the
-array will be incomplete and/or inaccurate.
-
-Check your `man_db.conf` for correctness, and run `mandb` again as described
-above. You may also want build a script that automatically runs `mandb`
-after software updates, if your O/S distribution doesn't already do this.
-
-> **:question: I'm unable to copy text to the clipboard using the mouse, and/or
-> my mouse behaves erratically**
-
-Mouse support is experimental, and depends on features that are not fully
-implemented by all terminals. If you are having trouble with the mouse,
-you can disable mouse support by commenting out the following lines in your
-config file:
-
-```
-; [mouse]
-; enable=true
-```
-
-> **:question: Trying to open an HTTP or e-mail link causes the program to
-> terminate (or does nothing)**
-
-By default, Qman uses `xdg-open` to open such links. On desktop Linux systems,
-this is sufficient to open them using the default browser / email client. On
-other systems, you may need to specify alternative programs using the
-`browser_path` and `mailer_path` options in the `misc` section your config file,
-for example:
-
-```
-[misc]
-browser_path=/usr/bin/links
-mailer_path=/usr/bin/mutt
-```
-
-To avoid opening such links altogether, set both options to a command that does
-nothing, e.g. `/usr/bin/false`.
-
-> **:question: I don't like the way Qman looks**
-
-Use a different one of the supplied
-[themes](https://github.com/plp13/qman/config/themes). Or build your own (and
-open a pull request to to add it to the repository).
-
-> **:question: It doesn't work on my non-Linux O/S (MacOS, FreeBSD, etc.)**
-
-Qman is specific to Linux, built upon the GNU `man` toolchain. Ports to other
-operating systems are possible. However, they'd most probably require a
-non-trivial amount of effort. They'd also need to be done as separate forks.
-
-## Contributing
-If you wish to contribute to the program's development, clone the
-[devel](https://github.com/plp13/qman/tree/devel) branch:
-
-```
-$ git clone -b devel https://github.com/plp13/qman qman
-```
-
-You should also take a look at [TESTING.md](TESTING.md), which describes the
-procedures and tools we use for testing.
+Online help:
+![Online Help](/screenshots/qman_help.png)

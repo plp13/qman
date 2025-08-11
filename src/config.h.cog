@@ -10,6 +10,15 @@
 // Types
 //
 
+// System type
+typedef enum {
+  ST_ERROR,   // parse error
+  ST_MANDB,   // `mandb`
+  ST_MANDOC,  // `mandoc`
+  ST_FREEBSD, // FreeBSD `man`
+  ST_DARWIN   // macOS X `man`
+} systype_t;
+
 // A ternary bit, i.e. one that can take one of 3 values: `true`, `false`, or
 // `auto`
 typedef enum {
@@ -76,6 +85,8 @@ for section, options in config_def.config_def.items():
       cog.outl("  bool " + option + ";")
     elif type[0] == "int":
       cog.outl("  unsigned " + option + ";")
+    elif type[0] == "systype":
+      cog.outl("  systype_t " + option + ";")
     elif type[0] == "trit":
       cog.outl("  trit_t " + option + ";")
     elif type[0] == "string":

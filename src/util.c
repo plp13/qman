@@ -13,6 +13,29 @@ void serror(wchar_t *dst, const wchar_t *s) {
     swprintf(dst, BS_SHORT, L"%s", strerror(errno));
 }
 
+void is_executable(const char *path) {
+  struct stat sb;
+  if (stat(path, &sb) != 0 || !(sb.st_mode & S_IXUSR)) {
+    static wchar_t errpre[BS_LINE];
+    swprintf(errpre, BS_LINE, L"Cannot execute '%s'", path);
+    static wchar_t errmsg[BS_LINE];
+    serror(errmsg, errpre);
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+}
+
+void is_readable(const char *path) {
+  struct stat sb;
+  if (stat(path, &sb) != 0 || !(sb.st_mode & S_IRUSR)) {
+    static wchar_t errpre[BS_LINE];
+    swprintf(errpre, BS_LINE, L"Cannot read '%s'", path);
+    static wchar_t errmsg[BS_LINE];
+    serror(errmsg, errpre);
+    winddown(ES_OPER_ERROR, errmsg);
+  }
+
+}
+
 void *xcalloc(size_t nmemb, size_t size) {
   void *const res = calloc(nmemb, size);
 
@@ -26,7 +49,17 @@ void *xcalloc(size_t nmemb, size_t size) {
 }
 
 void *xreallocarray(void *ptr, size_t nmemb, size_t size) {
+#if defined(__GLIBC__) && (defined(_DEFAULT_SOURCE) || defined(_GNU_SOURCE))
   void *const res = reallocarray(ptr, nmemb, size);
+#else
+  size_t total = nmemb * size;
+  void *res;
+  if (0 != nmemb && total / nmemb != size) {
+    // Overflow!
+    res = NULL;
+  } else
+    res = realloc(ptr, total);
+#endif
 
   if (NULL == res) {
     static wchar_t errmsg[BS_SHORT];
@@ -41,8 +74,10 @@ FILE *xpopen(const char *command, const char *type) {
   FILE *const pipe = popen(command, type);
 
   if (NULL == pipe) {
-    static wchar_t errmsg[BS_SHORT];
-    serror(errmsg, L"Unable to popen()");
+    static wchar_t errpre[BS_LINE];
+    swprintf(errpre, BS_LINE, L"Unable to popen('%s')", command);
+    static wchar_t errmsg[BS_LINE];
+    serror(errmsg, errpre);
     winddown(ES_OPER_ERROR, errmsg);
   }
 
@@ -63,11 +98,15 @@ int xpclose(FILE *stream) {
 
 #ifdef QMAN_GZIP
 gzFile xgzopen(const char *path, const char *mode) {
+  is_readable(path);
+
   gzFile gzfp = gzopen(path, mode);
 
   if (NULL == gzfp) {
-    static wchar_t errmsg[BS_SHORT];
-    serror(errmsg, L"Unable to gzopen()");
+    static wchar_t errpre[BS_LINE];
+    swprintf(errpre, BS_LINE, L"Unable to gzopen('%s')", path);
+    static wchar_t errmsg[BS_LINE];
+    serror(errmsg, errpre);
     winddown(ES_OPER_ERROR, errmsg);
   }
 
@@ -90,11 +129,15 @@ int xgzclose(gzFile file) {
 #endif
 
 FILE *xfopen(const char *pathname, const char *mode) {
+  is_readable(pathname);
+
   FILE *const file = fopen(pathname, mode);
 
   if (NULL == file) {
-    static wchar_t errmsg[BS_SHORT];
-    serror(errmsg, L"Unable to fopen()");
+    static wchar_t errpre[BS_LINE];
+    swprintf(errpre, BS_LINE, L"Unable to xfopen('%s')", pathname);
+    static wchar_t errmsg[BS_LINE];
+    serror(errmsg, errpre);
     winddown(ES_OPER_ERROR, errmsg);
   }
 
@@ -216,14 +259,14 @@ size_t xfwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
 char *xbasename(const char *path) {
   static char pathc[BS_LINE];
 
-  xstrncpy(pathc, path, BS_LINE);
+  strlcpy(pathc, path, BS_LINE);
   return basename(pathc);
 }
 
 char *xdirname(const char *path) {
   static char pathc[BS_LINE];
 
-  xstrncpy(pathc, path, BS_LINE);
+  strlcpy(pathc, path, BS_LINE);
   return dirname(pathc);
 }
 
@@ -283,22 +326,7 @@ size_t xmbstowcs(wchar_t *dest, const char *src, size_t n) {
   return res;
 }
 
-wchar_t *xwcsncpy(wchar_t *dest, const wchar_t *src, size_t n) {
-  wchar_t *res = wcsncpy(dest, src, n);
-  dest[n - 1] = L'\0';
-
-  return res;
-}
-
-char *xstrncpy(char *dest, const char *src, size_t n) {
-  char *res = strncpy(dest, src, n);
-  if (strlen(src) >= n)
-    dest[n - 1] = '\0';
-
-  return res;
-}
-
-void xsystem(const char *cmd, bool fail) {
+int xsystem(const char *cmd, bool fail) {
   int res = system(cmd);
 
   if (fail && 0 != res) {
@@ -306,6 +334,8 @@ void xsystem(const char *cmd, bool fail) {
     swprintf(errmsg, BS_SHORT, L"Failed to execute: %s", cmd);
     winddown(ES_CHILD_ERROR, errmsg);
   }
+
+  return res;
 }
 
 char *xtempnam(const char *dir, const char *pfx) {
@@ -322,7 +352,7 @@ char *xtempnam(const char *dir, const char *pfx) {
   for (unsigned i = 0; i < strlen(pfx); i++)
     if ('X' == pfx[i])
       winddown(ES_OPER_ERROR, L"Unable to xtempnam(): prefix contains 'X'");
-  if (strlen(dir) + strlen(pfx) + 2 > BS_SHORT)
+  if (strlen(dir) + strlen(pfx) + 8 > BS_SHORT)
     winddown(ES_OPER_ERROR, L"Unable to xtempnam(): prefix too long");
 
   fn = salloc(BS_SHORT);
@@ -688,19 +718,19 @@ unsigned wccnt(const wchar_t *hayst, wchar_t needle) {
 }
 
 void wcrepl(wchar_t *dst, const wchar_t *hayst, wchar_t needle,
-            const wchar_t *repl) {
+            const wchar_t *repl, unsigned dst_len) {
   const wchar_t *const hayst_start = (wchar_t *)hayst;
   unsigned offset = 0, repl_cnt = 0;
   const unsigned repl_len = wcslen(repl);
 
-  wcscpy(dst, hayst);
+  wcslcpy(dst, hayst, dst_len);
 
   do {
     if (offset == 0)
       hayst = wcschr(hayst, needle);
     else {
-      wcscpy(&dst[offset], repl);
-      wcscpy(&dst[offset + repl_len], hayst + 1);
+      wcslcpy(&dst[offset], repl, dst_len - offset);
+      wcslcpy(&dst[offset + repl_len], hayst + 1, dst_len - offset - repl_len);
       repl_cnt++;
       hayst = wcschr(hayst + 1, needle);
     }
@@ -725,24 +755,24 @@ void wwrap(wchar_t *trgt, unsigned cols) {
   }
 }
 
-bool wcasememberof(const wchar_t *const *hayst, const wchar_t *needle,
-                   unsigned hayst_len) {
-  unsigned i;
-
-  for (i = 0; i < hayst_len; i++) {
-    if (0 == wcscasecmp(hayst[i], needle))
-      return true;
-  }
-
-  return false;
-}
-
 bool wmemberof(const wchar_t *const *hayst, const wchar_t *needle,
                unsigned hayst_len) {
   unsigned i;
 
   for (i = 0; i < hayst_len; i++) {
     if (0 == wcscmp(hayst[i], needle))
+      return true;
+  }
+
+  return false;
+}
+
+bool wcasememberof(const wchar_t *const *hayst, const wchar_t *needle,
+                   unsigned hayst_len) {
+  unsigned i;
+
+  for (i = 0; i < hayst_len; i++) {
+    if (0 == wcscasecmp(hayst[i], needle))
       return true;
   }
 
@@ -758,6 +788,7 @@ void wsort(wchar_t **trgt, unsigned trgt_len, bool rev) {
   if (0 == trgt_len)
     return;
 
+  // This is a trivial bubble sort
   while (!sorted) {
     sorted = true;
     for (i = 0; i < trgt_len - 1; i++) {
@@ -791,7 +822,7 @@ unsigned wmaxlen(const wchar_t *const *src, unsigned src_len) {
 }
 
 unsigned wsplit(wchar_t ***dst, unsigned dst_len, wchar_t *src,
-                const wchar_t *extras) {
+                const wchar_t *extras, bool skipws) {
   wchar_t **res = *dst; // results
   unsigned res_cnt = 0; // number of results
   bool ws = true;    // whether current character is whitespace or in `extras`
@@ -805,7 +836,7 @@ unsigned wsplit(wchar_t ***dst, unsigned dst_len, wchar_t *src,
     pws = ws;
 
     ws = false;
-    if (iswspace(src[i]))
+    if (!skipws && iswspace(src[i]))
       ws = true;
     for (j = 0; L'\0' != extras[j]; j++)
       if (src[i] == extras[j])
@@ -937,7 +968,7 @@ unsigned scopylines(FILE *source, FILE *trgt) {
 }
 
 int sreadline(char *str, unsigned size, FILE *fp) {
-  xfgets(str, BS_LINE, fp);
+  xfgets(str, size, fp);
   if (feof(fp)) {
     str[0] = L'\0';
     return -1;
@@ -950,7 +981,7 @@ int sreadline(char *str, unsigned size, FILE *fp) {
   return nlc - str;
 }
 
-unsigned split_path(char ***dst, unsigned dst_len, char *src) {
+unsigned split_path(char ***dst, char *src) {
   char **res = *dst;    // results
   unsigned res_cnt = 0; // number of results
   unsigned pos = 0;     // starting position of last path found
@@ -1040,4 +1071,5 @@ void loggit(const char *msg) {
 
   time(&now);
   fwprintf(lfp, L"[%s] %s\n", strtok(ctime(&now), "\n"), msg);
+  fflush(lfp);
 }

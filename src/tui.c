@@ -6,11 +6,6 @@
 // Global variables
 //
 
-// Set by `sigusr1_reset()` to true if terminfo reset strings were sent to the
-// terminal. `winddown()` needs to be aware of this, in order to perform
-// additional cleanups.
-bool _terminfo_reset = false;
-
 tcap_t tcap;
 
 WINDOW *wmain = NULL;
@@ -30,8 +25,8 @@ mouse_t mouse_status = MS_EMPTY;
 //
 
 // Helper of `draw_page()`. Set `col` to the appropriate color for link number
-// `linkno` of line number `lineno`. Consider the `type` of the link, and also
-// query `flink` to check whether it's focused.
+// `linkno` of line number `lineno`. The color depends on the link's `type`, and
+// on the value of `flink` (since the focused link is highlighted).
 #define set_link_col(lineno, linkno, type)                                     \
   if (flink.ok && flink.line == lineno && flink.link == linkno) {              \
     switch (type) {                                                            \
@@ -43,6 +38,9 @@ mouse_t mouse_status = MS_EMPTY;
       break;                                                                   \
     case LT_EMAIL:                                                             \
       col = config.colours.link_email_f;                                       \
+      break;                                                                   \
+    case LT_FILE:                                                              \
+      col = config.colours.link_file_f;                                        \
       break;                                                                   \
     case LT_LS:                                                                \
     default:                                                                   \
@@ -58,6 +56,9 @@ mouse_t mouse_status = MS_EMPTY;
       break;                                                                   \
     case LT_EMAIL:                                                             \
       col = config.colours.link_email;                                         \
+      break;                                                                   \
+    case LT_FILE:                                                              \
+      col = config.colours.link_file;                                          \
       break;                                                                   \
     case LT_LS:                                                                \
     default:                                                                   \
@@ -97,6 +98,10 @@ mouse_t mouse_status = MS_EMPTY;
 
 // Helper of `tui_toc()`. Search the current page for a line whose text matches
 // the text of the `focus`ed entry in `toc`.
+//
+// This function calls `ls_jump()`. To increase accuracy, it tries to set its
+// `trgt_prev` argument to the section or subsection that preceeds the `focus`ed
+// entry in `toc`.
 #define toc_jump(toc, focus)                                                   \
   int prev;                                                                    \
   for (prev = MAX(0, focus - 1); prev >= 0; prev--)                            \
@@ -111,14 +116,14 @@ mouse_t mouse_status = MS_EMPTY;
 #define ls_jump(trgt, trgt_prev)                                               \
   {                                                                            \
     wchar_t trgt_clone[BS_LINE];                                               \
-    wcscpy(trgt_clone, trgt);                                                  \
+    wcslcpy(trgt_clone, trgt, BS_LINE);                                        \
     int best;                                                                  \
     if (NULL == trgt_prev)                                                     \
       best = 0;                                                                \
     else {                                                                     \
       wchar_t trgt_prev_clone[BS_LINE];                                        \
       /* ?/: is necessary to avoid a spurious -Wnonnull compiler warning */    \
-      wcscpy(trgt_prev_clone, NULL != trgt_prev ? trgt_prev : L"");            \
+      wcslcpy(trgt_prev_clone, NULL != trgt_prev ? trgt_prev : L"", BS_LINE);  \
       best = ls_discover(trgt_prev_clone, 0);                                  \
     }                                                                          \
     best = ls_discover(trgt_clone, best);                                      \
@@ -151,7 +156,7 @@ void sigusr1_reset() {
     if ((s = tigetstr("rs3")) != NULL)
       putp(s);
     fflush(stdout);
-    _terminfo_reset = true;
+    config.misc.terminfo_reset = true;
     // The above might put the terminal in cooked mode and/or enable echo
     raw();
     noecho();
@@ -160,7 +165,9 @@ void sigusr1_reset() {
 
 // Re-configure the program. `init_tui()` makes sure this is called whenever
 // `SIGUSR1` is received.
+CC_IGNORE_UNUSED_PARAMETER
 void sigusr1_handler(int signum) {
+  CC_IGNORE_ENDS
   // Don't attempt attempt to reconfigure on ancient terminals
   if (tcap.colours < 256 || tcap.term == strstr(tcap.term, "rxvt")) {
     return;
@@ -170,6 +177,7 @@ void sigusr1_handler(int signum) {
 
   // Reconfigure
   configure();
+  late_init();
   init_tui_tcap();
   if (-1 == config.tcap.colours || t_auto == config.tcap.rgb ||
       t_auto == config.tcap.unicode || t_auto == config.tcap.clipboard)
@@ -199,7 +207,7 @@ int ls_discover(wchar_t *trgt, unsigned sln) {
   unsigned max_score = 0;        // maximum score
   unsigned i, j;                 // iterators
 
-  trgt_words_len = wsplit(&trgt_words, BS_SHORT, trgt, NULL);
+  trgt_words_len = wsplit(&trgt_words, BS_SHORT, trgt, NULL, false);
   if (0 == trgt_words_len)
     return -1;
 
@@ -210,7 +218,7 @@ int ls_discover(wchar_t *trgt, unsigned sln) {
   j = 0;
   for (ln = sln; ln < page_len && j < BS_LINE; ln++) {
     wchar_t text[BS_LINE]; // current line text
-    wcscpy(text, page[ln].text);
+    wcslcpy(text, page[ln].text, BS_LINE);
     if (wcsstr(text, trgt_words[0]) == &text[wmargend(text, NULL)]) {
       // In order for a line to be a candidate, it must begin with the first
       // word in `trgt`
@@ -220,7 +228,7 @@ int ls_discover(wchar_t *trgt, unsigned sln) {
       // exactly match the words in `trgt`. An extra point is added to said
       // score if the last word in `trgt` matches just the beginning of its
       // corresponding word in `cand`
-      cand_words_len = wsplit(&cand_words, BS_SHORT, text, NULL);
+      cand_words_len = wsplit(&cand_words, BS_SHORT, text, NULL, false);
       for (i = 0; i < MIN(trgt_words_len, cand_words_len); i++)
         if (0 == wcscmp(cand_words[i], trgt_words[i]))
           line_scores[j] += 2;
@@ -252,8 +260,8 @@ int ls_discover(wchar_t *trgt, unsigned sln) {
   return max_no;
 }
 
-// Helper of `tui_sp_open()`. Print quick search results in `wimm` as the user
-// types. If the user has selected a result using arrow keys or the mouse,
+// Helper of `tui_sp_open()`. Print incremental search results in `wimm` as the
+// user types. If the user has selected a result using arrow keys or the mouse,
 // highlight it and return its `ident` (if `qident` is true) or `page` (if
 // `quident` is false). Otherwise return NULL. The string typed so far is
 // provided in `needle`. `last` contains the last return value of
@@ -267,17 +275,31 @@ wchar_t *aw_quick_search(wchar_t *needle, int last, bool qident) {
   static unsigned last_needle_len = 0;   // length of last `needle` encountered
   unsigned *res =
       aalloca(lines, unsigned); // search results as positions in `aw_all`
-  unsigned pos = 0;             // current position in `aw_all`
+  unsigned pos;                 // current position in `aw_all`
   unsigned ln = 0;              // current line
   wchar_t *ret = NULL;
 
-  // Search `aw_all` for `needle`
-  pos = aprowhat_search(needle, aw_all, aw_all_len, pos);
+  // Search `aw_all` for pages beginning with `needle`, and add them into `res`
+  pos = 0;
+  pos = aprowhat_search(needle, aw_all, aw_all_len, pos, false);
   while (-1 != pos && ln < lines) {
     res[ln] = pos;
-    pos = aprowhat_search(needle, aw_all, aw_all_len, ++pos);
+    pos = aprowhat_search(needle, aw_all, aw_all_len, ++pos, false);
     ln++;
   }
+
+  // If there's space, also search for pages that contain `needle`, and add them
+  // to `res` as well (only if `config.misc.sp_substrings` is true)
+  if (config.capabilities.sp_substrings) {
+    pos = 0;
+    pos = aprowhat_search(needle, aw_all, aw_all_len, pos, true);
+    while (-1 != pos && ln < lines) {
+      res[ln] = pos;
+      pos = aprowhat_search(needle, aw_all, aw_all_len, ++pos, true);
+      ln++;
+    }
+  }
+
   lines = ln; // `lines` becomes exact no. of lines to display
 
   // Update `focus`, if the user has used the arrow keys or mouse to highlight a
@@ -318,16 +340,18 @@ wchar_t *aw_quick_search(wchar_t *needle, int last, bool qident) {
   for (ln = 0; ln < lines; ln++) {
     change_colour(wimm, config.colours.sp_text);
     if (focus == ln) {
-      if (qident) {
+      if (qident)
         ret = aw_all[res[ln]].ident;
-        swprintf(tmp, width - 3, L"%-*ls", width - 4,
-                 &aw_all[res[ln]].ident[needle_len]);
-      } else {
+      else
         ret = aw_all[res[ln]].page;
-        swprintf(tmp, width - 3, L"%-*ls", width - 4,
-                 &aw_all[res[ln]].page[needle_len]);
+      if (wcsstr(ret, needle) == ret) {
+        swprintf(tmp, width - 3, L"%-*ls", width - 4, &ret[needle_len]);
+        mvwaddnwstr(wimm, 2, 2 + needle_len, tmp, width - 4 - needle_len);
+      } else {
+        swprintf(tmp, width - 3, L"  %ls %-*ls", config.chars.arrow_lr,
+                 width - 8, ret);
+        mvwaddnwstr(wimm, 2, 2 + needle_len, tmp, width - 4 - needle_len);
       }
-      mvwaddnwstr(wimm, 2, 2 + needle_len, tmp, width - 4 - needle_len);
       change_colour(wimm, config.colours.sp_text_f);
     }
     swprintf(tmp, width - 3, L"%-*ls %-*ls", ident_len, aw_all[res[ln]].ident,
@@ -462,7 +486,7 @@ void draw_toc(toc_entry_t *toc, unsigned toc_len, unsigned top,
 }
 
 //
-// Functions (utility)
+// Functions (generic)
 //
 
 void init_tui() {
@@ -548,6 +572,8 @@ void init_tui_colours() {
     init_colour(config.colours.link_http_f);
     init_colour(config.colours.link_email);
     init_colour(config.colours.link_email_f);
+    init_colour(config.colours.link_file);
+    init_colour(config.colours.link_file_f);
     init_colour(config.colours.link_ls);
     init_colour(config.colours.link_ls_f);
     init_colour(config.colours.sb_line);
@@ -942,8 +968,8 @@ void draw_sbar(unsigned lines_len, unsigned lines_top) {
 }
 
 void draw_stat(const wchar_t *mode, const wchar_t *name, unsigned lines_len,
-               unsigned lines_pos, const wchar_t *prompt, const wchar_t *help,
-               const wchar_t *em) {
+               unsigned lines_pos, unsigned column, const wchar_t *prompt,
+               const wchar_t *help, const wchar_t *em) {
   werase(wstat);
   wbkgd(wstat, COLOR_PAIR(config.colours.stat_input_prompt.pair));
 
@@ -964,8 +990,7 @@ void draw_stat(const wchar_t *mode, const wchar_t *name, unsigned lines_len,
   swprintf(tmp, BS_LINE, L" %-*ls", name_width - 1, name);
   change_colour(wstat, config.colours.stat_indic_name);
   mvwaddnwstr(wstat, 0, name_col, tmp, name_width);
-  swprintf(tmp2, BS_LINE, L"%d:%d /%d", lines_pos,
-           page_left / config.layout.tabstop, lines_len);
+  swprintf(tmp2, BS_LINE, L"%d:%d /%d", lines_pos, column, lines_len);
   swprintf(tmp, BS_LINE, L"%*ls ", loc_width - 1, tmp2);
   change_colour(wstat, config.colours.stat_indic_loc);
   mvwaddnwstr(wstat, 0, loc_col, tmp, loc_width);
@@ -1305,6 +1330,10 @@ void editcopy(wchar_t *src) {
       FILE *pp = xpopen("/usr/bin/wl-copy", "w");
       fputs(srcs, pp);
       xpclose(pp);
+    } else if (stat("/usr/bin/pbcopy", &sb) == 0 && sb.st_mode & S_IXUSR) {
+      FILE *pp = xpopen("/usr/bin/pbcopy", "w");
+      fputs(srcs, pp);
+      xpclose(pp);
     }
   }
 
@@ -1334,7 +1363,8 @@ void winddown_tui() {
   }
 
   endwin();
-  if (_terminfo_reset) {
+
+  if (config.misc.terminfo_reset) {
     char *s;
     if ((s = tigetstr("rs1")) != NULL)
       putp(s);
@@ -1367,7 +1397,8 @@ void tui_redraw() {
   swprintf(help, BS_SHORT, L"Press %ls for help or %ls to quit",
            ch2name(config.keys[PA_HELP][0]), ch2name(config.keys[PA_QUIT][0]));
   draw_stat(request_type_str(history[history_cur].request_type), page_title,
-            page_len, pos + 1, L":", help, NULL);
+            page_len, pos + 1, page_left / config.layout.tabstop + 1, L":",
+            help, NULL);
 }
 
 void tui_error(wchar_t *em) {
@@ -1378,7 +1409,8 @@ void tui_error(wchar_t *em) {
     pos = page_top;
 
   draw_stat(request_type_str(history[history_cur].request_type), page_title,
-            page_len, pos + 1, L":", NULL, em);
+            page_len, pos + 1, page_left / config.layout.tabstop + 1, L":",
+            NULL, em);
 
   cbeep();
 }
@@ -1546,6 +1578,8 @@ bool tui_end() {
 }
 
 bool tui_open() {
+  int res; // External handler subprocess exit code
+
   error_on_invalid_flink;
 
   // Open the link
@@ -1553,8 +1587,8 @@ bool tui_open() {
   case LT_MAN:
     // The link is a manual page; add a new page request to show it
     {
-      wchar_t trgt[BS_SHORT];
-      swprintf(trgt, BS_SHORT, L"'%ls'",
+      wchar_t trgt[BS_LINE];
+      swprintf(trgt, BS_LINE, L"'%ls'",
                page[page_flink.line].links[page_flink.link].trgt);
       history_push(RT_MAN, trgt);
       populate_page();
@@ -1575,32 +1609,65 @@ bool tui_open() {
   case LT_HTTP:
     // The link is http(s); open it with the external web browser
     {
-      char trgt[BS_SHORT];
-      snprintf(trgt, BS_SHORT, "%s '%ls' 2>>/dev/null",
-               config.misc.browser_path,
+      char trgt[BS_LINE];
+      snprintf(trgt, BS_LINE, "%s '%ls' 2>>/dev/null", config.misc.browser_path,
                page[page_flink.line].links[page_flink.link].trgt);
 
       // Shell out
-      xsystem(trgt, true);
+      res = xsystem(trgt, false);
 
       // Re-initialize ncurses (unless using xdg-open)
       if (config.misc.reset_after_http)
         tui_reset;
+
+      // If web browser failed, show error
+      if (0 != res) {
+        tui_error(L"Unable to open HTTP link");
+        return false;
+      }
     }
     break;
   case LT_EMAIL:
     // The link is an e-mail address; open it with the external mailer
     {
-      char trgt[BS_SHORT];
-      snprintf(trgt, BS_SHORT, "%s '%ls' 2>>/dev/null", config.misc.mailer_path,
+      char trgt[BS_LINE];
+      snprintf(trgt, BS_LINE, "%s '%ls' 2>>/dev/null", config.misc.mailer_path,
                page[page_flink.line].links[page_flink.link].trgt);
 
       // Shell out
-      xsystem(trgt, true);
+      res = xsystem(trgt, false);
 
       // Re-initialize ncurses
       if (config.misc.reset_after_email)
         tui_reset;
+
+      // If mailer failed, show error
+      if (0 != res) {
+        tui_error(L"Unable to open email link");
+        return false;
+      }
+    }
+    break;
+  case LT_FILE:
+    // The link is a file in the local filesystem; open it with the external
+    // file viewer
+    {
+      char trgt[BS_LINE];
+      snprintf(trgt, BS_LINE, "%s '%ls' 2>>/dev/null", config.misc.viewer_path,
+               page[page_flink.line].links[page_flink.link].trgt);
+
+      // Shell out
+      res = xsystem(trgt, false);
+
+      // Re-initialize ncurses
+      if (config.misc.reset_after_viewer)
+        tui_reset;
+
+      // If external viewer failed, show error
+      if (0 != res) {
+        tui_error(L"Unable to open file link");
+        return false;
+      }
     }
     break;
   case LT_LS:
@@ -1619,7 +1686,7 @@ bool tui_open_apropos() {
   error_on_invalid_flink;
 
   if (LT_MAN == page[page_flink.line].links[page_flink.link].type) {
-    wcscpy(wtrgt, page[page_flink.line].links[page_flink.link].trgt);
+    wcslcpy(wtrgt, page[page_flink.line].links[page_flink.link].trgt, BS_LINE);
     wtrgt_stripped = wcstok(wtrgt, L"()", &buf);
 
     if (NULL == wtrgt_stripped) {
@@ -1655,7 +1722,7 @@ bool tui_open_whatis() {
   error_on_invalid_flink;
 
   if (LT_MAN == page[page_flink.line].links[page_flink.link].type) {
-    wcscpy(wtrgt, page[page_flink.line].links[page_flink.link].trgt);
+    wcslcpy(wtrgt, page[page_flink.line].links[page_flink.link].trgt, BS_LINE);
     wtrgt_stripped = wcstok(wtrgt, L"()", &buf);
 
     if (NULL == wtrgt_stripped) {
@@ -1687,7 +1754,7 @@ bool tui_open_whatis() {
 bool tui_sp_open(request_type_t rt) {
   wchar_t inpt[BS_SHORT - 2] = L""; // string typed by user
   wchar_t trgt[BS_SHORT]; // final string that specifies the page to be opened
-  wchar_t *awqsr; // quick search result returned from `aw_quick_search()`
+  wchar_t *awqsr; // incremental search result returned from `aw_quick_search()`
   wchar_t help[BS_SHORT]; // help message
   swprintf(help, BS_SHORT,
            L"%ls: query string   %ls/%ls/%ls: select   %ls/%ls: abort",
@@ -1697,14 +1764,15 @@ bool tui_sp_open(request_type_t rt) {
 
   // Draw immediate window and title bar
   if (RT_MAN == rt)
-    draw_imm(true, true, config.colours.sp_text, L"Manual page to open?", help);
+    draw_imm(true, true, config.colours.sp_input, L"Manual page to open?",
+             help);
   else if (RT_APROPOS == rt)
-    draw_imm(true, true, config.colours.sp_text, L"Apropos what?", help);
+    draw_imm(true, true, config.colours.sp_input, L"Apropos what?", help);
   else if (RT_WHATIS == rt)
-    draw_imm(true, true, config.colours.sp_text, L"Whatis what?", help);
+    draw_imm(true, true, config.colours.sp_input, L"Whatis what?", help);
   doupdate();
 
-  // Get input (and show quick search results as the user types)
+  // Get input (and show incremental search results as the user types)
   awqsr = aw_quick_search(inpt, 0, RT_MAN == rt);
   doupdate();
   change_colour(wimm, config.colours.sp_input);
@@ -2086,7 +2154,8 @@ bool tui_search(bool back) {
 
   // Get search string
   swprintf(pout, BS_SHORT, prompt);
-  draw_stat(L"SEARCH", page_title, page_len, page_top + 1, pout, help, NULL);
+  draw_stat(L"SEARCH", page_title, page_len, page_top + 1,
+            page_left / config.layout.tabstop + 1, pout, help, NULL);
   got_inpt = get_str_next(wstat, 1, 1, inpt, MIN(BS_SHORT - 3, width));
 
   // As the user types something...
@@ -2116,7 +2185,8 @@ bool tui_search(bool back) {
     } else {
       // Input is not empty; populate `results` and `results_len` from input,
       // and set `my_top` to the location of the first match
-      results_len = search(&results, inpt, page, page_len, true);
+      results_len = search(&results, inpt, page, page_len,
+                           config.capabilities.icase_search);
       if (back) {
         const int tmp = search_prev(results, results_len, my_top);
         my_top = -1 == tmp ? my_top : tmp;
@@ -2137,11 +2207,13 @@ bool tui_search(bool back) {
     draw_sbar(page_len, my_top);
     swprintf(pout, BS_SHORT, L"%ls%ls", prompt, inpt);
     if (0 == results_len) {
-      draw_stat(L"SEARCH", page_title, page_len, my_top + 1, pout, NULL,
+      draw_stat(L"SEARCH", page_title, page_len, my_top + 1,
+                page_left / config.layout.tabstop + 1, pout, NULL,
                 L"Search string not found");
       cbeep();
     } else {
-      draw_stat(L"SEARCH", page_title, page_len, my_top + 1, pout, help, NULL);
+      draw_stat(L"SEARCH", page_title, page_len, my_top + 1,
+                page_left / config.layout.tabstop + 1, pout, help, NULL);
     }
     doupdate();
 
@@ -2174,7 +2246,8 @@ bool tui_search_next(bool back) {
 
   // Store the previous/next search result into `my_top`
   if (back)
-    my_top = search_prev(results, results_len, MAX(0, page_top - 1));
+    my_top = search_prev(results, results_len,
+                         MAX(0, page_top > 0 ? page_top - 1 : 0));
   else
     my_top = search_next(results, results_len, MIN(page_len - 1, page_top + 1));
 
@@ -2250,11 +2323,11 @@ bool tui_help() {
     // Produce `keys_names[i]` and update `keys_names_max`, using
     // `cur_key_names`
     keys_names[i] = walloca(BS_SHORT);
-    wcscpy(keys_names[i], L"");
+    wcslcpy(keys_names[i], L"", BS_SHORT);
     for (j = 0; NULL != cur_key_names[j]; j++) {
       if (0 != j)
-        wcscat(keys_names[i], L", ");
-      wcscat(keys_names[i], cur_key_names[j]);
+        wcslcat(keys_names[i], L", ", BS_SHORT);
+      wcslcat(keys_names[i], cur_key_names[j], BS_SHORT);
       cur_key_names[j] = NULL;
     }
     keys_names_max = MAX(keys_names_max, wcslen(keys_names[i]));
@@ -2383,7 +2456,7 @@ bool tui_mouse_click(short y, short x) {
   // clear the selection
   if (mark.enabled) {
     wchar_t *mt;
-    get_mark(&mt, mark, page, page_len);
+    get_mark(&mt, mark, page);
     editcopy(mt);
     free(mt);
 
@@ -2500,6 +2573,12 @@ void tui() {
   swprintf(errmsg, BS_SHORT, L"Invalid keystroke; press %ls for help",
            ch2name(config.keys[PA_HELP][0]));
 
+  // Reset config options that get set by command-line options but are ignored
+  // when using the TUI
+  config.misc.cli_force_color = false;
+  config.misc.global_whatis = false;
+  config.misc.global_apropos = false;
+
   // Initialize TUI
   init_tui();
   configure();
@@ -2511,6 +2590,7 @@ void tui() {
     // value might depend on terminal capabilities
     configure();
   }
+  late_init();
   init_tui_colours();
   init_tui_mouse();
   termsize_changed();

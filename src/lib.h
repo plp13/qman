@@ -5,7 +5,6 @@
 #define LIB_H
 
 #include <assert.h>
-#include <alloca.h>
 #include <errno.h>
 #include <getopt.h>
 #include <stdbool.h>
@@ -13,18 +12,22 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
+#include <ctype.h>
 #include <libgen.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/param.h>
+#include <sys/ioctl.h>
 #include <locale.h>
 #include <string.h>
+#include <wctype.h>
 #include <wchar.h>
 #include <time.h>
 #include <regex.h>
 #include <curses.h>
 #include <term.h>
+
 #undef lines
 
 #ifdef QMAN_GZIP
@@ -39,9 +42,9 @@
 #include <lzma.h>
 #endif
 
-#define _GNU_SOURCE
+#if defined(__GLIBC__)
 extern char *program_invocation_short_name;
-#undef _GNU_SOURCE
+#endif
 
 #include "util.h"
 #include "eini.h"

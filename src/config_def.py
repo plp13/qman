@@ -21,6 +21,7 @@ Where:
     - option: one of the options in said section (a string)
     - type: the option's type. One of the following strings:
         - "bool": a boolean
+        - "systype": a system type (one of: "gnu", "mandoc", "freebsd")
         - "trit": a ternary ("true", "false", or "auto")
         - "int": an integer
         - "string": an 8-bit string
@@ -68,7 +69,8 @@ config_def = {
         "box_bl": (("wstring",), ("└",), True, "Dialog box bottom left corner"),
         "box_br": (("wstring",), ("┘",), True, "Dialog box bottom right corner"),
         "arrow_up": (("wstring",), ("↑",), True, "Up arrow"),
-        "arrow_down": (("wstring",), ("↓",), True, "Down arrow")
+        "arrow_down": (("wstring",), ("↓",), True, "Down arrow"),
+        "arrow_lr": (("wstring",), ("↔",), True, "Left/right arrow")
     },
     "colours": {
         "fallback": (("colour",), ("white", "black", "false"), False, "Fallback for B&W terminals"),
@@ -81,6 +83,8 @@ config_def = {
         "link_http_f": (("colour",), ("black", "magenta", "false"), True, "HTTP links (focused)"),
         "link_email": (("colour",), ("magenta", "black", "false"), True, "E-mail links"),
         "link_email_f": (("colour",), ("black", "magenta", "false"), True, "E-mail links (focused)"),
+        "link_file": (("colour",), ("blue", "black", "false"), True, "File links"),
+        "link_file_f": (("colour",), ("black", "blue", "false"), True, "File links (focused)"),
         "link_ls": (("colour",), ("cyan", "black", "false"), True, "In-page local search links"),
         "link_ls_f": (("colour",), ("black", "cyan", "false"), True, "In-page local search links (focused)"),
         "sb_line": (("colour",), ("yellow", "black", "true"), True, "Scrollbar track line"),
@@ -94,8 +98,8 @@ config_def = {
         "imm_border": (("colour",), ("yellow", "black", "true"), True, "Pop-up dialogs border"),
         "imm_title": (("colour",), ("yellow", "red", "true"), True, "Pop-up dialogs title"),
         "sp_input": (("colour",), ("white", "black", "false"), True, "Pop-up input dialog prompt"),
-        "sp_text": (("colour",), ("cyan", "black", "false"), True, "Pop-up input dialog progressive help text"),
-        "sp_text_f": (("colour",), ("white", "black", "false"), True, "Pop-up input dialog progressive help text (focused)"),
+        "sp_text": (("colour",), ("cyan", "black", "false"), True, "Pop-up input dialog incremental search text"),
+        "sp_text_f": (("colour",), ("white", "black", "false"), True, "Pop-up input dialog incremental search text (focused)"),
         "help_text": (("colour",), ("cyan", "black", "false"), True, "Help dialog entries text"),
         "help_text_f": (("colour",), ("black", "cyan", "false"), True, "Help dialog entries text (focused)"),
         "history_text": (("colour",), ("cyan", "black", "false"), True, "History dialog entries text"),
@@ -152,16 +156,26 @@ config_def = {
         "imm_width_wide": (("int", 0, 400), ("54",), False, "Wide pop-up dialogs width"),
         "imm_height_short": (("int", 0, 100), ("6",), False, "Short pop-up dialogs height"),
         "imm_height_long": (("int", 0, 100), ("10",), False, "Long pop-up dialogs height"),
-        "sections_on_top": (("bool",), ("true",), True, "If true, show a list of sections at the top of each page"),
         "lmargin": (("int", 0, 200), ("2",), True, "Left margin size"),
         "rmargin": (("int", 0, 200), ("2",), True, "Right margin size"),
         "tabstop": (("int", 0, 100), ("8",), True, "Number of characters in a tab stop"),
         "sbar": (("bool",), ("true",), True, "If true, show the scrollbar"),
         "beep": (("bool",), ("true",), True, "If true, beep the terminal")
     },
+    "capabilities": {
+        "sections_on_top": (("bool",), ("true",), True, "Show a list of sections at the top of each page"),
+        "http_links": (("bool",), ("true",), True, "Hyperlinks to HTTP URLs"),
+        "email_links": (("bool",), ("true",), True, "Hyperlinks to email addresses"),
+        "file_links": (("bool",), ("true",), True, "Hyperlinks to local files and directories"),
+        "hyphenate": (("bool",), ("true",), True, "Hyphenate long words in manual pages"),
+        "justify": (("bool",), ("true",), True, "Justify manual pages text"),
+        "icase_search": (("bool",), ("true",), True, "Ignore case for page text search"),
+        "sp_substrings": (("bool",), ("true",), True, "Include substring matches in incremental search results"),
+    },
     "misc": {
         "program_name": (("string",), None, False, "Program executable basename (discovered automatically)"),
-        "program_version": (("wstring",), ("Qman 1.4.3",), False, "Formal program name and version"),
+        "program_version": (("wstring",), ("Qman 1.5.0",), False, "Formal program name and version"),
+        "system_type": (("systype", ), ("mandb", ), True, "System type: mandb, mandoc, freebsd, darwin, ..."),
         "config_path": (("string",), None, False, "Path to the configuration file"),
         "man_path": (("string",), ("/usr/bin/man",), True, "Path to the man(1) command"),
         "groff_path": (("string",), ("/usr/bin/groff",), True, "Path to the groff(1) command"),
@@ -169,11 +183,13 @@ config_def = {
         "apropos_path": (("string",), ("/usr/bin/apropos",), True, "Path to the apropos(1) command"),
         "browser_path": (("string",), ("/usr/bin/xdg-open",), True, "Path to web browser command"),
         "mailer_path": (("string",), ("/usr/bin/xdg-email",), True, "Path to mailer command"),
+        "viewer_path": (("string",), ("/usr/bin/xdg-open",), True, "Path to file viewer"),
         "reset_after_http": (("bool",), ("true",), True, "Re-initialize curses after opening an http(s) link"),
         "reset_after_email": (("bool",), ("true",), True, "Re-initialize curses after opening an e-mail link"),
+        "reset_after_viewer": (("bool",), ("true",), True, "Re-initialize curses after viewing a file"),
+        "terminfo_reset": (("bool",), ("false",), True, "Reset the terminal using the strings provided by terminfo on shutdown"),
         "history_size": (("int", 0, 256 * 1024), ("65536",), True, "Maximum number of history entries"),
-        "hyphenate": (("bool",), ("true",), True, "Hyphenate long words in manual pages"),
-        "justify": (("bool",), ("true",), True, "Justify manual pages text"),
+        "cli_force_color": (("bool",), ("false",), False, "-z / --cli-force-color option was passed"),
         "global_whatis": (("bool",), ("false",), False, "-a / --all option was passed"),
         "global_apropos": (("bool",), ("false",), False, "-k / --global-whatis option was passed")
     }

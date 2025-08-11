@@ -26,7 +26,12 @@ option_t options[] = {
     {"all", 'a',
      L"Show the contents of all pages whose name matches PAGE (global whatis)",
      OA_NONE, true},
-    {"cli", 'T', L"Suppress the TUI and output directly to the terminal",
+    {"cli", 'T',
+     L"Suppress the TUI and output directly to the terminal (CLI mode)",
+     OA_NONE, true},
+    {"cli-force-color", 'z',
+     L"Produce colorful output using terminal escape codes, even when not "
+     L"running inside a terminal",
      OA_NONE, true},
     {"action", 'A', L"Automatically perform program action ARG upon startup",
      OA_REQUIRED, true},
@@ -78,7 +83,7 @@ unsigned results_len = 0;
 
 mark_t mark = {false, 0, 0, 0, 0};
 
-full_regex_t re_man, re_http, re_email;
+full_regex_t re_man, re_http, re_email, re_file;
 
 //
 // Helper macros and functions
@@ -93,8 +98,9 @@ full_regex_t re_man, re_http, re_email;
     res = xreallocarray(res, res_len, sizeof(line_t));                         \
   }
 
-// Helper of `toc()`. Increase `en`, and reallocate `res` in memory, if `en` has
-// exceeded its previously allocated size.
+// Helper of `man_sections()`, `man_toc()` and `sc_toc()`. Increase `en`, and
+// reallocate `res` in memory, if `en` has exceeded its previously allocated
+// size.
 #define inc_en                                                                 \
   en++;                                                                        \
   if (en == res_len) {                                                         \
@@ -111,182 +117,6 @@ full_regex_t re_man, re_http, re_email;
     res = xreallocarray(res, res_len, sizeof(result_t));                       \
   }
 
-// Helper of `man()` and `aprowhat_render()`. Add a link to `line`. Allocate
-// memory using `line_realloc_link()` to do so. Use `start`, `end`, `link_next`,
-// `type`, and `trgt` to populate the new link's members.
-void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
-              unsigned start_next, unsigned end_next, link_type_t type,
-              const wchar_t *trgt) {
-  link_t link; // new link
-  int i;       // iterator
-
-  // Populate new link
-  link.start = start;
-  link.end = end;
-  link.type = type;
-  link.in_next = in_next;
-  link.start_next = start_next;
-  link.end_next = end_next;
-  link.trgt = walloc(wcslen(trgt));
-  wcscpy(link.trgt, trgt);
-
-  // Sanity check: new link's end must be after its start
-  if (link.end <= link.start) {
-    free(link.trgt);
-    return;
-  }
-  if (link.in_next)
-    if (link.end_next <= link.start_next) {
-      free(link.trgt);
-      return;
-    }
-
-  // Sanity check: new link can't overlap an existing link
-  for (i = 0; i < line->links_length; i++)
-    if (link.in_next) {
-      if (line->links[i].start <= link.end &&
-          line->links[i].end_next >= link.end_next) {
-        free(link.trgt);
-        return;
-      }
-    } else {
-      if (line->links[i].start <= link.end && line->links[i].end >= link.end) {
-        free(link.trgt);
-        return;
-      }
-    }
-
-  // Add new link to line
-  line_realloc_link((*line));
-  if (1 == line->links_length)
-    i = 0;
-  else {
-    for (i = line->links_length - 2; i >= 0; i--)
-      if (line->links[i].start > link.end)
-        line->links[i + 1] = line->links[i];
-      else
-        break;
-    i++;
-  }
-  line->links[i] = link;
-}
-
-// Helper of `man()`. Discover links that match `re` in the text of `line`,
-// and add them to said `line`. `line_next` is necessary to support hyphenated
-// links. `type` signifies the link type to add.
-void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
-                    const link_type_t type) {
-  // Ignore empty lines
-  if (line->length < 2)
-    return;
-
-  wchar_t ltext[BS_LINE * 2]; // text of `line` (or text of `line` merged with
-                              // text of `line_next`, if `line` is hyphenated)
-  memset(ltext, 0, sizeof(wchar_t) * BS_LINE * 2);
-  const bool lhyph =
-      line->text[line->length - 2] == L'‐'; // whether `line` is hyphenated
-  unsigned loff = 0;     // offset (in `ltext`) to start searching for links
-  range_t lrng;          // location of link in `ltext`
-  wchar_t trgt[BS_LINE]; // link target
-
-  // Prepare `ltext`
-  wcsncpy(ltext, line->text, line->length - 1);
-  if (lhyph) {
-    unsigned lnme =
-        wmargend(line_next->text, NULL); // left margin end of `line_next`
-    wcsncpy(&ltext[line->length - 2], &line_next->text[lnme],
-            line_next->length - lnme);
-  }
-
-  // While a link has been found...
-  lrng = fr_search(re, &ltext[loff]);
-  while (lrng.beg != lrng.end) {
-    // Extract link target from line text
-    wcsncpy(trgt, &ltext[loff + lrng.beg], lrng.end - lrng.beg);
-    trgt[lrng.end - lrng.beg] = L'\0';
-
-    if (lhyph && loff + lrng.beg < line->length &&
-        loff + lrng.end >= line->length) {
-      // Link is broken by a hyphen
-
-      const unsigned lnme = wmargend(
-          line_next->text, NULL); // position where actual text (without
-                                  // margin) of `line_next` starts
-      const unsigned lstart = loff + lrng.beg; // starting pos. in `line`
-      const unsigned lend = line->length - 2;  // ending pos. in `line`
-      const unsigned nlstart = lnme;           // starting pos. in `line_next`
-      const unsigned nlend = lnme + (lrng.end - lrng.beg) -
-                             (lend - lstart); // ending pos. in `line_next`
-      // Add the link to `line`
-      if (LT_MAN == type) {
-        if (aprowhat_has(trgt, aw_all, aw_all_len))
-          add_link(line, lstart, lend, true, nlstart, nlend, type, trgt);
-      } else
-        add_link(line, lstart, lend, true, nlstart, nlend, type, trgt);
-    } else if (loff + lrng.end < line->length) {
-      // Link is not broken by a hyphen
-
-      // Add the link to `line`
-      if (LT_MAN == type) {
-        if (aprowhat_has(trgt, aw_all, aw_all_len))
-          add_link(line, loff + lrng.beg, loff + lrng.end, //
-                   false, 0, 0, type, trgt);
-      } else
-        add_link(line, loff + lrng.beg, loff + lrng.end, //
-                 false, 0, 0, type, trgt);
-    }
-
-    // Calculate next offset
-    loff += lrng.end;
-    if (loff < line->length) {
-      // Offset is not beyond the end of `line`; look for another link
-      lrng = fr_search(re, &ltext[loff]);
-    } else {
-      // Offset is beyond the end of `line`; exit the loop
-      lrng.beg = 0;
-      lrng.end = 0;
-    }
-  }
-}
-
-// Helper of `man()`. If `line` is a section header, return its level.
-// Otherwise, return -1. This function must initially be called with a NULL
-// argument, every time `man()` is invoked.
-bool section_header_level(line_t *line) {
-  static unsigned lnme_set[] = {
-      0, 0, 0, 0, 0,
-      0, 0, 0}; // unique and (hopefully) ordered `lnme` values for all section
-                // headers encountered so far
-  unsigned i;   // iterator
-
-  // `line` is NULL; re-initialize `lnme_set` and return -1
-  if (NULL == line) {
-    for (i = 0; i < 8; i++)
-      lnme_set[i] = 0;
-
-    return -1;
-  }
-
-  unsigned lnme =
-      wmargend(line->text,
-               NULL); // position in `line`'s text where margin whitespace ends
-
-  if (bget(line->bold, lnme) && bget(line->reg, line->length - 1)) {
-    // `line` is a section header; return the level that corresponds to its
-    // `lnme`
-    for (i = 0; i < 8; i++) {
-      if (0 == lnme_set[i])
-        lnme_set[i] = lnme;
-      if (lnme == lnme_set[i])
-        return i;
-    }
-    return 7;
-  } else {
-    // Not a section header
-    return -1;
-  }
-}
-
 // The following are helpers of `man()`
 
 // true if `tmpw[i]` contains a 'bold' terminal escape sequence
@@ -294,9 +124,17 @@ bool section_header_level(line_t *line) {
   ((i + 4 < len) && (tmpw[i] == L'\e') && (tmpw[i + 1] == L'[') &&             \
    (tmpw[i + 2] == L'1') && (tmpw[i + 3] == L'm'))
 
+// attachment to `got_bold_nosgr` that fixes a quirk in `mandoc`'s output
+#define got_bold_nosgr_mandoc_quirk_fix                                        \
+  (!((ST_MANDOC == config.misc.system_type ||                                  \
+      ST_FREEBSD == config.misc.system_type ||                                 \
+      ST_DARWIN == config.misc.system_type) &&                                 \
+     tmpw[i] == '_' && uline_nosgr))
+
 // true if `tmpw[i]` contains a 'bold' typewriter (NO_SGR) sequence
 #define got_bold_nosgr                                                         \
-  ((i + 3 < len) && (tmpw[i] == tmpw[i + 2]) && (tmpw[i + 1] == L'\b'))
+  ((i + 3 < len) && (tmpw[i] == tmpw[i + 2]) && (tmpw[i + 1] == L'\b') &&      \
+   got_bold_nosgr_mandoc_quirk_fix)
 
 // true if `tmpw[i]` contains a 'not bold' terminal escape sequence
 #define got_not_bold                                                           \
@@ -429,6 +267,451 @@ bool section_header_level(line_t *line) {
   (got_b || got_i || got_sm || got_sb || got_bi || got_br || got_ib ||         \
    got_ir || got_rb || got_ri)
 
+// Helper of `man_loc()` and `man()`. Decompose command-line argument in `src`
+// into a `page` and potentially a `section` (both of length `len`). Return 2 if
+// both `page` and `section` got populated, 1 if just `page` got populated, or 0
+// of neither did.
+unsigned extract_args(wchar_t **page, wchar_t **section, unsigned len,
+                      const wchar_t *src) {
+  unsigned src_len = wcslen(src);   // length of src
+  wchar_t *srcc = walloca(src_len); // copy of `src`
+  wchar_t *arg;                     // current argument
+  wchar_t **arg_dec =
+      aalloca(2, wchar_t *); // decomposed current argument (e.g. `"ls(1)"` ->
+                             // `["ls", "1"]`)
+  unsigned arg_dec_len;      // length of `arg_dec`
+  wchar_t *buf;              // temporary
+
+  wcslcpy(srcc, src, src_len);
+
+  arg = wcstok(srcc, L"' \t", &buf);
+  if (NULL != arg) {
+    // Argument #1 exists...
+    arg_dec_len = wsplit(&arg_dec, 2, arg, L"()", false);
+    if (2 == arg_dec_len) {
+      // ...and is in page(sec) format; decompose it into `page` and `section`
+      wcslcpy(*page, arg_dec[0], len);
+      wcslcpy(*section, arg_dec[1], len);
+      return 2;
+    } else if (1 == arg_dec_len) {
+      // ...and is not in page(sec) format; provisionally set argument #1 as
+      // `page` and <empty string> as `section`
+      wcslcpy(*page, arg_dec[0], len);
+      wcslcpy(*section, L"", len);
+      // However...
+      arg = wcstok(NULL, L"' \t", &buf);
+      if (NULL != arg) {
+        // ...if argument #2 exists...
+        arg_dec_len = wsplit(&arg_dec, 2, arg, L"()", false);
+        if (1 == arg_dec_len) {
+          // ...and is not in page(sec) format, set argument #1 as `section` and
+          // argument #2 as `page`
+          wcslcpy(*section, *page, len);
+          wcslcpy(*page, arg_dec[0], len);
+          return 2;
+        }
+      }
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+// Helper of `man_sections()` and `man_toc()`. Place the location of the manual
+// page source that corresponds to `args` into `dst` (of length `dst_len`). If
+// no such location exists, return false, otherwise return true. `local_file`
+// signifies whether `args` contains a local file path, rather than a manual
+// page name and section.
+bool man_loc(char *dst, unsigned dst_len, const wchar_t *args,
+             bool local_file) {
+  char cmdstr[BS_LINE]; // command to execute
+  bool ret;             // return value
+
+  if (ST_MANDB == config.misc.system_type) {
+    // `mandb` specific
+    if (local_file)
+      snprintf(cmdstr, BS_LINE,
+               "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
+               config.misc.man_path, args);
+    else {
+      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
+               config.misc.man_path, args);
+    }
+
+    ret = true;
+    FILE *pp = xpopen(cmdstr, "r");
+    if (-1 == sreadline(dst, dst_len, pp))
+      ret = false;
+
+    xpclose(pp);
+    return ret;
+  } else if (ST_MANDOC == config.misc.system_type) {
+    // `mandoc` specific
+    unsigned args_len = wcslen(args);     // length of `args`
+    wchar_t *page = walloca(args_len);    // man page extracted from `args`
+    wchar_t *section = walloca(args_len); // man section extracted from `args`
+    char *combo = salloca(2 * args_len);  // `page`.`section` combination
+    char *combo_ptr, combo_post;          // used for analyzing `combo`
+    unsigned extracted;                   // return value of `extract_args()`
+    int searched;                         // return value of `aprowhat_search()`
+
+    extracted = extract_args(&page, &section, args_len, args);
+    switch (extracted) {
+    case 2:
+      snprintf(combo, 2 * args_len, "%ls.%ls", page, section);
+      break;
+    case 1:
+      searched = aprowhat_search(page, aw_all, aw_all_len, 0, false);
+      if (searched > -1)
+        snprintf(combo, 2 * args_len, "%ls.%ls", aw_all[searched].page,
+                 aw_all[searched].section);
+      else
+        xwcstombs(combo, page, args_len);
+      break;
+    case 0:
+      return false;
+    }
+
+    if (local_file) {
+      wcstombs(dst, page, dst_len);
+      return true;
+    } else {
+      if (2 == extracted)
+        snprintf(cmdstr, BS_LINE, "%s -w '%ls' '%ls' 2>>/dev/null",
+                 config.misc.man_path, section, page);
+      else
+        snprintf(cmdstr, BS_LINE, "%s -w '%ls' 2>>/dev/null",
+                 config.misc.man_path, page);
+
+      // Try to return the 'man -w' result that ends in `combo` (barring a
+      // filename extension)
+      ret = false;
+      FILE *pp = xpopen(cmdstr, "r");
+      while (-1 != sreadline(dst, dst_len, pp)) {
+        combo_ptr = strcasestr(dst, combo);
+        if (NULL != combo_ptr) {
+          combo_post = combo_ptr[strlen(combo)];
+          if ('.' == combo_post || '\0' == combo_post) {
+            ret = true;
+            break;
+          }
+        }
+      }
+
+      // If not found, execute 'man -w' again and return the first line of its
+      // output
+      if (false == ret) {
+        xpclose(pp);
+        ret = true;
+        pp = xpopen(cmdstr, "r");
+        if (-1 == sreadline(dst, dst_len, pp))
+          ret = false;
+      }
+
+      xpclose(pp);
+      return ret;
+    }
+  } else if (ST_FREEBSD == config.misc.system_type ||
+             ST_DARWIN == config.misc.system_type) {
+    // FreeBSD and macOS X `man` specific
+    unsigned args_len = wcslen(args);     // length of `args`
+    wchar_t *page = walloca(args_len);    // man page extracted from `args`
+    wchar_t *section = walloca(args_len); // man section extracted from `args`
+    unsigned extracted;                   // return value of `extract_args()`
+
+    extracted = extract_args(&page, &section, args_len, args);
+    if (2 == extracted)
+      snprintf(cmdstr, BS_LINE, "%s -w '%ls' '%ls' 2>>/dev/null",
+               config.misc.man_path, section, page);
+    else if (1 == extracted)
+      snprintf(cmdstr, BS_LINE, "%s -w '%ls' 2>>/dev/null",
+               config.misc.man_path, page);
+    else
+      return false;
+
+    ret = true;
+    FILE *pp = xpopen(cmdstr, "r");
+    if (-1 == sreadline(dst, dst_len, pp))
+      ret = false;
+
+    xpclose(pp);
+    return ret;
+  }
+
+  return false;
+}
+
+// macOS X specific version of `aprowhat_exec()` (arguments are the same)
+unsigned aprowhat_exec_darwin(aprowhat_t **dst, aprowhat_cmd_t cmd,
+                              const wchar_t *args) {
+  // Prepare `apropos`/`whatis` command
+  char cmdstr[BS_LINE];
+  if (AW_WHATIS == cmd)
+    snprintf(cmdstr, BS_LINE, "%s %ls 2>>/dev/null", config.misc.whatis_path,
+             args);
+  else
+    snprintf(cmdstr, BS_LINE, "%s %ls 2>>/dev/null", config.misc.apropos_path,
+             args);
+
+  unsigned res_len = BS_LINE;                    // result length
+  aprowhat_t *res = aalloc(res_len, aprowhat_t); // result
+  char *line =
+      salloc(BS_LONG); // current line of text, as returned by the command
+  wchar_t *wline = walloc(BS_LONG); // `wchar_t *` version of `line`
+  wchar_t **idents =
+      aalloc(BS_LINE, wchar_t *);    // manual page / section combos (in `line`)
+  wchar_t *descr = walloca(BS_LINE); // description (in `line`)
+  wchar_t *page,
+      *section; // manual page and section in current entry of `idents`
+  wchar_t *buf; // temporary
+  unsigned idents_len, descr_len, page_len,
+      section_len;    // lengths of `idents`, `descr`, `page` and `section`
+  int wline_len;      // length of `wline`
+  unsigned res_i = 0; // current result
+  unsigned i;         // iterators
+
+  // Execute the command
+  FILE *pp = xpopen(cmdstr, "r");
+
+  // For each `line` returned by the command...
+  xfgets(line, BS_LONG, pp);
+  while (!feof(pp)) {
+    wline_len = xmbstowcs(wline, line, BS_LONG);
+    if (-1 == wline_len) {
+      if (0 == res_i)
+        break;
+      else
+        winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
+    }
+    wline[wline_len - 1] = L'\0';
+
+    // Extract `descr`
+    descr = wcsstr(wline, L" - ");
+    if (NULL == descr) {
+      if (0 == res_i)
+        break;
+      else
+        winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
+    }
+    descr[0] = L'\0';
+    descr = &descr[3];
+    descr_len = wcslen(descr);
+
+    // Extract `idents`
+    idents_len = wsplit(&idents, BS_LINE, wline, L",", true);
+
+    // For each ident described by line...
+    for (i = 0; i < idents_len; i++) {
+      // Extract the corresponding `page` and `section`
+      // (Formatting and error handling here is a bit hacky, to account for
+      // darwin's flaky `apropos` output)
+      page = wcstok(idents[i], L"(", &buf);
+      page = &page[wmargend(page, NULL)];
+      wmargtrim(page, NULL);
+      if (NULL == page || L'/' == page[0] || NULL != wcschr(page, L' '))
+        continue;
+      section = wcstok(NULL, L")", &buf);
+      if (NULL == section || L'(' == section[0])
+        continue;
+
+      // Populate the `res_i`th element of `res`
+      page_len = wcslen(page);
+      section_len = wcslen(section);
+      res[res_i].page = walloc(page_len);
+      wcslcpy(res[res_i].page, page, page_len + 1);
+      res[res_i].section = walloc(section_len);
+      wcslcpy(res[res_i].section, section, section_len + 1);
+      res[res_i].ident = walloc(page_len + section_len + 3);
+      swprintf(res[res_i].ident, page_len + section_len + 3, L"%ls(%ls)", page,
+               section);
+      res[res_i].descr = walloc(descr_len);
+      wcslcpy(res[res_i].descr, descr, descr_len + 1);
+
+      // Increase `res_i`, and reallocate `res` if necessary
+      res_i++;
+      if (res_i == res_len) {
+        res_len += BS_LINE;
+        res = xreallocarray(res, res_len, sizeof(aprowhat_t));
+      }
+    }
+
+    xfgets(line, BS_LONG, pp);
+  }
+
+  int status = xpclose(pp);
+
+  // If no results were returned by the command, set `err` to true and
+  // describe the error in `err_msg`. Otherwise, set `err` to false.
+  err = false;
+  if (0 == res_i || 0 != status) {
+    err = true;
+    if (AW_WHATIS == cmd)
+      swprintf(err_msg, BS_LINE, L"Whatis %ls: nothing apropriate", args);
+    else
+      swprintf(err_msg, BS_LINE, L"Apropos %ls: nothing apropriate", args);
+  }
+
+  // Deallocate unused memory and return
+  if (res_i > 0)
+    res = xreallocarray(res, res_i, sizeof(aprowhat_t));
+  free(line);
+  free(wline);
+  free(idents);
+  *dst = res;
+  return res_i;
+}
+
+// Helper of `discover_links()`, man()` and `aprowhat_render()`. Add a link to
+// `line`. Allocate memory using `line_realloc_link()` to do so. Use `start`,
+// `end`, `in_next`, `start_next`, `end_next`, `type`, and `trgt` to populate
+// the new link's members.
+void add_link(line_t *line, unsigned start, unsigned end, bool in_next,
+              unsigned start_next, unsigned end_next, link_type_t type,
+              const wchar_t *trgt) {
+  link_t link; // new link
+  int i;       // iterator
+
+  // Populate new link
+  link.start = start;
+  link.end = end;
+  link.type = type;
+  link.in_next = in_next;
+  link.start_next = start_next;
+  link.end_next = end_next;
+  link.trgt = walloc(wcslen(trgt));
+  wcscpy(link.trgt, trgt);
+
+  // Sanity check: new link's end must be after its start
+  if (link.end <= link.start) {
+    free(link.trgt);
+    return;
+  }
+  if (link.in_next)
+    if (link.end_next <= link.start_next) {
+      free(link.trgt);
+      return;
+    }
+
+  // Sanity check: new link can't overlap an existing link
+  for (i = 0; i < line->links_length; i++)
+    if (link.in_next) {
+      if (line->links[i].start <= link.end &&
+          line->links[i].end_next >= link.end_next) {
+        free(link.trgt);
+        return;
+      }
+    } else {
+      if (line->links[i].start <= link.end && line->links[i].end >= link.end) {
+        free(link.trgt);
+        return;
+      }
+    }
+
+  // Add new link to line
+  line_realloc_link((*line));
+  if (1 == line->links_length)
+    i = 0;
+  else {
+    for (i = line->links_length - 2; i >= 0; i--)
+      if (line->links[i].start > link.end)
+        line->links[i + 1] = line->links[i];
+      else
+        break;
+    i++;
+  }
+  line->links[i] = link;
+}
+
+// Helper of `man()`. Discover links that match `re` in the text of `line`,
+// and add them to said `line`. `line_next` is necessary to support hyphenated
+// links. `type` signifies the link type to add.
+void discover_links(const full_regex_t *re, line_t *line, line_t *line_next,
+                    const link_type_t type) {
+  // Ignore empty lines
+  if (line->length < 2)
+    return;
+
+  wchar_t ltext[BS_LINE * 2]; // text of `line` (or text of `line` merged with
+                              // text of `line_next`, if `line` is hyphenated)
+  memset(ltext, 0, sizeof(wchar_t) * BS_LINE * 2);
+  const bool lhyph =
+      line->text[line->length - 2] == L'‐'; // whether `line` is hyphenated
+  unsigned loff = 0;         // offset (in `ltext`) to start searching for links
+  range_t lrng;              // location of link in `ltext`
+  wchar_t trgt[BS_LINE * 2]; // link target
+  char strgt[BS_LINE * 2];   // char* version of `trgt`
+  struct stat sb;            // used for verifying file links
+
+  // Prepare `ltext`
+  wcsncpy(ltext, line->text, line->length - 1);
+  if (lhyph) {
+    unsigned lnme =
+        wmargend(line_next->text, NULL); // left margin end of `line_next`
+    wcsncpy(&ltext[line->length - 2], &line_next->text[lnme],
+            line_next->length - lnme);
+  }
+
+  // While a link has been found...
+  lrng = fr_search(re, &ltext[loff]);
+  while (lrng.beg != lrng.end) {
+    // Extract link target from line text
+    wcsncpy(trgt, &ltext[loff + lrng.beg], lrng.end - lrng.beg);
+    trgt[lrng.end - lrng.beg] = L'\0';
+
+    if (lhyph && loff + lrng.beg < line->length &&
+        loff + lrng.end >= line->length) {
+      // Link is broken by a hyphen
+
+      const unsigned lnme = wmargend(
+          line_next->text, NULL); // position where actual text (without
+                                  // margin) of `line_next` starts
+      const unsigned lstart = loff + lrng.beg; // starting pos. in `line`
+      const unsigned lend = line->length - 2;  // ending pos. in `line`
+      const unsigned nlstart = lnme;           // starting pos. in `line_next`
+      const unsigned nlend = lnme + (lrng.end - lrng.beg) -
+                             (lend - lstart); // ending pos. in `line_next`
+      // Add the link to `line`
+      if (LT_MAN == type) {
+        if (aprowhat_has(trgt, aw_all, aw_all_len))
+          add_link(line, lstart, lend, true, nlstart, nlend, type, trgt);
+      } else if (LT_FILE == type) {
+        xwcstombs(strgt, trgt, BS_LINE * 2);
+        if (stat(strgt, &sb) == 0 && sb.st_mode & S_IRUSR)
+          add_link(line, lstart, lend, true, nlstart, nlend, type, trgt);
+      } else
+        add_link(line, lstart, lend, true, nlstart, nlend, type, trgt);
+    } else if (loff + lrng.end < line->length) {
+      // Link is not broken by a hyphen
+
+      // Add the link to `line`
+      if (LT_MAN == type) {
+        if (aprowhat_has(trgt, aw_all, aw_all_len))
+          add_link(line, loff + lrng.beg, loff + lrng.end, false, 0, 0, type,
+                   trgt);
+      } else if (LT_FILE == type) {
+        xwcstombs(strgt, trgt, BS_LINE * 2);
+        if (stat(strgt, &sb) == 0 && sb.st_mode & S_IRUSR)
+          add_link(line, loff + lrng.beg, loff + lrng.end, false, 0, 0, type,
+                   trgt);
+      } else
+        add_link(line, loff + lrng.beg, loff + lrng.end, false, 0, 0, type,
+                 trgt);
+    }
+
+    // Calculate next offset
+    loff += lrng.end;
+    if (loff < line->length) {
+      // Offset is not beyond the end of `line`; look for another link
+      lrng = fr_search(re, &ltext[loff]);
+    } else {
+      // Offset is beyond the end of `line`; exit the loop
+      lrng.beg = 0;
+      lrng.end = 0;
+    }
+  }
+}
+
 // Helper of `man_toc()`. Massage the `text` of every entry in `toc` (of size
 // `toc_len`) with the `groff` command, in order to remove escaped characters,
 // etc.
@@ -479,11 +762,6 @@ void tocgroff(toc_entry_t *toc, unsigned toc_len) {
       break;
   }
   xpclose(pp);
-
-  // Uncomment the following to log output into qman.log for debugging
-  // logprintf("tocgroff()");
-  // for (i = 0; i < toc_len; i++)
-  //   logprintf("%d: type=%d text=%ls", i, toc[i].type, toc[i].text);
 
   // Tidy up and restore the environment
   unlink(tpath);
@@ -563,12 +841,8 @@ void init() {
   history = aalloc(config.misc.history_size, request_t);
   history_replace(RT_NONE, NULL);
 
-  // Initialize `aw_all` and `sc_all`
-  aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"''");
-  sc_all_len = aprowhat_sections(&sc_all, aw_all, aw_all_len);
-
   // Initialize `page_title`
-  wcscpy(page_title, L"");
+  wcslcpy(page_title, L"", BS_SHORT);
 
   // initialize regular expressions
   fr_init(&re_man, "[a-zA-Z0-9\\.:@_-]+\\([a-zA-Z0-9]+\\)", L")");
@@ -582,6 +856,19 @@ void init() {
       "\\?\\^\\|\\.!#%&'=_`{}~-]*@[a-zA-Z0-9-][a-zA-Z0-9-]+\\.[a-zA-Z0-9-][a-"
       "zA-Z0-9\\.-]+[a-zA-Z0-9-]",
       L"@");
+  fr_init(&re_file, "(\\/[a-zA-Z0-9_\\.-]+)+\\/?", L"/");
+}
+
+void late_init() {
+  // Initialize `aw_all`
+  if (ST_FREEBSD == config.misc.system_type ||
+      ST_DARWIN == config.misc.system_type)
+    aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"'.'");
+  else
+    aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"''");
+
+  // Initialize `sc_all`
+  sc_all_len = aprowhat_sections(&sc_all, aw_all, aw_all_len);
 }
 
 int parse_options(int argc, char *const *argv) {
@@ -636,7 +923,8 @@ int parse_options(int argc, char *const *argv) {
       history_replace(RT_WHATIS, NULL);
       break;
     case 'l':
-      // -l or --local-file was passed; try to show a man page from a local file
+      // -l or --local-file was passed; try to show a man page from a local
+      // file
       history_replace(RT_MAN_LOCAL, NULL);
       break;
     case 'K':
@@ -651,6 +939,10 @@ int parse_options(int argc, char *const *argv) {
     case 'T':
       // -T or --cli was passed; do not launch the TUI
       config.layout.tui = false;
+      break;
+    case 'z':
+      // -z or --cli-force-color was passed; force-enable color for the CLI
+      config.misc.cli_force_color = true;
       break;
     case 'A':
       // -A or --action was passed; set `first_action` to the program action
@@ -731,32 +1023,19 @@ void parse_args(int argc, char *const *argv) {
       }
     }
 
-    wcscpy(tmp, L"");
+    wcslcpy(tmp, L"", BS_LINE);
     tmp_len = 0;
 
-    if (history[history_cur].request_type == RT_MAN && !config.layout.tui) {
-      // If we are showing a manual page, we are in CLI mode...
-      if (config.misc.global_apropos) {
-        // ...and the user has requested global apropos, add '-K' to `tmp`
-        wcscpy(tmp, L"-K ");
-        tmp_len = 3;
-      } else if (config.misc.global_whatis) {
-        // ...and the user has requested global whatis, add '-a' to `tmp`
-        wcscpy(tmp, L"-a ");
-        tmp_len = 3;
-      }
-    }
-
-    // Surround all members of `argv` with single quotes, and flatten them into
-    // `tmp`
+    // Surround all members of `argv` with single quotes, and flatten them
+    // into `tmp`
     for (i = 0; i < argc; i++) {
       swprintf(tmp2, BS_SHORT, L"'%s'", argv[i]);
       if (tmp_len + wcslen(tmp2) < BS_LINE) {
-        wcscat(tmp, tmp2);
+        wcslcat(tmp, tmp2, BS_LINE);
         tmp_len += wcslen(tmp2);
       }
       if (i < argc - 1 && tmp_len + 4 < BS_LINE) {
-        wcscat(tmp, L" ");
+        wcslcat(tmp, L" ", BS_LINE);
         tmp_len++;
       }
     }
@@ -790,9 +1069,10 @@ void usage() {
     else
       swprintf(long_opt_str, BS_SHORT, L"--%s=ARG", options[i].long_opt);
     // Help text
-    wcscpy(tmp_str, options[i].help_text);
+    wcslcpy(tmp_str, options[i].help_text, BS_LINE);
     wwrap(tmp_str, 52);
-    wcrepl(help_text_str, tmp_str, L'\n', L"\n                           ");
+    wcrepl(help_text_str, tmp_str, L'\n', L"\n                           ",
+           BS_LINE);
     wprintf(L"  %ls, %-20ls %ls\n", short_opt_str, long_opt_str, help_text_str);
     i++;
   } while (options[i]._cont);
@@ -842,8 +1122,8 @@ void history_push(request_type_t rt, const wchar_t *args) {
   // Make `history_top` equal to `history_cur`
   history_top = history_cur;
 
-  // Failsafe: in the unlikely case `history_top` exceeds history size, free all
-  // memory used by `history` and start over
+  // Failsafe: in the unlikely case `history_top` exceeds history size, free
+  // all memory used by `history` and start over
   if (history_top >= config.misc.history_size) {
     requests_free(history, config.misc.history_size);
     history_top = 0;
@@ -886,80 +1166,144 @@ void history_reset() {
 
 unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
                        const wchar_t *args) {
-  // Prepare `apropos`/`whatis` command
-  char cmdstr[BS_LINE];
-  if (AW_WHATIS == cmd)
-    snprintf(cmdstr, BS_LINE, "%s -l %ls 2>>/dev/null", config.misc.whatis_path,
-             args);
-  else
-    snprintf(cmdstr, BS_LINE, "%s -l %ls 2>>/dev/null",
-             config.misc.apropos_path, args);
-
-  // Execute the command, and enter its result into a temporary file. `lines`
-  // becomes the total number of lines copied.
-  FILE *pp = xpopen(cmdstr, "r");
-  FILE *fp = xtmpfile();
-  const unsigned lines = scopylines(pp, fp);
-  xpclose(pp);
-  rewind(fp);
-
-  // Result
-  aprowhat_t *res = aalloc(lines, aprowhat_t);
-
-  char line[BS_LINE];     // current line of text, as returned by the command
-  char page[BS_SHORT];    // current manual page
-  char section[BS_SHORT]; // current section
-  char *word;             // used by `strtok()` to compile `descr`
-  char descr[BS_LINE];    // current page description
-
-  unsigned page_len, section_len, descr_len, i;
-
-  // For each line returned by the command...
-  for (i = 0; i < lines; i++) {
-    if (-1 == sreadline(line, BS_LINE, fp))
-      winddown(ES_OPER_ERROR, L"Malformed temporary apropos/whatis file");
-
-    // Extract `page`, `section`, and `descr`, together with their lengths
-    strcpy(page, strtok(line, " ("));
-    page_len = strlen(page);
-    strcpy(section, strtok(NULL, " ()"));
-    section_len = strlen(section);
-    word = strtok(NULL, " )-");
-    descr[0] = '\0';
-    while (NULL != word) {
-      if ('\0' != descr[0])
-        strcat(descr, " ");
-      strcat(descr, word);
-      word = strtok(NULL, " ");
-    }
-    descr_len = strlen(descr);
-
-    // Populate the `i`th element of `res` (allocating when necessary)
-    res[i].page = walloc(page_len);
-    xmbstowcs(res[i].page, page, page_len + 1);
-    res[i].section = walloc(section_len);
-    xmbstowcs(res[i].section, section, section_len + 1);
-    res[i].ident = walloc(page_len + section_len + 3);
-    swprintf(res[i].ident, page_len + section_len + 3, L"%s(%s)", page,
-             section);
-    res[i].descr = walloc(descr_len);
-    xmbstowcs(res[i].descr, descr, descr_len + 1);
+  if (ST_DARWIN == config.misc.system_type) {
+    // macOS X requires its own special `aprowhat_exec()`
+    return aprowhat_exec_darwin(dst, cmd, args);
   }
 
-  xfclose(fp);
+  // Prepare `apropos`/`whatis` command
+  char cmdstr[BS_LINE];
+  char *longopt;
+  if (ST_MANDB == config.misc.system_type)
+    longopt = "-l";
+  else
+    longopt = "";
+  if (AW_WHATIS == cmd)
+    snprintf(cmdstr, BS_LINE, "%s %s %ls 2>>/dev/null", config.misc.whatis_path,
+             longopt, args);
+  else
+    snprintf(cmdstr, BS_LINE, "%s %s %ls 2>>/dev/null",
+             config.misc.apropos_path, longopt, args);
 
-  // If no results were returned by the command, set `err` and `err_msg`
+  unsigned res_len = BS_LINE;                    // result length
+  aprowhat_t *res = aalloc(res_len, aprowhat_t); // result
+  char *line =
+      salloc(BS_LONG); // current line of text, as returned by the command
+  wchar_t *wline = walloc(BS_LONG);             // `wchar_t *` version of `line`
+  wchar_t **pages = aalloc(BS_LINE, wchar_t *); // pages (in `line`)
+  wchar_t **sections = aalloc(BS_LINE, wchar_t *); // sections (in `line`)
+  wchar_t *descr = walloca(BS_LINE);               // description (in `line`)
+  wchar_t *tmp, *buf;                              // temporary
+  unsigned pages_len, sections_len, cur_page_len, cur_section_len,
+      descr_len; // lengths of `pages`, `sections`, current entry in `pages`,
+                 // current entry in `sections` and `descr`
+  int wline_len; // length of `wline`
+  unsigned res_i = 0; // current result
+  unsigned i, j;      // iterators
+
+  // Execute the command
+  FILE *pp = xpopen(cmdstr, "r");
+
+  // For each `line` returned by the command...
+  xfgets(line, BS_LONG, pp);
+  while (!feof(pp)) {
+
+    wline_len = xmbstowcs(wline, line, BS_LONG);
+    if (-1 == wline_len) {
+      if (0 == res_i)
+        break;
+      else
+        winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
+    }
+    wline[wline_len - 1] = L'\0';
+
+    // Extract `descr`
+    descr = wcsstr(wline, L" - ");
+    if (NULL == descr) {
+      if (0 == res_i)
+        break;
+      else
+        winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
+    }
+    descr[0] = L'\0';
+    descr = &descr[3];
+    descr_len = wcslen(descr);
+
+    // Extract `pages`
+    tmp = wcstok(wline, L"(", &buf);
+    if (NULL == tmp) {
+      if (0 == res_i)
+        break;
+      else
+        winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
+    }
+    pages_len = wsplit(&pages, BS_LINE, wline, L",", false);
+
+    // Extract `sections`
+    tmp = wcstok(NULL, L")", &buf);
+    if (NULL == tmp) {
+      if (0 == res_i)
+        break;
+      else
+        winddown(ES_OPER_ERROR, L"Malformed apropos/whatis command output");
+    }
+    sections_len = wsplit(&sections, BS_LINE, tmp, L",", false);
+
+    // For each page described by line...
+    for (i = 0; i < pages_len; i++) {
+      for (j = 0; j < sections_len; j++) {
+        // Populate the `res_i`th element of `res`
+        cur_page_len = wcslen(pages[i]);
+        cur_section_len = wcslen(sections[j]);
+        res[res_i].page = walloc(cur_page_len);
+        wcslcpy(res[res_i].page, pages[i], cur_page_len + 1);
+        res[res_i].section = walloc(cur_section_len);
+        wcslcpy(res[res_i].section, sections[j], cur_section_len + 1);
+        res[res_i].ident = walloc(cur_page_len + cur_section_len + 3);
+        swprintf(res[res_i].ident, cur_page_len + cur_section_len + 3,
+                 L"%ls(%ls)", pages[i], sections[j]);
+        res[res_i].descr = walloc(descr_len);
+        wcslcpy(res[res_i].descr, descr, descr_len + 1);
+
+        // Increase `res_i`, and reallocate `res` if necessary
+        res_i++;
+        if (res_i == res_len) {
+          res_len += BS_LINE;
+          res = xreallocarray(res, res_len, sizeof(aprowhat_t));
+        }
+      }
+    }
+
+    xfgets(line, BS_LONG, pp);
+  }
+
+  int status = xpclose(pp);
+
+  // If no results were returned by the command, set `err` to true and
+  // describe the error in `err_msg`. Otherwise, set `err` to false.
   err = false;
-  if (0 == lines) {
+  if (0 == res_i || 0 != status) {
     err = true;
     if (AW_WHATIS == cmd)
       swprintf(err_msg, BS_LINE, L"Whatis %ls: nothing apropriate", args);
-    else
-      swprintf(err_msg, BS_LINE, L"Apropos %ls: nothing apropriate", args);
+    else {
+      if (0 == wcscmp(args, L"''") || 0 == wcscmp(args, L"'.'"))
+        swprintf(err_msg, BS_LINE,
+                 L"'apropos .' failed; did you run mandb/makewhatis?", args);
+      else
+        swprintf(err_msg, BS_LINE, L"Apropos %ls: nothing apropriate", args);
+    }
   }
 
+  // Deallocate unused memory and return
+  if (res_i > 0)
+    res = xreallocarray(res, res_i, sizeof(aprowhat_t));
+  free(line);
+  free(wline);
+  free(pages);
+  free(sections);
   *dst = res;
-  return lines;
+  return res_i;
 }
 
 unsigned aprowhat_sections(wchar_t ***dst, const aprowhat_t *aw,
@@ -1009,8 +1353,6 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
   line_t *res = aalloc(res_len, line_t); // result buffer
 
   // Header
-  line_alloc(res[ln], 0);
-  inc_ln;
   line_alloc(res[ln], line_width);
   const unsigned title_len = wcslen(title); // `title` length
   const unsigned key_len = wcslen(key);     // `key` length
@@ -1035,7 +1377,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
   bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
 
   // Only if list of sections is enabled
-  if (config.layout.sections_on_top) {
+  if (config.capabilities.sections_on_top) {
     // Newline
     inc_ln;
     line_alloc(res[ln], 0);
@@ -1043,7 +1385,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
     // Section title for sections
     inc_ln;
     line_alloc(res[ln], line_width);
-    wcscpy(tmp, L"SECTIONS");
+    wcslcpy(tmp, L"SECTIONS", BS_LINE);
     swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
              lmargin_width, "",                         //
              text_width, tmp);
@@ -1068,7 +1410,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
         sc_i = sc_cols * i + j;
         if (sc_i < sc_len) {
           swprintf(tmp, sc_maxwidth + 5, L" %-*ls", sc_maxwidth + 3, sc[sc_i]);
-          wcscat(res[ln].text, tmp);
+          wcslcat(res[ln].text, tmp, line_width + 1);
           swprintf(tmp, BS_LINE, L"MANUAL PAGES IN SECTION '%ls'", sc[sc_i]);
           add_link(&res[ln], lmargin_width + j * (sc_maxwidth + 4) + 1,
                    lmargin_width + j * (sc_maxwidth + 4) +
@@ -1119,12 +1461,12 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
                  false, 0, 0, LT_MAN, aw[j].ident);
 
         // Description
-        wcscpy(tmp, aw[j].descr);
+        wcslcpy(tmp, aw[j].descr, BS_LINE);
         wwrap(tmp, rc_width);
         wchar_t *buf;
         wchar_t *ptr = wcstok(tmp, L"\n", &buf);
         if (NULL != ptr && page_width < lc_width) {
-          wcscat(res[ln].text, ptr);
+          wcslcat(res[ln].text, ptr, line_width + 1);
           ptr = wcstok(NULL, L"\n", &buf);
         }
         while (NULL != ptr) {
@@ -1170,15 +1512,20 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
 }
 
 int aprowhat_search(const wchar_t *needle, const aprowhat_t *hayst,
-                    unsigned hayst_len, unsigned pos) {
+                    unsigned hayst_len, unsigned pos, bool fullsub) {
   unsigned i;
 
   if (NULL == needle)
     return -1;
 
   for (i = pos; i < hayst_len; i++)
-    if (wcsstr(hayst[i].ident, needle) == hayst[i].ident)
-      return i;
+    if (fullsub) {
+      if (wcsstr(hayst[i].ident, needle) > hayst[i].ident)
+        return i;
+    } else {
+      if (wcsstr(hayst[i].ident, needle) == hayst[i].ident)
+        return i;
+    }
 
   return -1;
 }
@@ -1207,20 +1554,9 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
   unsigned res_len = BS_SHORT;                // result buffer length
   wchar_t **res = aalloc(res_len, wchar_t *); // result buffer
 
-  // Use GNU man to figure out gpath
-  char cmdstr[BS_LINE];
-  if (local_file)
-    snprintf(cmdstr, BS_LINE,
-             "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
-             config.misc.man_path, args);
-  else {
-    snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
-             config.misc.man_path, args);
-  }
-  FILE *pp = xpopen(cmdstr, "r");
-  if (-1 == sreadline(gpath, BS_LINE, pp))
-    winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
-  xpclose(pp);
+  // Use `man` to figure out `gpath`
+  if (false == man_loc(gpath, BS_LINE, args, local_file))
+    winddown(ES_OPER_ERROR, L"Failed to locate manual page source file");
 
   // Open `gpath`
   archive_t gp = aropen(gpath);
@@ -1239,7 +1575,7 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
       unsigned textsp = wmargend(&gline[3], L"\"");
       if (textsp > 0) {
         res[en] = walloc(BS_LINE);
-        wcscpy(res[en], &gline[3 + textsp]);
+        wcslcpy(res[en], &gline[3 + textsp], BS_LINE);
         wmargtrim(res[en], L"\"");
         inc_en;
       }
@@ -1325,36 +1661,100 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // Set up the environment for `man` to create its output as we want it
   char *old_term = getenv("TERM");
   setenv("TERM", "xterm", true);
-  sprintf(tmps, "%d", 1 + text_width);
-  setenv("MANWIDTH", tmps, true);
-  sprintf(tmps, "%s %s", config.misc.hyphenate ? "" : "--nh",
-          config.misc.justify ? "" : "--nj");
-  setenv("MANOPT", tmps, true);
-  setenv("MAN_KEEP_FORMATTING", "1", true);
-  setenv("MANROFFOPT", "", true);
-  setenv("GROFF_SGR", "1", true);
-  unsetenv("GROFF_NO_SGR");
+  char *old_manpager = getenv("MANPAGER");
+  setenv("MANPAGER", "", true);
+  if (ST_MANDB == config.misc.system_type) {
+    // `mandb` specific
+    sprintf(tmps, "%d", 1 + text_width);
+    setenv("MANWIDTH", tmps, true);
+    sprintf(tmps, "%s %s", config.capabilities.hyphenate ? "" : "--nh",
+            config.capabilities.justify ? "" : "--nj");
+    setenv("MANOPT", tmps, true);
+    setenv("MAN_KEEP_FORMATTING", "1", true);
+    setenv("MANROFFOPT", "", true);
+    setenv("GROFF_SGR", "1", true);
+    unsetenv("GROFF_NO_SGR");
+  } else if (ST_MANDOC == config.misc.system_type) {
+    // `mandoc` specific
+  } else if (ST_FREEBSD == config.misc.system_type ||
+             ST_DARWIN == config.misc.system_type) {
+    // FreeBSD and macOS X `man` specific
+    sprintf(tmps, "%d", 1 + text_width);
+    setenv("MANWIDTH", tmps, true);
+    unsetenv("MANCOLOR");
+  }
 
   // Prepare `man` command
   char cmdstr[BS_LINE];
-  if (local_file)
-    snprintf(cmdstr, BS_LINE,
-             "%s --warnings='!all' --local-file %ls 2>>/dev/null",
-             config.misc.man_path, args);
-  else
-    snprintf(cmdstr, BS_LINE, "%s --warnings='!all' %ls 2>>/dev/null",
-             config.misc.man_path, args);
+  if (ST_MANDB == config.misc.system_type) {
+    // `mandb` specific
+    wchar_t *gargs = L""; // `man` arguments for global apropos/whatis
+
+    if (!config.layout.tui) {
+      if (config.misc.global_apropos)
+        gargs = L"--global-apropos";
+      else if (config.misc.global_whatis)
+        gargs = L"--all";
+    }
+
+    if (local_file)
+      snprintf(cmdstr, BS_LINE,
+               "%s --warnings='!all' --local-file %ls 2>>/dev/null",
+               config.misc.man_path, args);
+    else
+      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' %ls %ls 2>>/dev/null",
+               config.misc.man_path, gargs, args);
+  } else if (ST_MANDOC == config.misc.system_type) {
+    // `mandoc` specific
+    unsigned args_len = wcslen(args);     // length of `args`
+    wchar_t *page = walloca(args_len);    // man page extracted from `args`
+    wchar_t *section = walloca(args_len); // man section extracted from `args`
+    unsigned extracted;                   // return value of `extract_args()`
+
+    extracted = extract_args(&page, &section, args_len, args);
+    if (0 == extracted)
+      winddown(ES_CHILD_ERROR, L"Unable to parse command-line arguments");
+
+    if (local_file)
+      snprintf(cmdstr, BS_LINE, "%s -T utf8 -O width=%d -l '%ls' 2>>/dev/null",
+               config.misc.man_path, text_width, page);
+    else {
+      if (2 == extracted)
+        snprintf(cmdstr, BS_LINE,
+                 "%s -T utf8 -O width=%d '%ls' '%ls' 2>>/dev/null",
+                 config.misc.man_path, text_width, section, page);
+      else
+        snprintf(cmdstr, BS_LINE, "%s -T utf8 -O width=%d '%ls' 2>>/dev/null",
+                 config.misc.man_path, text_width, page);
+    }
+  } else if (ST_FREEBSD == config.misc.system_type ||
+             ST_DARWIN == config.misc.system_type) {
+    // FreeBSD and macOS X `man` specific
+    unsigned args_len = wcslen(args);     // length of `args`
+    wchar_t *page = walloca(args_len);    // man page extracted from `args`
+    wchar_t *section = walloca(args_len); // man section extracted from `args`
+    unsigned extracted;                   // return value of `extract_args()`
+
+    extracted = extract_args(&page, &section, args_len, args);
+    if (1 == extracted)
+      snprintf(cmdstr, BS_LINE, "%s '%ls' 2>>/dev/null", config.misc.man_path,
+               page);
+    else if (2 == extracted)
+      snprintf(cmdstr, BS_LINE, "%s '%ls' '%ls' 2>>/dev/null",
+               config.misc.man_path, section, page);
+    else
+      winddown(ES_CHILD_ERROR, L"Unable to parse command-line arguments");
+  }
 
   // Execute `man`
   FILE *pp = xpopen(cmdstr, "r");
-
-  section_header_level(NULL);
 
   // Discard any empty lines on top, and read the first non-empty line into
   // `tmps`/`tmpw`
   xfgets(tmps, BS_LINE, pp);
   len = xmbstowcs(tmpw, tmps, BS_LINE);
-  while (0 == len || L'\n' == tmpw[wmargend(tmpw, L"\n")]) {
+  i = 0;
+  while (!feof(pp) && (0 == len || L'\n' == tmpw[wmargend(tmpw, L"\n")])) {
     xfgets(tmps, BS_LINE, pp);
     len = xmbstowcs(tmpw, tmps, BS_LINE);
   }
@@ -1362,14 +1762,15 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // For each line of `man`'s output...
   while (!feof(pp)) {
     // At line 1, insert the list of sections (if enabled)
-    if (config.layout.sections_on_top && 1 == ln) {
+    if (1 == ln && config.capabilities.sections_on_top &&
+        !config.misc.global_apropos && !config.misc.global_whatis) {
       // Newline
       line_alloc(res[ln], 0);
 
       // Section title for sections
       inc_ln;
       line_alloc(res[ln], line_width);
-      wcscpy(tmpw, L"SECTIONS");
+      wcslcpy(tmpw, L"SECTIONS", BS_LINE);
       swprintf(res[ln].text, line_width + 1, L"%*s%-*ls", //
                lmargin_width, "",                         //
                text_width, tmpw);
@@ -1399,7 +1800,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
             swprintf(tmpw, sc_maxwidth + 5, L" %-*ls", sc_maxwidth + 3,
                      sc[sc_i]);
             wcslower(tmpw);
-            wcscat(res[ln].text, tmpw);
+            wcslcat(res[ln].text, tmpw, line_width + 1);
             add_link(&res[ln], lmargin_width + j * (sc_maxwidth + 4) + 1,
                      lmargin_width + j * (sc_maxwidth + 4) +
                          MIN(sc_maxwidth + 3, wcslen(sc[sc_i])) + 1,
@@ -1413,8 +1814,12 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
       len = xmbstowcs(tmpw, tmps, BS_LINE);
     }
 
-    if (-1 == len)
-      winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
+    if (-1 == len) {
+      if (0 == ln)
+        break;
+      else
+        winddown(ES_CHILD_ERROR, L"Malformed man command output");
+    }
 
     // Allocate memory for a new line in `res`
     line_alloc(res[ln], config.layout.lmargin + len + 1);
@@ -1423,8 +1828,8 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
     for (j = 0; j < config.layout.lmargin; j++)
       res[ln].text[j] = L' ';
 
-    // Read the contents of `tmpw` one character at a time, and build the line's
-    // `text`, `reg`, `bold`, `italic`, and `uline` members
+    // Read the contents of `tmpw` one character at a time, and build the
+    // line's `text`, `reg`, `bold`, `italic`, and `uline` members
     bool bold_nosgr = false;  // a 'bold' typewriter sequence has been seen
     bool uline_nosgr = false; // a 'underline' typewriter sequence has been seen
     for (i = 0; i < len; i++) {
@@ -1527,8 +1932,10 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // Restore the environment
   if (NULL != old_term)
     setenv("TERM", old_term, true);
+  if (NULL != old_manpager)
+    setenv("MANPAGER", old_manpager, true);
 
-  xpclose(pp);
+  int status = xpclose(pp);
   free(tmpw);
   free(tmps);
 
@@ -1536,14 +1943,19 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   if (ln >= 2) {
     for (unsigned i = 2; i < ln - 1; i++) {
       discover_links(&re_man, &res[i], &res[i + 1], LT_MAN);
-      discover_links(&re_http, &res[i], &res[i + 1], LT_HTTP);
-      discover_links(&re_email, &res[i], &res[i + 1], LT_EMAIL);
+      if (config.capabilities.http_links)
+        discover_links(&re_http, &res[i], &res[i + 1], LT_HTTP);
+      if (config.capabilities.email_links)
+        discover_links(&re_email, &res[i], &res[i + 1], LT_EMAIL);
+      if (config.capabilities.file_links)
+        discover_links(&re_file, &res[i], &res[i + 1], LT_FILE);
     }
   }
 
-  // If no results were returned by `man`, set `err` and `err_msg`
+  // If no results were returned by `man`, set `err` to true and describe the
+  // error in `err_msg`. Otherwise, set `err` to false.
   err = false;
-  if (0 == ln) {
+  if (0 == ln || status != 0) {
     err = true;
     swprintf(err_msg, BS_LINE, L"No manual page for %ls", args);
   }
@@ -1565,27 +1977,16 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   toc_entry_t *res = aalloc(res_len, toc_entry_t); // result buffer
 
   // Section header for the list of sections (if enabled)
-  if (config.layout.sections_on_top) {
+  if (config.capabilities.sections_on_top) {
     res[en].type = TT_HEAD;
     res[en].text = walloc(BS_LINE);
-    wcscpy(res[en].text, L"SECTIONS");
+    wcslcpy(res[en].text, L"SECTIONS", BS_LINE);
     inc_en;
   }
 
-  // Use `man` to figure out `gpath`
-  char cmdstr[BS_LINE];
-  if (local_file)
-    snprintf(cmdstr, BS_LINE,
-             "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
-             config.misc.man_path, args);
-  else {
-    snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
-             config.misc.man_path, args);
-  }
-  FILE *pp = xpopen(cmdstr, "r");
-  if (-1 == sreadline(gpath, BS_LINE, pp))
-    winddown(ES_CHILD_ERROR, L"GNU man returned invalid output");
-  xpclose(pp);
+  // Correct arguments and use `man` to figure out `gpath`
+  if (false == man_loc(gpath, BS_LINE, args, local_file))
+    winddown(ES_OPER_ERROR, L"Failed to locate manual page source file");
 
   // Open `gpath`
   archive_t gp = aropen(gpath);
@@ -1605,7 +2006,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       textsp = wmargend(&gline[3], L"\"");
       if (textsp > 0) {
         res[en].text = walloc(BS_LINE);
-        wcscpy(res[en].text, &gline[3 + textsp]);
+        wcslcpy(res[en].text, &gline[3 + textsp], BS_LINE);
         wmargtrim(res[en].text, L"\"");
         inc_en;
         sh_seen = true;
@@ -1616,7 +2017,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       textsp = wmargend(&gline[3], L"\"");
       if (textsp > 0) {
         res[en].text = walloc(BS_LINE);
-        wcscpy(res[en].text, &gline[3 + textsp]);
+        wcslcpy(res[en].text, &gline[3 + textsp], BS_LINE);
         wmargtrim(res[en].text, L"\"");
         inc_en;
       }
@@ -1626,8 +2027,8 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
       if (!areof(gp)) {
         glen = xmbstowcs(gline, tmp, BS_LINE);
         {
-          // Edge case: the tag line contains only a comment or a line that must
-          // otherwise be skipped; skip to next line
+          // Edge case: the tag line contains only a comment or a line that
+          // must otherwise be skipped; skip to next line
           while (got_comment || got_tp || got_pd) {
             argets(gp, tmp, BS_LINE);
             if (areof(gp))
@@ -1636,8 +2037,8 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
           }
         }
         {
-          // Edge case: the tag line starts with a formatting command that sets
-          // a trap for the next line; skip to the next line
+          // Edge case: the tag line starts with a formatting command that
+          // sets a trap for the next line; skip to the next line
           while (got_trap && wmargtrim(gline, NULL) < 4) {
             argets(gp, tmp, BS_LINE);
             if (areof(gp))
@@ -1656,11 +2057,11 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
         textsp = wmargend(gline, NULL);
         res[en].type = TT_TAGPAR;
         res[en].text = walloc(BS_LINE);
-        wcscpy(res[en].text, &gline[textsp]);
+        wcslcpy(res[en].text, &gline[textsp], BS_LINE);
         glen = wmargtrim(res[en].text, L"\n");
         {
-          // Edge case: there's a line escape at the end of the tag line; remove
-          // it
+          // Edge case: there's a line escape at the end of the tag line;
+          // remove it
           if (glen >= 1 && L'\\' == res[en].text[glen - 1])
             res[en].text[glen - 1] = L'\0';
           if (glen >= 2 && L'\\' == res[en].text[glen - 2] &&
@@ -1678,11 +2079,6 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
 
   arclose(gp);
 
-  // Uncomment the following to log output into qman.log for debugging
-  // logprintf("man_toc()");
-  // for (unsigned i = 0; i < en; i++)
-  //   logprintf("%d: type=%d text=%ls", i, res[i].type, res[i].text);
-
   tocgroff(res, en);
   *dst = res;
   return en;
@@ -1697,10 +2093,10 @@ unsigned sc_toc(toc_entry_t **dst, const wchar_t *const *sc,
   toc_entry_t *res = aalloc(res_len, toc_entry_t); // result buffer
 
   // Section header for the list of sections (if enabled)
-  if (config.layout.sections_on_top) {
+  if (config.capabilities.sections_on_top) {
     res[en].type = TT_HEAD;
     res[en].text = walloc(BS_LINE);
-    wcscpy(res[en].text, L"SECTIONS");
+    wcslcpy(res[en].text, L"SECTIONS", BS_LINE);
     inc_en;
   }
 
@@ -1716,8 +2112,10 @@ unsigned sc_toc(toc_entry_t **dst, const wchar_t *const *sc,
   return en;
 }
 
+CC_IGNORE_UNUSED_PARAMETER
 link_loc_t prev_link(const line_t *lines, unsigned lines_len,
                      link_loc_t start) {
+  CC_IGNORE_ENDS
   unsigned i;
   link_loc_t res;
 
@@ -1916,17 +2314,17 @@ int search_prev(result_t *res, unsigned res_len, unsigned from) {
   return -1;
 }
 
-extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines,
-                         unsigned lines_len) {
+extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines) {
   // Return if no text is marked
   if (!mark.enabled) {
     *dst = NULL;
     return 0;
   }
 
-  wchar_t *res = walloc(BS_LINE * config.layout.height); // return value
-  wchar_t tmp[BS_LINE];                                  // temporary
-  unsigned ln;                                           // current line number
+  unsigned res_len = BS_LINE * config.layout.height; // return value length
+  wchar_t *res = walloc(res_len);                    // return value
+  wchar_t tmp[BS_LINE];                              // temporary
+  unsigned ln;                                       // current line number
 
   // Necessary to get rid of valgrind warnings
   memset(res, 0, sizeof(wchar_t) * BS_LINE * config.layout.height);
@@ -1942,15 +2340,15 @@ extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines,
     for (ln = mark.start_line; ln <= mark.end_line; ln++) {
       if (ln == mark.start_line) {
         // First line; append text from `start_char` to end of line
-        wcscat(res, &lines[ln].text[mark.start_char]);
+        wcslcat(res, &lines[ln].text[mark.start_char], res_len);
       } else if (ln == mark.end_line) {
         // Last line; append text from beginning of line to `end_char`
         wcsncpy(tmp, lines[ln].text, 1 + mark.end_char);
         tmp[1 + mark.end_char] = L'\0';
-        wcscat(res, tmp);
+        wcslcat(res, tmp, res_len);
       } else {
         // Intermediary lines; append entire line text
-        wcscat(res, lines[ln].text);
+        wcslcat(res, lines[ln].text, res_len);
       }
     }
   }
@@ -1976,7 +2374,7 @@ void populate_page() {
   // Populate page according to the request type of `history[history_cur]`
   switch (history[history_cur].request_type) {
   case RT_INDEX:
-    wcscpy(page_title, L"All Manual Pages");
+    wcslcpy(page_title, L"All Manual Pages", BS_SHORT);
     entitle(page_title);
     page_len = index_page(&page);
     break;
@@ -2018,8 +2416,8 @@ void populate_page() {
 }
 
 void populate_toc() {
-  // If the TOC doesn't exist yet, use `man_toc()` or `sc_toc()` to generate it
-  // now
+  // If the TOC doesn't exist yet, use `man_toc()` or `sc_toc()` to generate
+  // it now
   if (NULL == toc || 0 == toc_len) {
     request_type_t rt =
         history[history_cur].request_type;     // current request type
@@ -2153,6 +2551,8 @@ void winddown(int ec, const wchar_t *em) {
     free(config.chars.arrow_up);
   if (NULL != config.chars.arrow_down)
     free(config.chars.arrow_down);
+  if (NULL != config.chars.arrow_lr)
+    free(config.chars.arrow_lr);
   if (NULL != config.misc.program_version)
     free(config.misc.program_version);
   if (NULL != config.misc.config_path)
@@ -2169,6 +2569,8 @@ void winddown(int ec, const wchar_t *em) {
     free(config.misc.browser_path);
   if (NULL != config.misc.mailer_path)
     free(config.misc.mailer_path);
+  if (NULL != config.misc.viewer_path)
+    free(config.misc.viewer_path);
 
   // Deallocate memory used by `history` global
   requests_free(history, config.misc.history_size);
@@ -2197,6 +2599,7 @@ void winddown(int ec, const wchar_t *em) {
   regfree(&re_man.re);
   regfree(&re_http.re);
   regfree(&re_email.re);
+  regfree(&re_file.re);
 
   // (Optionally print `em` and) exit
   if (NULL != em)

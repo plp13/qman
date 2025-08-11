@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Bump version to ${1}
 
 exit_on_error() {

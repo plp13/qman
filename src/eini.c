@@ -19,20 +19,20 @@ regex_t eini_re_include, eini_re_section, eini_re_value;
   if (NULL == mykey)                                                           \
     ret.key = NULL;                                                            \
   else {                                                                       \
-    xwcsncpy(ret_key, wnnl(mykey), BS_SHORT);                                  \
+    wcslcpy(ret_key, wnnl(mykey), BS_SHORT);                                   \
     ret.key = ret_key;                                                         \
   }                                                                            \
   if (NULL == myvalue)                                                         \
     ret.value = NULL;                                                          \
   else {                                                                       \
-    xwcsncpy(ret_value, wnnl(myvalue), BS_LINE);                               \
+    wcslcpy(ret_value, wnnl(myvalue), BS_LINE);                                \
     wunescape(ret_value);                                                      \
     ret.value = ret_value;                                                     \
   }
 
-// Helper of `eini_parse()`. Strip trailing whitespace from `src`. If it's
+// Helper of `eini_parse()`. Strip trailing whitespace from `wsrc`. If it's
 // surrounded by single or double quotes, strip those as well. Return any syntax
-// errors.
+// errors pertaining to non-terminated quotes.
 #define wsrc_strip                                                             \
   wlen = wmargtrim(wsrc, NULL);                                                \
   if (L'"' == wsrc[0]) {                                                       \
@@ -138,16 +138,20 @@ range_t match(regex_t re, char *src) {
 //
 
 void eini_init() {
-  regcomp(&eini_re_include, "\\s*include\\s*", REG_EXTENDED);
-  regcomp(&eini_re_section, "\\s*\\[\\s*[a-zA-Z][a-zA-Z0-9_]*\\s*\\]\\s*",
+  regcomp(&eini_re_include, "[[:space:]]*include[[:space:]]*", REG_EXTENDED);
+  regcomp(&eini_re_section,
+          "[[:space:]]*\\[[[:space:]]*[a-zA-Z][a-zA-Z0-9_]*[[:space:]]*\\][[:"
+          "space:]]*",
           REG_EXTENDED);
-  regcomp(&eini_re_value, "\\s*[a-zA-Z][a-zA-Z0-9_]*\\s*=\\s*", REG_EXTENDED);
+  regcomp(&eini_re_value,
+          "[[:space:]]*[a-zA-Z][a-zA-Z0-9_]*[[:space:]]*=[[:space:]]*",
+          REG_EXTENDED);
 }
 
 eini_t eini_parse(char *src) {
   wchar_t *wsrc = walloca(BS_LINE); // `wchar_t*` version of `src`
   char *csrc =
-      salloca(BS_LINE); // `char*` version of `src` (after modification)
+      salloca(BS_LINE); // `char*` version of `src` (after removing comments)
   int wlen;             // length of `wsrc`
   range_t loc;          // location of regex match in `wsrc`
   eini_t ret;           // return value
@@ -219,6 +223,12 @@ void eini(eini_handler_t hf, eini_error_t ef, const char *path) {
 
   fp = xfopen(path, "r");
 
+  // If this is an empty file, do nothing
+  fseek(fp, 0, SEEK_END);
+  if (0 == ftell(fp))
+    return;
+  rewind(fp);
+
   while (!feof(fp)) {
     xfgets(ln, BS_LINE, fp);
     i++;
@@ -233,9 +243,9 @@ void eini(eini_handler_t hf, eini_error_t ef, const char *path) {
       } else {
         char apath[BS_LINE];
         xwcstombs(apath, lne.value, BS_LINE);
-        xstrncpy(ipath, xdirname(path), BS_LINE);
-        strncat(ipath, "/", BS_LINE - strlen(ipath) - 1);
-        strncat(ipath, apath, BS_LINE - strlen(ipath) - 1);
+        strlcpy(ipath, xdirname(path), BS_LINE);
+        strlcat(ipath, "/", BS_LINE);
+        strlcat(ipath, apath, BS_LINE);
       }
       ifp = fopen(ipath, "r");
       if (NULL == ifp) {
@@ -248,7 +258,7 @@ void eini(eini_handler_t hf, eini_error_t ef, const char *path) {
       break;
     }
     case EINI_SECTION: {
-      xwcsncpy(sec, lne.value, BS_SHORT);
+      wcslcpy(sec, lne.value, BS_SHORT);
       break;
     }
     case EINI_VALUE: {

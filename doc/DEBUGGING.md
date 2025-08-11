@@ -1,44 +1,15 @@
-# Testing
+# Debugging
 
-This document describes the procedures and tools we use for testing Qman.
+How to debug and profile Qman.
 
-## Terminal emulators
+## Debugger
 
-Test against the following terminal emulators:
+Use `gdb` (standalone or integrated with your editor/IDE).
 
-- console
-- xterm
-- urxvt
-- gnome-terminal
-- konsole
-- terminator
-- guake
-- tilix
-- tilda
-- edex-ui
-- cool-retro-term
-- alacritty
-- kitty
-- st
-- ghostty
-
-## Configuration files
-
-Test using the following configurations:
-
-- [modernity.conf](https://github.com/plp13/qman/blob/main/config/modernity.conf)
-- empty configuration file
-- custom configuration file, depending on the test case
-
-## Debugging
-
-Use `gdb`.
-
-To make sure the program gets fully rebuilt between debug sessions, we can use:
+To make sure the program gets fully rebuilt between debug sessions, use:
 
 ```
 meson compile --clean && meson compile
-
 ```
 
 ## Memory leaks
@@ -68,5 +39,14 @@ valgrind --tool=callgrind --dump-instr=yes --simulate-cache=yes --collect-jumps=
 ```
 
 This will produce a file named `callgrind.out.<pid>` where `<pid>` is the
-process ID assigned to `valgrind` by the OS. Use `kcachegrind` to open this file
-for further examination.
+process ID assigned to `valgrind` by the O/S. Use `kcachegrind` to open this
+file for further examination.
+
+## Debug logging
+
+Developers can use function `loggit()` or macro `logprintf()`, both in
+[util.h](../src/util.h), to print messages to `./qman.log` during development.
+
+All calls to `loggit()` and `logprintf()` must be removed before committing to
+either [main](https://github.com/plp13/qman/tree/main) or
+[devel](https://github.com/plp13/qman/tree/devel).
