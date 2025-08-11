@@ -2246,7 +2246,8 @@ bool tui_search_next(bool back) {
 
   // Store the previous/next search result into `my_top`
   if (back)
-    my_top = search_prev(results, results_len, MAX(0, page_top - 1));
+    my_top = search_prev(results, results_len,
+                         MAX(0, page_top > 0 ? page_top - 1 : 0));
   else
     my_top = search_next(results, results_len, MIN(page_len - 1, page_top + 1));
 
