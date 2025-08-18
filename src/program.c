@@ -267,6 +267,16 @@ full_regex_t re_man, re_http, re_email, re_file;
   (got_b || got_i || got_sm || got_sb || got_bi || got_br || got_ib ||         \
    got_ir || got_rb || got_ri)
 
+// true if `gline` signifies the beginning of a roff macro definition
+#define got_de_beg                                                             \
+  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
+   (L'D' == gline[1] || L'd' == gline[1]) &&                                   \
+   (L'E' == gline[2] || L'e' == gline[2]))
+
+// true if `gline` signifies the end of a roff macro definition
+#define got_de_end                                                             \
+  (gm && (glen >= 2) && (L'.' == gline[0]) && 0 == wcscmp(&gline[1], gme))
+
 // Helper of `man_loc()` and `man()`. Decompose command-line argument in `src`
 // into a `page` and potentially a `section` (both of length `len`). Return 2 if
 // both `page` and `section` got populated, 1 if just `page` got populated, or 0
@@ -304,8 +314,8 @@ unsigned extract_args(wchar_t **page, wchar_t **section, unsigned len,
         // ...if argument #2 exists...
         arg_dec_len = wsplit(&arg_dec, 2, arg, L"()", false);
         if (1 == arg_dec_len) {
-          // ...and is not in page(sec) format, set argument #1 as `section` and
-          // argument #2 as `page`
+          // ...and is not in page(sec) format, set argument #1 as `section`
+          // and argument #2 as `page`
           wcslcpy(*section, *page, len);
           wcslcpy(*page, arg_dec[0], len);
           return 2;
@@ -318,11 +328,11 @@ unsigned extract_args(wchar_t **page, wchar_t **section, unsigned len,
   return 0;
 }
 
-// Helper of `man_sections()` and `man_toc()`. Place the location of the manual
-// page source that corresponds to `args` into `dst` (of length `dst_len`). If
-// no such location exists, return false, otherwise return true. `local_file`
-// signifies whether `args` contains a local file path, rather than a manual
-// page name and section.
+// Helper of `man_sections()` and `man_toc()`. Place the location of the
+// manual page source that corresponds to `args` into `dst` (of length
+// `dst_len`). If no such location exists, return false, otherwise return
+// true. `local_file` signifies whether `args` contains a local file path,
+// rather than a manual page name and section.
 bool man_loc(char *dst, unsigned dst_len, const wchar_t *args,
              bool local_file) {
   char cmdstr[BS_LINE]; // command to execute
@@ -1555,8 +1565,14 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
   char gpath[BS_LINE];    // path to groff document for manual page
   int glen;               // length of current line in groff document
   wchar_t gline[BS_LINE]; // current line in groff document
-  unsigned en = 0;        // current entry in `res`
-  char tmp[BS_LINE];      // temporary
+  wchar_t **gwords =
+      aalloca(3, wchar_t *); // first words of `gline` (maximum 3; only used
+                             // for discovering macro definitions)
+  unsigned gwords_len;       // length of `gwords`
+  bool gm = false;           // true if we are inside a macro definition
+  wchar_t gme[BS_SHORT];     // end token of current macro definition
+  unsigned en = 0;           // current entry in `res`
+  char tmp[BS_LINE];         // temporary
 
   unsigned res_len = BS_SHORT;                // result buffer length
   wchar_t **res = aalloc(res_len, wchar_t *); // result buffer
@@ -1571,14 +1587,30 @@ unsigned man_sections(wchar_t ***dst, const wchar_t *args, bool local_file) {
   // For each line in `gpath`, `gline`...
   argets(gp, tmp, BS_LINE);
   while (!areof(gp)) {
-    glen = xmbstowcs(gline, tmp, BS_LINE);
+    xmbstowcs(gline, tmp, BS_LINE);
+    glen = wmargtrim(gline, L"");
 
     if (-1 == glen)
       winddown(ES_OPER_ERROR, L"Failed to read manual page source");
 
+    // If line is the beginning of a macro definition, set `gm` to true and
+    // `gme` to the macro's end token
+    if (got_de_beg) {
+      gm = true;
+      gwords_len = wsplit(&gwords, 3, gline, L"", false);
+      if (3 == gwords_len)
+        wcslcpy(gme, gwords[2], BS_SHORT);
+      else
+        wcslcpy(gme, L".", BS_SHORT);
+    }
+
+    // If line is the end of a macro definition, set `gm` to false
+    else if (got_de_end) {
+      gm = false;
+    }
+
     // If line is a section heading, add the corresponding data to `res`
-    if (got_sh) {
-      // Section heading
+    else if (!gm && got_sh) {
       unsigned textsp = wmargend(&gline[3], L"\"");
       if (textsp > 0) {
         res[en] = walloc(BS_LINE);
@@ -1978,9 +2010,15 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   char gpath[BS_LINE];    // path to groff document for manual page
   int glen;               // length of current line in groff document
   wchar_t gline[BS_LINE]; // current line in groff document
-  unsigned en = 0;        // current entry in `res`
-  bool sh_seen = false;   // whether a section header has been seen
-  char tmp[BS_LINE];      // temporary
+  wchar_t **gwords =
+      aalloca(3, wchar_t *); // first words of `gline` (maximum 3; only used
+                             // for discovering macro definitions)
+  unsigned gwords_len;       // length of `gwords`
+  bool gm = false;           // true if we are inside a macro definition
+  wchar_t gme[BS_SHORT];     // end token of current macro definition
+  unsigned en = 0;           // current entry in `res`
+  bool sh_seen = false;      // whether a section header has been seen
+  char tmp[BS_LINE];         // temporary
   unsigned textsp; // real beginning of `gline`'s text (ignoring whitespace)
 
   unsigned res_len = BS_LINE;                      // result buffer length
@@ -2004,13 +2042,30 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
   // For each line in `gpath`, `gline`...
   argets(gp, tmp, BS_LINE);
   while (!areof(gp)) {
-    glen = xmbstowcs(gline, tmp, BS_LINE);
+    xmbstowcs(gline, tmp, BS_LINE);
+    glen = wmargtrim(gline, L"");
 
     if (-1 == glen)
       winddown(ES_OPER_ERROR, L"Failed to read manual page source");
 
+    // If line is the beginning of a macro definition, set `gm` to true and
+    // `gme` to the macro's end token
+    if (got_de_beg) {
+      gm = true;
+      gwords_len = wsplit(&gwords, 3, gline, L"", false);
+      if (3 == gwords_len)
+        wcslcpy(gme, gwords[2], BS_SHORT);
+      else
+        wcslcpy(gme, L".", BS_SHORT);
+    }
+
+    // If line is the end of a macro definition, set `gm` to false
+    else if (got_de_end) {
+      gm = false;
+    }
+
     // If line can be a TOC entry, add the corresponding data to `res`
-    if (got_sh) {
+    else if (!gm && got_sh) {
       // Section heading
       res[en].type = TT_HEAD;
       textsp = wmargend(&gline[3], L"\"");
@@ -2021,7 +2076,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
         inc_en;
         sh_seen = true;
       }
-    } else if (got_ss && sh_seen) {
+    } else if (!gm && got_ss && sh_seen) {
       // Subsection heading
       res[en].type = TT_SUBHEAD;
       textsp = wmargend(&gline[3], L"\"");
@@ -2031,7 +2086,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
         wmargtrim(res[en].text, L"\"");
         inc_en;
       }
-    } else if (got_tp && sh_seen) {
+    } else if (!gm && got_tp && sh_seen) {
       // Tagged paragraph
       argets(gp, tmp, BS_LINE);
       if (!areof(gp)) {

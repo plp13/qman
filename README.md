@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.5.0-1-g5f344a0 -- [see what's new](#new-in-this-version)
+Version 1.5.0-2-g1b6168a -- [see what's new](#new-in-this-version)
 
 ![Screenhot -- Viewing a Manual Page](/screenshots/qman_man.png)
 
@@ -56,8 +56,9 @@ you have found one, please open an
 
 ## New in this version
 
-Version 1.5.0 introduces the following:
+Version 1.6.0 introduces the following:
 - *Italic text* support
+- Miscellaneous bug fixes and documentation updates
 
 > **:bulb: Note**
 >
