@@ -267,11 +267,30 @@ full_regex_t re_man, re_http, re_email, re_file;
   (got_b || got_i || got_sm || got_sb || got_bi || got_br || got_ib ||         \
    got_ir || got_rb || got_ri)
 
-// true if `gline` signifies the beginning of a roff macro definition
-#define got_de_beg                                                             \
-  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
+// Components of `got_de_beg`
+#define got_de                                                                 \
+  ((glen >= 4) && (L'.' == gline[0]) &&                                        \
    (L'D' == gline[1] || L'd' == gline[1]) &&                                   \
-   (L'E' == gline[2] || L'e' == gline[2]))
+   (L'E' == gline[2] || L'e' == gline[2]) && iswspace(gline[3]))
+#define got_de1                                                                \
+  ((glen >= 5) && (L'.' == gline[0]) &&                                        \
+   (L'D' == gline[1] || L'd' == gline[1]) &&                                   \
+   (L'E' == gline[2] || L'e' == gline[2]) && (L'1' == gline[3]) &&             \
+   iswspace(gline[4]))
+#define got_dei                                                                \
+  ((glen >= 5) && (L'.' == gline[0]) &&                                        \
+   (L'D' == gline[1] || L'd' == gline[1]) &&                                   \
+   (L'E' == gline[2] || L'e' == gline[2]) &&                                   \
+   (L'i' == gline[3] || L'I' == gline[3]) && iswspace(gline[4]))
+#define got_dei1                                                               \
+  ((glen >= 6) && (L'.' == gline[0]) &&                                        \
+   (L'D' == gline[1] || L'd' == gline[1]) &&                                   \
+   (L'E' == gline[2] || L'e' == gline[2]) &&                                   \
+   (L'i' == gline[3] || L'I' == gline[3]) && (L'1' == gline[4]) &&             \
+   iswspace(gline[5]))
+
+// true if `gline` signifies the beginning of a roff macro definition
+#define got_de_beg (got_de || got_de1 || got_dei || got_dei1)
 
 // true if `gline` signifies the end of a roff macro definition
 #define got_de_end                                                             \
