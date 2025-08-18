@@ -1370,10 +1370,14 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
            hfr_width, key,                                            //
            rmargin_width, ""                                          //
   );
-  bset(t_false == config.tcap.italics ? res[ln].uline : res[ln].italic,
+  bset(ST_MANDB != config.misc.system_type || t_false == config.tcap.italics
+           ? res[ln].uline
+           : res[ln].italic,
        lmargin_width);
   bset(res[ln].reg, lmargin_width + key_len);
-  bset(t_false == config.tcap.italics ? res[ln].uline : res[ln].italic,
+  bset(ST_MANDB != config.misc.system_type || t_false == config.tcap.italics
+           ? res[ln].uline
+           : res[ln].italic,
        lmargin_width + hfl_width + hfc_width + hfr_width - key_len);
   bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
 
@@ -1504,7 +1508,9 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
            hfr_width, key,                                            //
            rmargin_width, ""                                          //
   );
-  bset(t_false == config.tcap.italics ? res[ln].uline : res[ln].italic,
+  bset(ST_MANDB != config.misc.system_type || t_false == config.tcap.italics
+           ? res[ln].uline
+           : res[ln].italic,
        lmargin_width + hfl_width + hfc_width + hfr_width - key_len);
   bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
 
