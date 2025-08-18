@@ -21,7 +21,7 @@ Where:
     - option: one of the options in said section (a string)
     - type: the option's type. One of the following strings:
         - "bool": a boolean
-        - "systype": a system type (one of: "gnu", "mandoc", "freebsd")
+        - "systype": a system type (one of: "mandb", "mandoc", "freebsd", "darwin")
         - "trit": a ternary ("true", "false", or "auto")
         - "int": an integer
         - "string": an 8-bit string
@@ -174,7 +174,7 @@ config_def = {
     },
     "misc": {
         "program_name": (("string",), None, False, "Program executable basename (discovered automatically)"),
-        "program_version": (("wstring",), ("Qman 1.5.0",), False, "Formal program name and version"),
+        "program_version": (("wstring",), ("Qman 1.4.3-106-g41a4e9a",), False, "Formal program name and version"),
         "system_type": (("systype", ), ("mandb", ), True, "System type: mandb, mandoc, freebsd, darwin, ..."),
         "config_path": (("string",), None, False, "Path to the configuration file"),
         "man_path": (("string",), ("/usr/bin/man",), True, "Path to the man(1) command"),
