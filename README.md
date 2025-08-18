@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.4.3-107-ge1e7b5a -- [see what's new](#new-in-this-version)
+Version 1.5.0 -- [see what's new](#new-in-this-version)
 
 ![Screenhot -- Viewing a Manual Page](/screenshots/qman_man.png)
 
@@ -57,34 +57,13 @@ you have found one, please open an
 ## New in this version
 
 Version 1.5.0 introduces the following:
-- Support for several different manual page systems. Historically Qman only
-  supported `mandb`, but this is no longer the case. The program now supports
-  the following manual page systems:
-  - **[mandb](https://gitlab.com/man-db/man-db)** - most Linux distributions
-  - **[mandoc](https://mandoc.bsd.lv/)** - Void Linux, Haiku, others?
-  - **[freebsd](https://www.freebsd.org/)** - FreeBSD
-  - **[darwin](https://www.apple.com/macos/)** - macOS
-- Hyperlinks to files or directories in the local filesystem (new config
-  option `viewer_path` can be used to specify the program for opening them)
-- New `[capabilities]` config file section enables users to disable several non-
-  core program features
-- Three new themes:
-  - `adwaita`, designed to match the colors of dark Adwaita desktops
-  - `adwaita-light`, designed to match the colors of light Adwaita desktops
-  - `modernity-light`, a generic light theme to complement `modernity`
-- Re-organized and extended documentation
-- Improved error messages, especially when it comes to errors caused by
-  misconfiguration or a missing manual pages database
-- Miscellaneous other bug fixes and minor features
+- *Italic text* support
 
 > **:bulb: Note**
 >
 > Users using custom config files may need to update them after a new release.
 > For more information, please refer to Qman's manual page and the documentation
 > in [config/README.md](config/README.md).
->
-> In version 1.5.0, config options `sections_on_top`, `hyphenate` and `justify`
-> have been moved to section `[capabilities]`.
 
 ## More screenshots
 
