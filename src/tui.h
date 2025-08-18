@@ -16,6 +16,7 @@ typedef struct {
   short colours;  // number of colors supported by the terminal, or 0 if the
                   // terminal is black and white
   bool rgb;       // true if terminal colors can be re-defined
+  bool italics;   // true if terminal supports italics
   bool unicode;   // true if the terminal supports Unicode
   bool clipboard; // true if the terminal supports clipboard operations (OSC 52)
   unsigned escdelay; // terminal escape delay

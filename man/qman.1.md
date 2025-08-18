@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.4.3-106-g41a4e9a
+footer: Qman 1.4.3-107-ge1e7b5a
 date: December 15, 2023
 ---
 
@@ -351,6 +351,7 @@ behavior:
 |----------|--------------|------------|---------------------------------------|
 | colours  | int          | -1         | Number of colors supported by the terminal, or -1 to auto-detect |
 | rgb      | ternary      | auto       | True if terminal can re-define colors, false if not, auto to auto-detect |
+| italics  | ternary      | auto       | True if terminal supports italics, false if not, auto to auto-detect |
 | unicode  | ternary      | auto       | True if terminal supports Unicode, false if not, auto to auto-detect |
 | clipboard| ternary      | auto       | True if terminal supports clipboard operations (OSC 52), false if not, auto to auto-detect |
 | escdelay | int          | 60         | Number of miliseconds to wait after receving ESC from the keyboard before interpreting it as the escape key. Users with historical terminals or very unreliable network connections may want to increase this. |

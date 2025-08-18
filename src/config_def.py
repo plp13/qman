@@ -49,6 +49,7 @@ config_def = {
     "tcap": {
         "colours": (("int", -1, 256), ("-1",), True, "Number of colors supported by the terminal (set to -1 to auto-configure)"),
         "rgb": (("trit",), ("auto",), True, "Terminal colors can be re-defined"),
+        "italics": (("trit",), ("auto",), True, "Terminal supports italics"),
         "unicode": (("trit",), ("auto",), True, "Terminal supports Unicode"),
         "clipboard": (("trit",), ("auto",), True, "Terminal supports clipboard operations (OSC 52)"),
         "escdelay": (("int", 1, 10000), ("60",), True, "Terminal escape delay")
@@ -174,7 +175,7 @@ config_def = {
     },
     "misc": {
         "program_name": (("string",), None, False, "Program executable basename (discovered automatically)"),
-        "program_version": (("wstring",), ("Qman 1.4.3-106-g41a4e9a",), False, "Formal program name and version"),
+        "program_version": (("wstring",), ("Qman 1.4.3-107-ge1e7b5a",), False, "Formal program name and version"),
         "system_type": (("systype", ), ("mandb", ), True, "System type: mandb, mandoc, freebsd, darwin, ..."),
         "config_path": (("string",), None, False, "Path to the configuration file"),
         "man_path": (("string",), ("/usr/bin/man",), True, "Path to the man(1) command"),

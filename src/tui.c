@@ -527,6 +527,19 @@ void init_tui_tcap() {
     tcap.rgb = (tcap.colours >= 256) && can_change_color();
   }
 
+  switch (config.tcap.italics) {
+  case t_true:
+    tcap.italics = true;
+    break;
+  case t_false:
+    tcap.italics = false;
+    break;
+  case t_auto:
+    tcap.italics = 0 != strcmp(tcap.term, "linux") &&
+                   0 != strcmp(tcap.term, "xterm") && tigetflag("sitm") &&
+                   tigetflag("ritm");
+  }
+
   switch (config.tcap.unicode) {
   case t_true:
     tcap.unicode = true;
@@ -863,7 +876,8 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
       if (bget(lines[ly].bold, lx))
         change_colour_attr(wmain, config.colours.text, WA_BOLD);
       if (bget(lines[ly].italic, lx))
-        change_colour_attr(wmain, config.colours.text, WA_STANDOUT);
+        change_colour_attr(wmain, config.colours.text,
+                           tcap.italics ? WA_ITALIC : WA_UNDERLINE);
       if (bget(lines[ly].uline, lx))
         change_colour_attr(wmain, config.colours.text, WA_UNDERLINE);
       if (bget(lines[ly].reg, lx))

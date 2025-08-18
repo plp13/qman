@@ -1370,9 +1370,10 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
            hfr_width, key,                                            //
            rmargin_width, ""                                          //
   );
-  bset(res[ln].uline, lmargin_width);
+  bset(t_false == config.tcap.italics ? res[ln].uline : res[ln].italic,
+       lmargin_width);
   bset(res[ln].reg, lmargin_width + key_len);
-  bset(res[ln].uline,
+  bset(t_false == config.tcap.italics ? res[ln].uline : res[ln].italic,
        lmargin_width + hfl_width + hfc_width + hfr_width - key_len);
   bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
 
@@ -1503,7 +1504,7 @@ unsigned aprowhat_render(line_t **dst, const aprowhat_t *aw,
            hfr_width, key,                                            //
            rmargin_width, ""                                          //
   );
-  bset(res[ln].uline,
+  bset(t_false == config.tcap.italics ? res[ln].uline : res[ln].italic,
        lmargin_width + hfl_width + hfc_width + hfr_width - key_len);
   bset(res[ln].reg, lmargin_width + hfl_width + hfc_width + hfr_width);
 
@@ -1671,7 +1672,10 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
             config.capabilities.justify ? "" : "--nj");
     setenv("MANOPT", tmps, true);
     setenv("MAN_KEEP_FORMATTING", "1", true);
-    setenv("MANROFFOPT", "", true);
+    if (t_false == config.tcap.italics)
+      setenv("MANROFFOPT", "", true);
+    else
+      setenv("MANROFFOPT", "-P-i", true);
     setenv("GROFF_SGR", "1", true);
     unsetenv("GROFF_NO_SGR");
   } else if (ST_MANDOC == config.misc.system_type) {
