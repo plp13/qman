@@ -499,6 +499,7 @@ void init_tui() {
   curs_set(0);
   timeout(2000);
   start_color();
+  use_default_colors();
 
   // Set up on-the-fly reconfiguration
   signal(SIGUSR1, sigusr1_handler);

@@ -140,8 +140,9 @@ int wcs2int(const wchar_t *src) {
 // Helper of various `conf_...()` functions and methods. Return the ncurses
 // color that corresponds to `src`. Allowed values for `src` are "black", "red",
 // "green", "yellow", "blue", "magenta", "cyan", "white", a positive integer, or
-// "#rrggbb". Return -1 in case of parse error, or -2 if the terminal cannot
-// support such a color.
+// "#rrggbb". Also, "default", referring to the terminal's default foreground or
+// background color, depending on context. Return -1 for default color, -2 in
+// case of parse error, or -3 if the terminal cannot support such a color.
 //
 // NOTE: Setting `src` to a "#rrggbb" causes terminal colors to be re-defined.
 // We use an internal index to re-define colors, starting with color no. 255 and
@@ -160,13 +161,13 @@ short wcs2colour(const wchar_t *src) {
   const int srci = wcs2int(src);
   if (errno == 0 && srci >= 0) {
     if (tcap.colours < 256) {
-      // Terminal does not support 256 colors; return -2
-      return -2;
+      // Terminal does not support 256 colors; return -3
+      return -3;
     }
     return srci;
   }
 
-  // If `src` matches a color name such as 'black', 'red', etc. return the
+  // If `src` matches a color name such as "black", "red", etc. return the
   // corresponding color.
   else if (0 == wcscasecmp(src, L"BLACK"))
     return COLOR_BLACK;
@@ -184,19 +185,21 @@ short wcs2colour(const wchar_t *src) {
     return COLOR_CYAN;
   else if (0 == wcscasecmp(src, L"WHITE"))
     return COLOR_WHITE;
+  else if (0 == wcscasecmp(src, L"DEFAULT"))
+    return -1;
 
   // Otherwise, try to parse `src` as '#rrggbb' and return the corresponding
   // color
   else {
     unsigned red = 0, green = 0, blue = 0; // New color values
     if (3 != swscanf(src, L"#%2x%2x%2x", &red, &green, &blue)) {
-      // Unable to parse src; return -1
-      return -1;
+      // Unable to parse src; return -2
+      return -2;
     } else {
       if (! tcap.rgb) {
         // Terminal does not support 256 colors that can be re-defined; return
-        // -2
-        return -2;
+        // -3
+        return -3;
       }
       red = (red * 1000) / 256;
       green = (green * 1000) / 256;
@@ -399,7 +402,7 @@ int wcs2ch(const wchar_t *src) {
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
     nfg = wcs2colour(fg);                                                      \
-    if (-1 == nfg) {                                                           \
+    if (-2 == nfg) {                                                           \
       swprintf(                                                                \
           errmsg, BS_SHORT,                                                    \
           L"Error in %s line %d: Invalid foreground color '%ls'",              \
@@ -407,7 +410,7 @@ int wcs2ch(const wchar_t *src) {
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
     nbg = wcs2colour(bg);                                                      \
-    if (-1 == nbg) {                                                           \
+    if (-2 == nbg) {                                                           \
       swprintf(                                                                \
           errmsg, BS_SHORT,                                                    \
           L"Error in %s line %d: Invalid background color '%ls'",              \
@@ -422,7 +425,7 @@ int wcs2ch(const wchar_t *src) {
       winddown(ES_CONFIG_ERROR, errmsg);                                       \
     }                                                                          \
     /* Apply colour changes only if the terminal supports it                */ \
-    if (-2 != nfg && -2 != nbg) {                                              \
+    if (-3 != nfg && -3 != nbg) {                                              \
       trgt.fg = nfg;                                                           \
       trgt.bg = nbg;                                                           \
       trgt.bold = nbold;                                                       \
