@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.5.0-6-ge44699c
+footer: Qman 1.5.0-7-gc3a7475
 date: December 15, 2023
 ---
 
@@ -281,9 +281,11 @@ Each color is defined using three words separated by whitespace:
 _foreground_ _background_ _bold_
 
 _foreground_ and _background_ can be one of **black**, **red**, **green**,
-**yellow**, **blue**, **magenta**, **cyan**, or **white**. Alternatively, they
-can be a number between 0 and 255, or a hexadecimal RGB value using the #RRGGBB
-notation.
+**yellow**, **blue**, **magenta**, **cyan**, **white**, or **default**.
+Alternatively, they can be a number between 0 and 255, or a hexadecimal RGB
+value using the #RRGGBB notation. Setting a foreground or background color to
+**default** instructs **Qman** to use the terminal's default foreground or
+background color respectively.
 
 _bold_ is a boolean that signifies whether the foreground color will have a
 high (true) or low (false) intensity.

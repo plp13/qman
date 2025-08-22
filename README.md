@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.5.0-6-ge44699c -- [see what's new](#new-in-this-version)
+Version 1.5.0-7-gc3a7475 -- [see what's new](#new-in-this-version)
 
 ![Screenhot -- Viewing a Manual Page](/screenshots/qman_man.png)
 
@@ -58,6 +58,9 @@ you have found one, please open an
 
 Version 1.6.0 introduces the following:
 - *Italic text* support
+- Themes can now use the terminal's default colors
+- New `minimal-16` theme that follows the host terminal's color scheme
+  (contributed by @denn-moe)
 - Miscellaneous bug fixes and documentation updates
 
 > **:bulb: Note**
