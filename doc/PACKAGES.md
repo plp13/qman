@@ -2,6 +2,8 @@
 
 Known Qman packages:
 
+- Alpine Linux
+  -[qman](https://pkgs.alpinelinux.org/package/edge/testing/armv7/qman): latest release
 - Arch Linux
   - [qman](https://aur.archlinux.org/packages/qman) (AUR): latest release
   - [qman-git](https://aur.archlinux.org/packages/qman-git) (AUR):
