@@ -114,7 +114,7 @@ config_def = {
     },
     "keys": {
         "up": (("key",), ("KEY_UP", "y", "k"), True, "Scroll up one line"),
-        "down": (("key",), ("KEY_DOWN", "e", "j"), True, "Scroll down one line"),
+        "down": (("key",), ("KEY_DOWN", "SPACE", "e", "j"), True, "Scroll down one line"),
         "left": (("key",), ("KEY_LEFT", "<"), True, "Scroll left one tab stop"),
         "right": (("key",), ("KEY_RIGHT", ">"), True, "Scroll right one tab stop"),
         "pgup": (("key",), ("KEY_PPAGE", "b"), True, "Scroll up one page"),
@@ -175,7 +175,7 @@ config_def = {
     },
     "misc": {
         "program_name": (("string",), None, False, "Program executable basename (discovered automatically)"),
-        "program_version": (("wstring",), ("Qman 1.5.0-7-gc3a7475",), False, "Formal program name and version"),
+        "program_version": (("wstring",), ("Qman 1.5.0-9-ge478a0b",), False, "Formal program name and version"),
         "system_type": (("systype", ), ("mandb", ), True, "System type: mandb, mandoc, freebsd, darwin, ..."),
         "config_path": (("string",), None, False, "Path to the configuration file"),
         "man_path": (("string",), ("/usr/bin/man",), True, "Path to the man(1) command"),

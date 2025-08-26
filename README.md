@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.5.0-7-gc3a7475 -- [see what's new](#new-in-this-version)
+Version 1.5.0-9-ge478a0b -- [see what's new](#new-in-this-version)
 
 ![Screenhot -- Viewing a Manual Page](/screenshots/qman_man.png)
 
