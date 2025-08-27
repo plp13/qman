@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.5.0-11-g63d6761 -- [see what's new](#new-in-this-version)
+Version 1.5.0-12-g56ed062 -- [see what's new](#new-in-this-version)
 
 ![Screenhot -- Viewing a Manual Page](/screenshots/qman_man.png)
 
@@ -61,6 +61,8 @@ Version 1.6.0 introduces the following:
 - Themes can now use the terminal's default colors
 - New `minimal-16` theme that follows the host terminal's color scheme
   (contributed by [denn-moe](https://github.com/denn-moe))
+- Space bar is now associated with DOWN, in order to conform with common UX
+  expectations
 - Miscellaneous bug fixes and documentation updates
 
 > **:bulb: Note**
