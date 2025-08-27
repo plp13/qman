@@ -680,6 +680,9 @@ bool termsize_changed() {
     config.layout.width = width;
     config.layout.height = height;
 
+    if (width < 40 || height < 12)
+      winddown(ES_OPER_ERROR, L"Terminal size too small");
+
     if (width > config.layout.sbar_width)
       config.layout.main_width = width - config.layout.sbar_width;
     else
