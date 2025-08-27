@@ -631,8 +631,7 @@ void init_tui_mouse() {
               NULL);
 
     // Initialize terminal to enable drag-and-drop
-    char *term = getenv("TERM");
-    if (0 != strcmp(term, "xterm-1002")) {
+    if (0 != strcmp(tcap.term, "xterm-1002")) {
       sendescseq("[?1002h");
     }
   }
@@ -1375,8 +1374,7 @@ void winddown_tui() {
   reset_color_pairs();
 
   // Initialize terminal to disable drag-and-drop
-  char *term = getenv("TERM");
-  if (0 != strcmp(term, "xterm-1002")) {
+  if (0 != strcmp(tcap.term, "xterm-1002")) {
     sendescseq("[?1002l");
   }
 
