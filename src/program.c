@@ -489,8 +489,8 @@ unsigned aprowhat_exec_darwin(aprowhat_t **dst, aprowhat_cmd_t cmd,
       salloc(BS_LONG); // current line of text, as returned by the command
   wchar_t *wline = walloc(BS_LONG); // `wchar_t *` version of `line`
   wchar_t **idents =
-      aalloc(BS_LINE, wchar_t *);    // manual page / section combos (in `line`)
-  wchar_t *descr = walloca(BS_LINE); // description (in `line`)
+      aalloc(BS_LINE, wchar_t *); // manual page / section combos (in `line`)
+  wchar_t *descr;                 // description (in `line`)
   wchar_t *page,
       *section; // manual page and section in current entry of `idents`
   wchar_t *buf; // temporary
@@ -1221,7 +1221,7 @@ unsigned aprowhat_exec(aprowhat_t **dst, aprowhat_cmd_t cmd,
   wchar_t *wline = walloc(BS_LONG);             // `wchar_t *` version of `line`
   wchar_t **pages = aalloc(BS_LINE, wchar_t *); // pages (in `line`)
   wchar_t **sections = aalloc(BS_LINE, wchar_t *); // sections (in `line`)
-  wchar_t *descr = walloca(BS_LINE);               // description (in `line`)
+  wchar_t *descr;                                  // description (in `line`)
   wchar_t *tmp, *buf;                              // temporary
   unsigned pages_len, sections_len, cur_page_len, cur_section_len,
       descr_len; // lengths of `pages`, `sections`, current entry in `pages`,
@@ -1814,7 +1814,6 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
   // `tmps`/`tmpw`
   xfgets(tmps, BS_LINE, pp);
   len = xmbstowcs(tmpw, tmps, BS_LINE);
-  i = 0;
   while (!feof(pp) && (0 == len || L'\n' == tmpw[wmargend(tmpw, L"\n")])) {
     xfgets(tmps, BS_LINE, pp);
     len = xmbstowcs(tmpw, tmps, BS_LINE);
@@ -1938,7 +1937,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
         if (ilink) {
           if (ilink_ln == ln) {
             ilink_end = j;
-            add_link(&res[ln], ilink_start, j, false, 0, 0, LT_HTTP,
+            add_link(&res[ln], ilink_start, ilink_end, false, 0, 0, LT_HTTP,
                      ilink_trgt);
           } else if (ln > 0) {
             ilink_end = res[ln - 1].length - 1;
