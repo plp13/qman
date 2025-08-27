@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.5.0-9-ge478a0b
+footer: Qman 1.5.0-11-g63d6761
 date: December 15, 2023
 ---
 
@@ -58,7 +58,7 @@ keyboard mappings:
 | Action name     | Description                           | Key mappings       |
 |-----------------|---------------------------------------|--------------------|
 | UP              | Scroll up one line and/or focus on the previous link | **UP**, **y**, **k** |
-| DOWN            | Scroll down one line and/or focus on the next link | **DOWN**, **e**, **j** |
+| DOWN            | Scroll down one line and/or focus on the next link | **DOWN**, **SPACE**, **e**, **j** |
 | LEFT            | Scroll left one tab stop              | **LEFT**, **<**    |
 | RIGHT           | Scroll right one tab stop             | **RIGHT**, **>**   |
 | PGUP            | Scroll up one page                    | **PGUP**, **b**    |
