@@ -1374,7 +1374,7 @@ void winddown_tui() {
   reset_color_pairs();
 
   // Initialize terminal to disable drag-and-drop
-  if (0 != strcmp(tcap.term, "xterm-1002")) {
+  if (NULL != tcap.term && 0 != strcmp(tcap.term, "xterm-1002")) {
     sendescseq("[?1002l");
   }
 
