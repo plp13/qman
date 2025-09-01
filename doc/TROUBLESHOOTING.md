@@ -5,7 +5,7 @@
 
 2. Read [BUILDING.md](BUILDING.md) and [OS_SPECIFIC.md](OS_SPECIFIC.md).
 
-3. And, of course, RTFM:
+3. And, of course, [RTFM](../man/qman.1.md):
 
 ```
 $ qman qman
