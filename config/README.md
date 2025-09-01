@@ -5,8 +5,8 @@ users. It's automatically installed at `/etc/xdg/qman/qman.conf`. Alternatively,
 and in order to configure Qman on a per-user basis, it can be copied to
 `${HOME}/.config/qman/qman.conf`.
 
-A complete reference on configuration file locations and contents can be found
-in Qman's manual page.
+A complete reference on configuration files can be found in
+[Qman's manual page](../man/qman.1.md).
 
 ## Themes
 
