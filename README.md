@@ -9,6 +9,7 @@ Version 1.5.0 -- [see what's new](#new-in-this-version)
 
 - [Generic build instructions](doc/BUILDING.md) (works for most Linux distros)
 - [O/S specific instructions](doc/OS_SPECIFIC.md)
+- [Manual](man/qman.1.md)
 - [Troubleshooting](doc/TROUBLESHOOTING.md)
 - [Packages](doc/PACKAGES.md)
 - [Configuration and themes](config/)
