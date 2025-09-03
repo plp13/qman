@@ -30,6 +30,12 @@ option('config',
   description: 'Install the configuration files'
 )
 
+option('staticexe',
+  type: 'boolean',
+  value: false,
+  description: 'Try to build static executables'
+)
+
 option('libbsd',
   type: 'feature',
   value: 'disabled',

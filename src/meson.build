@@ -33,37 +33,45 @@ src = [
   'tui.c'
 ]
 
+# Meta-variables for handling staticexe
+_static = false
+_link_args = ''
+if get_option('staticexe')
+  _static = true
+  _link_args = '-static'
+endif
+
 # Dependencies
 deps = [
-  dependency('ncursesw', required: true),
+  dependency('ncursesw', static: _static, required: true),
 ]
 if get_option('libbsd').enabled() or get_option('libbsd').auto()
-  libbsd = dependency('libbsd-overlay', required: true)
+  libbsd = dependency('libbsd-overlay', static: _static, required: true)
   deps += [libbsd]
 endif
 if get_option('gzip').enabled() or get_option('gzip').auto()
-  gzip = dependency('zlib', required: true)
+  gzip = dependency('zlib', static: _static, required: true)
   deps += [gzip]
   add_global_arguments('-DQMAN_GZIP=true', language: 'c')
 endif
 if get_option('bzip2').enabled() or get_option('bzip2').auto()
-  bzip2 = dependency('bzip2', required: false)
+  bzip2 = dependency('bzip2', static: _static, required: false)
   if not bzip2.found()
-    bzip2 = cc.find_library('bz2', required: true)
+    bzip2 = cc.find_library('bz2', static: _static, required: true)
   endif
   deps += [bzip2]
   add_global_arguments('-DQMAN_BZIP2=true', language: 'c')
 endif
 if get_option('lzma').enabled() or get_option('lzma').auto()
-  xz = dependency('liblzma', required: false)
+  xz = dependency('liblzma', static: _static, required: false)
   if not xz.found()
-    xz = cc.find_library('lzma', required: true)
+    xz = cc.find_library('lzma', static: _static, required: true)
   endif
   deps += [xz]
   add_global_arguments('-DQMAN_LZMA=true', language: 'c')
 endif
 if get_option('tests').enabled() or get_option('tests').auto()
-  cunit = dependency('cunit', required: true)
+  cunit = dependency('cunit', static: _static, required: true)
   deps += [cunit]
 endif
 
@@ -71,6 +79,7 @@ endif
 executable('qman',
   sources: src + ['qman.c'],
   dependencies: deps,
+  link_args: _link_args,
   install: true,
   install_dir: 'bin',
   install_tag: 'program'
@@ -81,6 +90,7 @@ if get_option('tests').enabled()
   t_exe = executable('qman_tests',
     sources: src + ['qman_tests.c'],
     dependencies: deps,
+    link_args: _link_args,
     install: false
   )
   t_all = run_command(find_program('qman_tests_list.sh'), check: true).stdout().split('\n')
