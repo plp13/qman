@@ -418,7 +418,7 @@ bool man_loc(char *dst, unsigned dst_len, const wchar_t *args,
       ret = false;
       FILE *pp = xpopen(cmdstr, "r");
       while (-1 != sreadline(dst, dst_len, pp)) {
-        combo_ptr = strcasestr(dst, combo);
+        combo_ptr = xstrcasestr(dst, combo);
         if (NULL != combo_ptr) {
           combo_post = combo_ptr[strlen(combo)];
           if ('.' == combo_post || '\0' == combo_post) {

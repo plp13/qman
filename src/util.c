@@ -326,6 +326,35 @@ size_t xmbstowcs(wchar_t *dest, const char *src, size_t n) {
   return res;
 }
 
+char *xstrcasestr(const char *haystack, const char *needle) {
+#if defined(__GLIBC__) && (defined(_GNU_SOURCE) || defined(_DEFAULT_SOURCE))
+  return strcasestr(haystack, needle);
+#else
+  unsigned i = 0, j;
+  char haystack_c, needle_c;
+
+  if (L'\0' == needle[0])
+    return (char *)haystack;
+
+  while (L'\0' != haystack[i]) {
+    j = 0;
+    while (TRUE) {
+      haystack_c = tolower(haystack[i + j]);
+      needle_c = tolower(needle[j]);
+      if (L'\0' == needle_c)
+        return (char *)&haystack[i];
+      else if (haystack_c != needle_c)
+        break;
+      else
+        j++;
+    }
+    i++;
+  }
+
+  return NULL;
+#endif
+}
+
 int xsystem(const char *cmd, bool fail) {
   int res = system(cmd);
 

@@ -193,7 +193,8 @@ void is_readable(const char *path);
 // Safely call `calloc()`
 extern void *xcalloc(size_t nmemb, size_t size);
 
-// Safely call `reallocarray()`
+// Safely call `reallocarray()` if it exists, or our own local implementation if
+// it doesn't
 extern void *xreallocarray(void *ptr, size_t nmemb, size_t size);
 
 // Safely call `popen()`
@@ -258,11 +259,15 @@ extern wchar_t *xwcsdup(const wchar_t *s);
 // you're converting/copying parts of strings), use their vanilla counterparts
 // instead.
 
-// Safely call wcstombs()
+// Safely call `wcstombs()`
 extern size_t xwcstombs(char *dest, const wchar_t *src, size_t n);
 
-// Safely call mbstowcs()
+// Safely call `mbstowcs()`
 size_t xmbstowcs(wchar_t *dest, const char *src, size_t n);
+
+// Safely call `strcasestr()` if it exists, or our own local implementation if
+// it doesn't
+extern char *xstrcasestr(const char *haystack, const char *needle);
 
 // Safely call `system(cmd)`, to execute `cmd` in a new shell. If `fail` is
 // true, and the return value of `system()` is non-zero, terminate. Otherwise
