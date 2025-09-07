@@ -1074,7 +1074,10 @@ void parse_args(int argc, char *const *argv) {
   }
 }
 
-void version() { wprintf(L"%ls\n", config.misc.program_version); }
+void version() {
+  wprintf(L"%ls\n%ls\n", config.misc.program_version,
+          config.misc.program_copyright);
+}
 
 void usage() {
   // Header
