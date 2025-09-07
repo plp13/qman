@@ -175,7 +175,7 @@ config_def = {
     },
     "misc": {
         "program_name": (("string",), None, False, "Program executable basename (discovered automatically)"),
-        "program_version": (("wstring",), ("Qman 1.5.0-26-g1dcda6e",), False, "Formal program name and version"),
+        "program_version": (("wstring",), ("Qman 1.5.0-27-g86dc217",), False, "Formal program name and version"),
         "program_copyright": (("wstring",), ("Copyright (c) 2023-2025, Pantelis Panayiotou and others",), False, "Program copyright notice"),
         "system_type": (("systype", ), ("mandb", ), True, "System type: mandb, mandoc, freebsd, darwin, ..."),
         "config_path": (("string",), None, False, "Path to the configuration file"),
