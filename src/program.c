@@ -357,7 +357,7 @@ bool man_loc(char *dst, unsigned dst_len, const wchar_t *args,
   char cmdstr[BS_LINE]; // command to execute
   bool ret;             // return value
 
-  if (ST_MANDB == config.misc.system_type) {
+  if (ST_MANDB == config.misc.system_type && !config.misc.legacy_mandb) {
     // `mandb` specific
     if (local_file)
       snprintf(cmdstr, BS_LINE,
@@ -442,7 +442,9 @@ bool man_loc(char *dst, unsigned dst_len, const wchar_t *args,
       return ret;
     }
   } else if (ST_FREEBSD == config.misc.system_type ||
-             ST_DARWIN == config.misc.system_type) {
+             ST_DARWIN == config.misc.system_type ||
+             (ST_MANDB == config.misc.system_type &&
+              config.misc.legacy_mandb)) {
     // FreeBSD and macOS X `man` specific
     unsigned args_len = wcslen(args);     // length of `args`
     wchar_t *page = walloca(args_len);    // man page extracted from `args`
@@ -1113,8 +1115,8 @@ void version() {
       "USE\n"
       "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
 
-      wprintf(L"%ls\n%ls\n\n%s\n", config.misc.program_version,
-              config.misc.program_copyright, license);
+  wprintf(L"%ls\n%ls\n\n%s\n", config.misc.program_version,
+          config.misc.program_copyright, license);
 }
 
 void usage() {
@@ -1788,7 +1790,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
 
   // Prepare `man` command
   char cmdstr[BS_LINE];
-  if (ST_MANDB == config.misc.system_type) {
+  if (ST_MANDB == config.misc.system_type && !config.misc.legacy_mandb) {
     // `mandb` specific
     wchar_t *gargs = L""; // `man` arguments for global apropos/whatis
 
@@ -1830,7 +1832,9 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
                  config.misc.man_path, text_width, page);
     }
   } else if (ST_FREEBSD == config.misc.system_type ||
-             ST_DARWIN == config.misc.system_type) {
+             ST_DARWIN == config.misc.system_type ||
+             (ST_MANDB == config.misc.system_type &&
+              config.misc.legacy_mandb)) {
     // FreeBSD and macOS X `man` specific
     unsigned args_len = wcslen(args);     // length of `args`
     wchar_t *page = walloca(args_len);    // man page extracted from `args`

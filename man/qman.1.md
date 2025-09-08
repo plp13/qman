@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.5.0-27-g86dc217
+footer: Qman 1.5.0-28-gf3746c3
 date: December 15, 2023
 ---
 
@@ -390,6 +390,7 @@ This section contains various miscellaneous options:
 | Option       | Type         | Def. value | Description                       |
 |--------------|--------------|------------|-----------------------------------|
 | system_type  | string       | mandb      | Manual system type                |
+| legacy_mandb | bool         | false      | Enable workarounds for mandb version 2.10 or earlier | 
 | man_path     | string       | /usr/bin/man | Path to the **man(1)** command  |
 | groff_path   | string       | /usr/bin/groff | Path to the **groff(1)** command |
 | whatis_path  | string       | /usr/bin/whatis | Path to the **whatis(1)** command |
@@ -402,12 +403,16 @@ This section contains various miscellaneous options:
 | reset_after_viewer | boolean | true      | Re-initialize curses after opening a link to a local filesystem file |
 | terminfo_reset | boolean    | false      | Reset the terminal using the strings provided by **terminfo(5)** on shutdown |
 | history_size | unsigned int | 256k       | Maximum number of history entries |
+
 _system_type_ must match the Unix manual system used by your O/S:
 
 - **[mandb](https://gitlab.com/man-db/man-db)** - most Linux distributions
 - **[mandoc](https://mandoc.bsd.lv/)** - Void Linux, Haiku, others?
 - **[freebsd](https://www.freebsd.org/)** - FreeBSD
 - **[darwin](https://www.apple.com/macos/)** - macOS
+
+Users of **mandb** version 2.10 or earlier should set _legacy_madb_ to **true**,
+to resolve issues with opening manual page links.
 
 To avoid an annoying screen redraw, options _reset_after_http_,
 _reset_after_email_, or _reset_after_viewer_ can be set to **false** whenever

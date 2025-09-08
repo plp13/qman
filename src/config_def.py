@@ -175,9 +175,10 @@ config_def = {
     },
     "misc": {
         "program_name": (("string",), None, False, "Program executable basename (discovered automatically)"),
-        "program_version": (("wstring",), ("Qman 1.5.0-27-g86dc217",), False, "Formal program name and version"),
+        "program_version": (("wstring",), ("Qman 1.5.0-28-gf3746c3",), False, "Formal program name and version"),
         "program_copyright": (("wstring",), ("Copyright (c) 2023-2025, Pantelis Panayiotou and others",), False, "Program copyright notice"),
-        "system_type": (("systype", ), ("mandb", ), True, "System type: mandb, mandoc, freebsd, darwin, ..."),
+        "system_type": (("systype",), ("mandb",), True, "System type: mandb, mandoc, freebsd, darwin, ..."),
+        "legacy_mandb": (("bool",), ("false",), True, "Enable workarounds for mandb version 2.10 or earlier"),
         "config_path": (("string",), None, False, "Path to the configuration file"),
         "man_path": (("string",), ("/usr/bin/man",), True, "Path to the man(1) command"),
         "groff_path": (("string",), ("/usr/bin/groff",), True, "Path to the groff(1) command"),
