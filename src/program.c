@@ -359,13 +359,35 @@ bool man_loc(char *dst, unsigned dst_len, const wchar_t *args,
 
   if (ST_MANDB == config.misc.system_type) {
     // `mandb` specific
-    if (local_file)
-      snprintf(cmdstr, BS_LINE,
-               "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
-               config.misc.man_path, args);
-    else {
-      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' --path %ls 2>>/dev/null",
-               config.misc.man_path, args);
+
+    if (config.misc.legacy_mandb) {
+      unsigned args_len = wcslen(args);     // length of `args`
+      wchar_t *page = walloca(args_len);    // man page extracted from `args`
+      wchar_t *section = walloca(args_len); // man section extracted from `args`
+      unsigned extracted;                   // return value of `extract_args()`
+
+      extracted = extract_args(&page, &section, args_len, args);
+      if (0 == extracted)
+        winddown(ES_CHILD_ERROR, L"Unable to parse command-line arguments");
+
+      if (local_file)
+        snprintf(cmdstr, BS_LINE,
+                 "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
+                 config.misc.man_path, page);
+      else
+        snprintf(cmdstr, BS_LINE,
+                 "%s --warnings='!all' --path %ls %ls 2>>/dev/null",
+                 config.misc.man_path, section, page);
+    } else {
+      if (local_file)
+        snprintf(cmdstr, BS_LINE,
+                 "%s --warnings='!all' --path --local-file %ls 2>>/dev/null",
+                 config.misc.man_path, args);
+      else {
+        snprintf(cmdstr, BS_LINE,
+                 "%s --warnings='!all' --path %ls 2>>/dev/null",
+                 config.misc.man_path, args);
+      }
     }
 
     ret = true;
@@ -1770,7 +1792,7 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
             config.capabilities.justify ? "" : "--nj");
     setenv("MANOPT", tmps, true);
     setenv("MAN_KEEP_FORMATTING", "1", true);
-    if (t_false == config.tcap.italics)
+    if (config.misc.legacy_mandb || t_false == config.tcap.italics)
       setenv("MANROFFOPT", "", true);
     else
       setenv("MANROFFOPT", "-P-i", true);
@@ -1799,13 +1821,33 @@ unsigned man(line_t **dst, const wchar_t *args, bool local_file) {
         gargs = L"--all";
     }
 
-    if (local_file)
-      snprintf(cmdstr, BS_LINE,
-               "%s --warnings='!all' --local-file %ls 2>>/dev/null",
-               config.misc.man_path, args);
-    else
-      snprintf(cmdstr, BS_LINE, "%s --warnings='!all' %ls %ls 2>>/dev/null",
-               config.misc.man_path, gargs, args);
+    if (config.misc.legacy_mandb) {
+      unsigned args_len = wcslen(args);     // length of `args`
+      wchar_t *page = walloca(args_len);    // man page extracted from `args`
+      wchar_t *section = walloca(args_len); // man section extracted from `args`
+      unsigned extracted;                   // return value of `extract_args()`
+
+      extracted = extract_args(&page, &section, args_len, args);
+      if (0 == extracted)
+        winddown(ES_CHILD_ERROR, L"Unable to parse command-line arguments");
+
+      if (local_file)
+        snprintf(cmdstr, BS_LINE,
+                 "%s --warnings='!all' --local-file %ls 2>>/dev/null",
+                 config.misc.man_path, page);
+      else
+        snprintf(cmdstr, BS_LINE,
+                 "%s --warnings='!all' %ls %ls %ls 2>>/dev/null",
+                 config.misc.man_path, gargs, section, page);
+    } else {
+      if (local_file)
+        snprintf(cmdstr, BS_LINE,
+                 "%s --warnings='!all' --local-file %ls 2>>/dev/null",
+                 config.misc.man_path, args);
+      else
+        snprintf(cmdstr, BS_LINE, "%s --warnings='!all' %ls %ls 2>>/dev/null",
+                 config.misc.man_path, gargs, args);
+    }
   } else if (ST_MANDOC == config.misc.system_type) {
     // `mandoc` specific
     unsigned args_len = wcslen(args);     // length of `args`
