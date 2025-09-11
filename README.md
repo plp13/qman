@@ -1,17 +1,23 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.5.0-31-g6b2e699 -- [see what's new](#new-in-this-version)
+Version 1.5.0-32-gcff289f -- [see what's new](#new-in-this-version)
 
 ![Screenhot -- Viewing a Manual Page](/screenshots/qman_man.png)
 
 ## Get started
 
+Qman [packages](doc/PACKAGES.md) are available for many different Linux
+distributions, FreeBSD, and macOS.
+
+The following documents provide instructions on how to build, install and
+configure the program from source:
 - [Generic build instructions](doc/BUILDING.md) (works for most Linux distros)
 - [O/S specific instructions](doc/OS_SPECIFIC.md)
-- [Manual](man/qman.1.md)
+
+In case you get stuck, or decide to delve deeper:
+- [Manual page](man/qman.1.md)
 - [Troubleshooting](doc/TROUBLESHOOTING.md)
-- [Packages](doc/PACKAGES.md)
 - [Configuration and themes](config/)
 - [Contributing](doc/CONTRIBUTING.md)
 
@@ -58,6 +64,8 @@ you have found one, please open an
 ## New in this version
 
 Version 1.6.0 introduces the following:
+- Static binaries, suitable for many Linux distributions. See
+  [PACKAGES.md](doc/PACKAGES.md).
 - *Italic text* support
 - Themes can now use the terminal's default colors
 - New themes:
