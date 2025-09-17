@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.5.0-32-gcff289f
+footer: Qman 1.5.0-33-g08e4b57
 date: December 15, 2023
 ---
 
@@ -246,6 +246,7 @@ Options in this section specify the user interface colors:
 |-------------------|----------------------------------------------------------|
 | text              | page text                                                |
 | search            | matched search terms in page text                        |
+| mark              | text selected with mouse                                 |
 | link_man          | links to manual pages                                    |
 | link_man_f        | links to manual pages (focused)                          |
 | link_http         | HTTP links                                               |
