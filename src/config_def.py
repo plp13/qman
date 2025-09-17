@@ -77,7 +77,7 @@ config_def = {
         "fallback": (("colour",), ("default", "default", "false"), False, "Fallback for B&W terminals"),
         "text": (("colour",), ("default", "default", "false"), True, "Page text"),
         "search": (("colour",), ("yellow", "default", "true"), True, "Matched search terms in page text"),
-        "mark": (("colour",), ("white", "cyan", "false"), True, "Marked text"),
+        "mark": (("colour",), ("white", "cyan", "false"), True, "Text marked for copying to clipboard"),
         "link_man": (("colour",), ("green", "default", "false"), True, "Links to manual pages"),
         "link_man_f": (("colour",), ("black", "green", "false"), True, "Links to manual pages (focused)"),
         "link_http": (("colour",), ("magenta", "default", "false"), True, "HTTP links"),
@@ -175,7 +175,7 @@ config_def = {
     },
     "misc": {
         "program_name": (("string",), None, False, "Program executable basename (discovered automatically)"),
-        "program_version": (("wstring",), ("Qman 1.5.0-33-g08e4b57",), False, "Formal program name and version"),
+        "program_version": (("wstring",), ("Qman 1.5.0-35-gf332ae3",), False, "Formal program name and version"),
         "program_copyright": (("wstring",), ("Copyright (c) 2023-2025, Pantelis Panayiotou and others",), False, "Program copyright notice"),
         "system_type": (("systype",), ("mandb",), True, "System type: mandb, mandoc, freebsd, darwin, ..."),
         "legacy_mandb": (("bool",), ("false",), True, "Enable workarounds for mandb version 2.10 or earlier"),
