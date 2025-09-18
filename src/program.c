@@ -2685,58 +2685,7 @@ void winddown(int ec, const wchar_t *em) {
   base64_cleanup();
 
   // Deallocate memory used by `config` global
-  if (NULL != config.chars.sbar_top)
-    free(config.chars.sbar_top);
-  if (NULL != config.chars.sbar_vline)
-    free(config.chars.sbar_vline);
-  if (NULL != config.chars.sbar_bottom)
-    free(config.chars.sbar_bottom);
-  if (NULL != config.chars.sbar_block)
-    free(config.chars.sbar_block);
-  if (NULL != config.chars.trans_mode_name)
-    free(config.chars.trans_mode_name);
-  if (NULL != config.chars.trans_name_loc)
-    free(config.chars.trans_name_loc);
-  if (NULL != config.chars.trans_prompt_help)
-    free(config.chars.trans_prompt_help);
-  if (NULL != config.chars.trans_prompt_em)
-    free(config.chars.trans_prompt_em);
-  if (NULL != config.chars.box_hline)
-    free(config.chars.box_hline);
-  if (NULL != config.chars.box_vline)
-    free(config.chars.box_vline);
-  if (NULL != config.chars.box_tl)
-    free(config.chars.box_tl);
-  if (NULL != config.chars.box_tr)
-    free(config.chars.box_tr);
-  if (NULL != config.chars.box_bl)
-    free(config.chars.box_bl);
-  if (NULL != config.chars.box_br)
-    free(config.chars.box_br);
-  if (NULL != config.chars.arrow_up)
-    free(config.chars.arrow_up);
-  if (NULL != config.chars.arrow_down)
-    free(config.chars.arrow_down);
-  if (NULL != config.chars.arrow_lr)
-    free(config.chars.arrow_lr);
-  if (NULL != config.misc.program_version)
-    free(config.misc.program_version);
-  if (NULL != config.misc.config_path)
-    free(config.misc.config_path);
-  if (NULL != config.misc.man_path)
-    free(config.misc.man_path);
-  if (NULL != config.misc.groff_path)
-    free(config.misc.groff_path);
-  if (NULL != config.misc.whatis_path)
-    free(config.misc.whatis_path);
-  if (NULL != config.misc.apropos_path)
-    free(config.misc.apropos_path);
-  if (NULL != config.misc.browser_path)
-    free(config.misc.browser_path);
-  if (NULL != config.misc.mailer_path)
-    free(config.misc.mailer_path);
-  if (NULL != config.misc.viewer_path)
-    free(config.misc.viewer_path);
+  conf_winddown();
 
   // Deallocate memory used by `history` global
   requests_free(history, config.misc.history_size);

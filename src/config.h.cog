@@ -142,4 +142,7 @@ extern void conf_init();
 // appropriately
 extern void configure();
 
+// Deallocate all memory allocated by `conf_init()` and/or `configure()`
+extern void conf_winddown();
+
 #endif

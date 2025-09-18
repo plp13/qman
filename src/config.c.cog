@@ -663,12 +663,16 @@ for section, options in config_def.config_def.items():
 
 [[[end]]]*/
 
-  if (NULL == config.misc.program_name)
+  if (NULL == config.misc.program_name) {
 #if defined(__GLIBC__)
-    config.misc.program_name = program_invocation_short_name;
+    unsigned program_name_len = strlen(program_invocation_short_name);
+    config.misc.program_name = salloc(program_name_len);
+    strlcpy(config.misc.program_name, program_invocation_short_name, program_name_len);
 #else
-    config.misc.program_name = "qman";
+    config.misc.program_name = salloc(4);
+    strlcpy(config.misc.program_name, "qman", 4);
 #endif
+  }
 
   set_transition_colours;
 }
@@ -767,4 +771,19 @@ void configure() {
   }
   set_transition_colours;
   check_paths();
+}
+
+void conf_winddown() {
+/*[[[cog
+
+for section, options in config_def.config_def.items():
+  for option, option_def in options.items():
+    (type, default_value, in_config, comment) = option_def
+
+    if type[0] == "string" or type[0] == "wstring":
+      cog.outl("  if (NULL != config." + section + "." + option + ")")
+      cog.outl("    free(config." + section + "." + option + ");")
+]]]
+
+[[[end]]]*/
 }
