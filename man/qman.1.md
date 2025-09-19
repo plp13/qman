@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.5.0-36-g230aad3
+footer: Qman 1.5.0-37-g3229d99
 date: December 15, 2023
 ---
 
@@ -309,7 +309,7 @@ _key_1_ _key_2_ _key_3_ _key_4_ _key_5_ _key_6_ _key_7_ _key_8_
 
 The value of each _key_i_ can take one of the following values:
 
-- Any character, surch as **a**, **b**, **c**, etc.
+- Any character, such as **a**, **b**, **c**, etc.
 - Any ncurses(3x) keycode, such as **KEY_UP** or **KEY_HOME**
 - **F1** to **F12** (for the function keys)
 - **ESC** (for the ESC key)
@@ -357,7 +357,7 @@ behavior:
 | italics  | ternary      | auto       | True if terminal supports italics, false if not, auto to auto-detect |
 | unicode  | ternary      | auto       | True if terminal supports Unicode, false if not, auto to auto-detect |
 | clipboard| ternary      | auto       | True if terminal supports clipboard operations (OSC 52), false if not, auto to auto-detect |
-| escdelay | int          | 60         | Number of miliseconds to wait after receving ESC from the keyboard before interpreting it as the escape key. Users with historical terminals or very unreliable network connections may want to increase this. |
+| escdelay | int          | 60         | Number of milliseconds to wait after receiving ESC from the keyboard before interpreting it as the escape key. Users with historical terminals or very unreliable network connections may want to increase this. |
 
 Beware that **Qman** uses these capabilities to decide whether to either honor
 or ignore various configuration options specified elsewhere, particularly in
@@ -423,7 +423,7 @@ respectively.
 Setting _terminfo_reset_ to **true** will initiate a full terminal reset, using
 the strings provided by **terminfo(5)**, upon program shutdown. This may be
 necessary if your ncurses implementation doesn't completely restore terminal
-settings (e.g.  colors) upon exit, but will also clear the screen and erase your
+settings (e.g. colors) upon exit, but will also clear the screen and erase your
 scroll history as a side effect.
 
 When using a horizontally narrow terminal, setting _hyphenate_ to **true**
