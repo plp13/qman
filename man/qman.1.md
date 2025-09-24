@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.5.0-37-g3229d99
+footer: Qman 1.5.0-40-g16875b4
 date: December 15, 2023
 ---
 
@@ -492,7 +492,9 @@ The above are similar to the exit values of **man(1)**.
 **man(1)**, **apropos(1)**, **whatis(1)**, **pinfo(1)**
 
 # AUTHOR
-Written by Pantelis Panayiotou / plp13 on GitHub
+Written and maintained by Pantelis Panayiotou (plp13) and others. The full list
+of contributors can be found at
+https://github.com/plp13/qman/graphs/contributors
 
 # BUGS
 Please report bugs at https://github.com/plp13/qman/issues
