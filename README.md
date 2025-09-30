@@ -1,9 +1,9 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.5.0-41-gdfe6c6a -- [see what's new](#new-in-this-version)
+Version 1.5.0-42-g9c9b665 -- [see what's new](#new-in-this-version)
 
-![Screenhot -- Viewing a Manual Page](/screenshots/qman_man.png)
+[![Qman 1.6.0 demo](screenshorts/qman-demo-screenshot.png)](https://www.youtube.com/watch?v=OAX2OW-v1Ls)
 
 ## Get started
 
@@ -81,23 +81,3 @@ Version 1.6.0 introduces the following:
 > Users using custom config files may need to update them after a new release.
 > For more information, please refer to Qman's manual page and the documentation
 > in [config/README.md](config/README.md).
-
-## More screenshots
-
-Index page:
-![Index Page](/screenshots/qman_index.png)
-
-Opening a manual page using a pop-up:
-![Screenshot -- Opening a Manual Page](/screenshots/qman_open.png)
-
-Using the table of contents:
-![Using the Table of Contents](/screenshots/qman_toc.png)
-
-Searching incrementally:
-![Searching incrementally](/screenshots/qman_search.png)
-
-Performing apropos:
-![Performing Apropos](/screenshots/qman_apropos.png)
-
-Online help:
-![Online Help](/screenshots/qman_help.png)
