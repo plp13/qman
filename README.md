@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.5.0-44-ge7c3c35 -- [see what's new](#new-in-this-version)
+Version 1.5.0-45-ga621b89 -- [see what's new](#new-in-this-version)
 
 ![Qman screenshot](screenshots/qman.png)
 
@@ -10,8 +10,7 @@ Version 1.5.0-44-ge7c3c35 -- [see what's new](#new-in-this-version)
 Qman [packages](doc/PACKAGES.md) are available for many different Linux
 distributions, FreeBSD, and macOS.
 
-The following documents provide instructions on how to build, install and
-configure the program from source:
+How to build, install and configure the program from source:
 - [Generic build instructions](doc/BUILDING.md) (works for most Linux distros)
 - [O/S specific instructions](doc/OS_SPECIFIC.md)
 
@@ -52,6 +51,7 @@ plain C and has only minimal dependencies.
 - Navigation history
 - On-line help
 - Fully configurable using INI-style config files
+- Themes
 - Manual page
 
 ## Project status 
