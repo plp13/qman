@@ -637,19 +637,6 @@ void init_tui_mouse() {
   }
 }
 
-void sendescseq(char *s) {
-  if (!config.layout.tui)
-    return;
-
-  putchar('\033');
-
-  unsigned i = 0;
-  while ('\0' != s[i])
-    putchar(s[i++]);
-
-  fflush(stdout);
-}
-
 void init_windows() {
   if (NULL != wmain)
     delwin(wmain);
@@ -669,6 +656,19 @@ void init_windows() {
   keypad(wstat, true);
 
   wnoutrefresh(stdscr);
+}
+
+void sendescseq(char *s) {
+  if (!config.layout.tui)
+    return;
+
+  putchar('\033');
+
+  unsigned i = 0;
+  while ('\0' != s[i])
+    putchar(s[i++]);
+
+  fflush(stdout);
 }
 
 bool termsize_changed() {
@@ -1308,6 +1308,9 @@ void ctbeep() {
 }
 
 void entitle(wchar_t *src) {
+  if (!config.layout.tui)
+    return;
+
   // char* version of src
   unsigned srcs_len = 3 * wcslen(src); // length
   char *srcs = salloca(srcs_len);      // actual string
