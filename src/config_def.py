@@ -175,7 +175,7 @@ config_def = {
     },
     "misc": {
         "program_name": (("string",), None, False, "Program executable basename (discovered automatically)"),
-        "program_version": (("wstring",), ("Qman 1.5.0-46-g62b67e7",), False, "Formal program name and version"),
+        "program_version": (("wstring",), ("Qman 1.5.0-47-gbc34f4b",), False, "Formal program name and version"),
         "program_copyright": (("wstring",), ("Copyright (c) 2023-2025, Pantelis Panayiotou and others",), False, "Program copyright notice"),
         "system_type": (("systype",), ("mandb",), True, "System type: mandb, mandoc, freebsd, darwin, ..."),
         "legacy_mandb": (("bool",), ("false",), True, "Enable workarounds for mandb version 2.10 or earlier"),
