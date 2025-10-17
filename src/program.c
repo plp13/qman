@@ -2525,15 +2525,14 @@ extern unsigned get_mark(wchar_t **dst, mark_t mark, const line_t *lines) {
 
 void populate_page() {
   // If `page` is already populated, free its allocated memory
-  if (NULL != page && page_len > 0) {
+  if (NULL != page || page_len > 0) {
     lines_free(page, page_len);
     page = NULL;
     page_len = 0;
   }
 
   // Reset `toc`
-  if (NULL != toc && toc_len > 0)
-    toc_free(toc, toc_len);
+  toc_free(toc, toc_len);
   toc = NULL;
   toc_len = 0;
 
@@ -2609,8 +2608,7 @@ void populate_toc() {
         winddown(ES_OPER_ERROR, err_msg);
       sc_len = aprowhat_sections(&sc, aw, aw_len);
       toc_len = sc_toc(&toc, (const wchar_t *const *)sc, sc_len);
-      if (NULL != aw && aw_len > 0)
-        aprowhat_free(aw, aw_len);
+      aprowhat_free(aw, aw_len);
       if (NULL != sc && sc_len > 0)
         wafree(sc, sc_len);
       break;
@@ -2620,8 +2618,7 @@ void populate_toc() {
         winddown(ES_OPER_ERROR, err_msg);
       sc_len = aprowhat_sections(&sc, aw, aw_len);
       toc_len = sc_toc(&toc, (const wchar_t *const *)sc, sc_len);
-      if (NULL != aw && aw_len > 0)
-        aprowhat_free(aw, aw_len);
+      aprowhat_free(aw, aw_len);
       if (NULL != sc && sc_len > 0)
         wafree(sc, sc_len);
       break;
@@ -2636,45 +2633,53 @@ void populate_toc() {
 void requests_free(request_t *reqs, unsigned reqs_len) {
   unsigned i;
 
-  for (i = 0; i < reqs_len; i++)
-    if (NULL != reqs[i].args)
-      free(reqs[i].args);
+  if (NULL != reqs) {
+    for (i = 0; i < reqs_len; i++)
+      if (NULL != reqs[i].args)
+        free(reqs[i].args);
 
-  free(reqs);
+    free(reqs);
+  }
 }
 
 void aprowhat_free(aprowhat_t *aw, unsigned aw_len) {
   unsigned i;
 
-  for (i = 0; i < aw_len; i++) {
-    free(aw[i].page);
-    free(aw[i].section);
-    free(aw[i].ident);
-    free(aw[i].descr);
-  }
+  if (NULL != aw) {
+    for (i = 0; i < aw_len; i++) {
+      free(aw[i].page);
+      free(aw[i].section);
+      free(aw[i].ident);
+      free(aw[i].descr);
+    }
 
-  free(aw);
+    free(aw);
+  }
 }
 
 void lines_free(line_t *lines, unsigned lines_len) {
   unsigned i;
 
-  for (i = 0; i < lines_len; i++) {
-    line_free(lines[i]);
-  }
+  if (NULL != lines) {
+    for (i = 0; i < lines_len; i++) {
+      line_free(lines[i]);
+    }
 
-  free(lines);
+    free(lines);
+  }
 }
 
 void toc_free(toc_entry_t *toc, unsigned toc_len) {
   unsigned i;
 
-  for (i = 0; i < toc_len; i++) {
-    if (NULL != toc[i].text)
-      free(toc[i].text);
-  }
+  if (NULL != toc) {
+    for (i = 0; i < toc_len; i++) {
+      if (NULL != toc[i].text)
+        free(toc[i].text);
+    }
 
-  free(toc);
+    free(toc);
+  }
 }
 
 void winddown(int ec, const wchar_t *em) {
@@ -2691,20 +2696,17 @@ void winddown(int ec, const wchar_t *em) {
   requests_free(history, config.misc.history_size);
 
   // Deallocate memory used by `aw_all` global
-  if (NULL != aw_all && aw_all_len > 0)
-    aprowhat_free(aw_all, aw_all_len);
+  aprowhat_free(aw_all, aw_all_len);
 
   // Deallocate memory used by `sc_all` global
   if (NULL != sc_all && sc_all_len > 0)
     wafree(sc_all, sc_all_len);
 
   // Deallocate memory used by `page` global
-  if (NULL != page && page_len > 0)
-    lines_free(page, page_len);
+  lines_free(page, page_len);
 
   // Deallocate memory used by `toc` global
-  if (NULL != toc && toc_len > 0)
-    toc_free(toc, toc_len);
+  toc_free(toc, toc_len);
 
   // Deallocate memory used by `results` global
   if (NULL != results && results_len > 0)
