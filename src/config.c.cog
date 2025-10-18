@@ -534,6 +534,14 @@ void error_handler(const wchar_t *error, const char *path,
                    const unsigned line) {
   wchar_t errmsg[BS_SHORT]; // error message
 
+  // Ignore lines that can't be parsed as strings, if the system can't parse
+  // UTF-8 strings either
+  if (L'N' == error[0] && 0 == wcscmp(error, L"Non-string data")) {
+    wchar_t tmp[BS_SHORT];
+    if (-1 == mbstowcs(tmp, "έλεγχος", BS_SHORT))
+      return;
+  }
+
   swprintf(errmsg, BS_SHORT,
            L"Error in %s line %d: %ls",
            path, line, error);
