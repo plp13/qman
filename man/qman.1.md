@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.5.0-50-gdfabe43
+footer: Qman 1.5.0-51-ga6beac5
 date: December 15, 2023
 ---
 
@@ -63,6 +63,8 @@ keyboard mappings:
 | RIGHT           | Scroll right one tab stop             | **RIGHT**, **>**   |
 | PGUP            | Scroll up one page                    | **PGUP**, **b**    |
 | PGDN            | Scroll down one page                  | **PGDN**, **f**    |
+| HLFUP           | Scroll up half a page                 | **u**              |
+| HLFDN           | Scroll down half a page               | **d**              |
 | HOME            | Go to page top                        | **HOME**, **g**    |
 | END             | Go to page bottom                     | **END**, **G**     |
 | OPEN            | Open focused link                     | **ENTER**, **o**   |

@@ -1508,10 +1508,10 @@ bool tui_right() {
   return true;
 }
 
-bool tui_pgup() {
-  if (page_top >= config.layout.main_height) {
-    // If there's space, scroll up one window height
-    page_top -= config.layout.main_height;
+bool tui_pgup(unsigned wh) {
+  if (page_top >= wh) {
+    // If there's space, scroll up `wh` lines
+    page_top -= wh;
   } else if (page_top > 0) {
     // If not, but we're still not at the very top, go there
     page_top = 0;
@@ -1538,10 +1538,10 @@ bool tui_pgup() {
   return true;
 }
 
-bool tui_pgdn() {
-  if (page_top + 2 * config.layout.main_height < page_len) {
-    // If there's space, scroll down one window height
-    page_top += config.layout.main_height;
+bool tui_pgdn(unsigned wh) {
+  if (page_top + config.layout.main_height + wh < page_len) {
+    // If there's space, scroll down `wh` lines
+    page_top += wh;
   } else if (page_top + config.layout.main_height < page_len &&
              config.layout.main_height <= page_len) {
     // If not, but we're still not at the very bottom, go there
@@ -2672,10 +2672,16 @@ void tui() {
       redraw = tui_right();
       break;
     case PA_PGUP:
-      redraw = tui_pgup();
+      redraw = tui_pgup(config.layout.main_height);
       break;
     case PA_PGDN:
-      redraw = tui_pgdn();
+      redraw = tui_pgdn(config.layout.main_height);
+      break;
+    case PA_HLFUP:
+      redraw = tui_pgup(config.layout.main_height / 2);
+      break;
+    case PA_HLFDN:
+      redraw = tui_pgdn(config.layout.main_height / 2);
       break;
     case PA_HOME:
       redraw = tui_home();

@@ -307,11 +307,11 @@ extern bool tui_left();
 // Handler for `PA_RIGHT`
 extern bool tui_right();
 
-// Handler for `PA_PGUP`
-extern bool tui_pgup();
+// Handler for `PA_PGUP` and `PA_HLFUP`. Scrolls up `wh` lines.
+extern bool tui_pgup(unsigned wh);
 
-// Handler for `PA_PGDN`
-extern bool tui_pgdn();
+// Handler for `PA_PGDN` and `PA_HLFDN``. Scrolls down `wh` lines.
+extern bool tui_pgdn(unsigned wh);
 
 // Handler for `PA_HOME`
 extern bool tui_home();
