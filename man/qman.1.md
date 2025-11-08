@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.5.0-51-ga6beac5
+footer: Qman 1.5.0-52-gbcca114
 date: December 15, 2023
 ---
 
@@ -312,7 +312,8 @@ _key_1_ _key_2_ _key_3_ _key_4_ _key_5_ _key_6_ _key_7_ _key_8_
 The value of each _key_i_ can take one of the following values:
 
 - Any character, such as **a**, **b**, **c**, etc.
-- Any ncurses(3x) keycode, such as **KEY_UP** or **KEY_HOME**
+- Any ncurses keycode, such as **KEY_UP** or **KEY_HOME**. A comprehensive list
+  of said keycodes can be found in getch(3x).
 - **F1** to **F12** (for the function keys)
 - **ESC** (for the ESC key)
 - **EXT** (for CTRL-C)
@@ -325,6 +326,18 @@ For reasons of compatibility with various terminals, mapping the ENTER key
 requires specifying both **KEY_ENTER** and **LF**. Similarly, mapping CTRL-C
 requires specifying both **KEY_BREAK** and **ETX**, and mapping BACKSPACE
 requires specifying both **KEY_BACKSPACE** and **BS**.
+
+For example:
+
+```
+[keys]
+
+; Associate the up arrow key and number 8 with the UP action
+UP = KEY_UP 8
+
+; Associate the down arrow key, space, and number 2 with the DOWN action
+DOWN = KEY_DOWN SPACE 2
+```
 
 ## Section [mouse]
 This section contains the following options that pertain to mouse support:
