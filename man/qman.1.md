@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.5.0-52-gbcca114
+footer: Qman 1.5.0-53-ga84ffc7
 date: December 15, 2023
 ---
 
@@ -199,6 +199,10 @@ The following locations are searched in sequence:
 - _/etc/qman/qman.conf_
 
 The process stops once a configuration file has been found.
+
+Configuration files are not cumulative. If, for example, both
+_\${HOME}/.config/qman/qman.conf_ and _/etc/xdg/qman/qman.conf_ exist, only the
+former will be processed, according to the aforementioned search order.
 
 **Qman**'s configuration file uses the basic
 [INI file format](https://en.wikipedia.org/wiki/INI_file), extended with an
