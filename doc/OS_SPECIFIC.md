@@ -121,8 +121,8 @@ Then, change the `[misc]` section of your config file as follows:
 [misc]
 system_type=darwin
 groff_path=/usr/local/bin/groff
-apropos=/usr/local/bin/fakeapropos.sh
-whatis=/usr/local/bin/fakewhatis.sh
+apropos_path=/usr/local/bin/fakeapropos.sh
+whatis_path=/usr/local/bin/fakewhatis.sh
 ```
 
 And, finally, run `mkfakewhatis.sh` as root:
