@@ -1,7 +1,7 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.5.0-10-gf7a26aa -- [see what's new](#new-in-this-version)
+Version 1.5.0-11-g44f1991 -- [see what's new](#new-in-this-version)
 
 ![Screenhot -- Viewing a Manual Page](/screenshots/qman_man.png)
 
@@ -79,7 +79,7 @@ Version 1.5.0 introduces the following:
 - Miscellaneous other bug fixes and minor features
 
 Version 1.5.1 fixes an issue with reporting errors in configruation files, and
-a few updates to Qman's documentation.
+introduces a few updates to Qman's documentation.
 
 > **:bulb: Note**
 >
