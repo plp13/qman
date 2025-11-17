@@ -249,8 +249,8 @@ void eini(eini_handler_t hf, eini_error_t ef, const char *path) {
       }
       ifp = fopen(ipath, "r");
       if (NULL == ifp) {
-        wchar_t errmsg[BS_SHORT];
-        swprintf(errmsg, BS_SHORT, L"Unable to open '%s'", ipath);
+        wchar_t errmsg[BS_LINE];
+        swprintf(errmsg, BS_LINE, L"Unable to open '%s'", ipath);
         ef(errmsg, path, i);
       }
       fclose(ifp);
