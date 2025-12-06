@@ -214,6 +214,12 @@ full_regex_t re_man, re_http, re_email, re_file;
    (L'T' == gline[1] || L't' == gline[1]) &&                                   \
    (L'P' == gline[2] || L'p' == gline[2]))
 
+// true if `gline` is a standard paragraph
+#define got_pp                                                                 \
+  ((glen >= 3) && (L'.' == gline[0]) &&                                        \
+   (L'P' == gline[1] || L'p' == gline[1]) &&                                   \
+   (L'P' == gline[2] || L'p' == gline[2]))
+
 // true if `gline` is a command to output delayed text
 #define got_pd                                                                 \
   ((glen >= 3) && (L'.' == gline[0]) &&                                        \
@@ -2191,7 +2197,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
         wmargtrim(res[en].text, L"\"");
         inc_en;
       }
-    } else if (!gm && got_tp && sh_seen) {
+    } else if (!gm && (got_tp || got_pp) && sh_seen) {
       // Tagged paragraph
       argets(gp, tmp, BS_LINE);
       if (!areof(gp)) {
@@ -2199,7 +2205,7 @@ unsigned man_toc(toc_entry_t **dst, const wchar_t *args, bool local_file) {
         {
           // Edge case: the tag line contains only a comment or a line that
           // must otherwise be skipped; skip to next line
-          while (got_comment || got_tp || got_pd) {
+          while (got_comment || got_tp || got_pp || got_pd) {
             argets(gp, tmp, BS_LINE);
             if (areof(gp))
               break;
