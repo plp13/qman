@@ -27,6 +27,7 @@ Runtime dependencies:
     [official version](https://invisible-island.net/ncurses/) by Thomas E.
     Dickey. Most Linux distributions provide this by default.
 - `groff`
+- `cunit`: used for unit testing
 
 Build dependencies:
 - `gcc` or `clang`
@@ -43,7 +44,6 @@ Optional dependencies:
 - `zlib`: support for manual pages compressed with `gzip`
 - `bzip2`: support for manual pages compressed with `bzip2`
 - `liblzma`: support for manual pages compressed with `xz`
-- `cunit`: used for unit testing
 
 ## Building and installing
 
