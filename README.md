@@ -78,7 +78,7 @@ Version 1.5.0 introduces the following:
   misconfiguration or a missing manual pages database
 - Miscellaneous other bug fixes and minor features
 
-Version 1.5.1 fixes an issue with reporting errors in configruation files, and
+Version 1.5.1 fixes an issue with reporting errors in configuration files, and
 introduces a few updates to Qman's documentation.
 
 > **:bulb: Note**
