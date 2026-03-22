@@ -8,6 +8,10 @@ respective O/S.
 The instructions in [BUILDING.md](BUILDING.md) should be sufficient for most
 Linux distributions. (Please pay attention to the note about `libbsd`.)
 
+### Ubuntu 22.04
+
+See [UBUNTU_INSTALL.md](UBUNTU_INSTALL.md).
+
 ### Red Hat Enterprise Linux 8 / Rocky Linux 8 / AlmaLinux 8
 
 The `mandb` system provided by these Linux distributions cannot parse arguments
