@@ -39,7 +39,7 @@ Build dependencies:
     `pip` or `pipx`
 
 Optional dependencies:
-- `libbsd`: required by Linux systems with older versions of `glibc`
+- `libbsd`: required by Linux systems with older versions of `glibc` or some other C libraries
 - `zlib`: support for manual pages compressed with `gzip`
 - `bzip2`: support for manual pages compressed with `bzip2`
 - `liblzma`: support for manual pages compressed with `xz`
