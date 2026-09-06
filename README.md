@@ -76,6 +76,9 @@ Version 1.6.0 introduces the following:
   expectations
 - Miscellaneous bug fixes and documentation updates
 
+Version 1.5.1 fixes an issue with reporting errors in configuration files, and
+introduces a few updates to Qman's documentation.
+
 > **:bulb: Note**
 >
 > Users using custom config files may need to update them after a new release.
