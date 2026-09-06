@@ -45,6 +45,12 @@ Optional dependencies:
 - `liblzma`: support for manual pages compressed with `xz`
 - `cunit`: used for unit testing
 
+> **:bulb: Note**
+>
+> All optional dependencies are enabled by default. The can be disabled by
+> passing the appropriate arguments to `meson setup build/`, as described
+> [below](#meson-options).
+
 ## Building and installing
 
 Make sure that all runtime and build dependencies are installed, and do the
@@ -86,9 +92,13 @@ The following optional arguments can be passed to `meson setup`:
 - `-Ddocs=disabled`: do not install any documentation
 - `-Dconfig=disabled`: do not install any configuration files
 - `-Dgzip=disabled`: disable support for manual pages compressed with `gzip`
+  (removes `zlib` dependency)
 - `-Dbzip2=disabled`: disable support for manual pages compressed with `bzip2`
+  (removes `bzip2` dependency)
 - `-Dlzma=disabled`: disable support for manual pages compressed with `xz`
-- `-Dtests=enabled`: enable unit testing
+  (removes `liblzma` dependency)
+- `-Dtests=disabled`: disable unit testing (removes `cunit` dependency)
+- `-Dlibbsd=enabled`: add `libbsd` support for systems that need it
 - `-Dconfigdir=...`: where to install configuration files
 - `-Ddocdir=...`: where to install documentation
 
