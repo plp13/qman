@@ -8,18 +8,19 @@ respective O/S.
 The instructions in [BUILDING.md](BUILDING.md) should be sufficient for most
 Linux distributions. (Please pay attention to the note about `libbsd`.)
 
-### Red Hat Enterprise Linux 8 / Rocky Linux 8 / AlmaLinux 8
+### Older versions of `mandb`
 
-The `mandb` system provided by these Linux distributions cannot parse arguments
-in the `<manual page>(<section>)` format (e.g. `ls(1)`). This prevents Qman from
-performing certain actions, such as opening links to other man pages.
+Limitations in `mandb` versions 2.10 and earlier prevent Qman from performing
+certain actions, such as opening links to manual pages. This affects
+distributions such as RHEL / Rocky Linux /AlmaLinux 8 or earlier, and Debian
+11 or earlier.
 
 To work around this problem, add the following to your
 [config file](BUILDING.md#configuration):
 
 ```
 [misc]
-system_type=freebsd
+legacy_mandb=true
 ```
 
 ### Void Linux

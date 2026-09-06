@@ -499,6 +499,7 @@ void init_tui() {
   curs_set(0);
   timeout(2000);
   start_color();
+  use_default_colors();
 
   // Set up on-the-fly reconfiguration
   signal(SIGUSR1, sigusr1_handler);
@@ -525,6 +526,19 @@ void init_tui_tcap() {
     break;
   case t_auto:
     tcap.rgb = (tcap.colours >= 256) && can_change_color();
+  }
+
+  switch (config.tcap.italics) {
+  case t_true:
+    tcap.italics = true;
+    break;
+  case t_false:
+    tcap.italics = false;
+    break;
+  case t_auto:
+    tcap.italics = 0 != strcmp(tcap.term, "linux") &&
+                   0 != strcmp(tcap.term, "xterm") && tigetflag("sitm") &&
+                   tigetflag("ritm");
   }
 
   switch (config.tcap.unicode) {
@@ -617,24 +631,10 @@ void init_tui_mouse() {
               NULL);
 
     // Initialize terminal to enable drag-and-drop
-    char *term = getenv("TERM");
-    if (0 != strcmp(term, "xterm-1002")) {
+    if (0 != strcmp(tcap.term, "xterm-1002")) {
       sendescseq("[?1002h");
     }
   }
-}
-
-void sendescseq(char *s) {
-  if (!config.layout.tui)
-    return;
-
-  putchar('\033');
-
-  unsigned i = 0;
-  while ('\0' != s[i])
-    putchar(s[i++]);
-
-  fflush(stdout);
 }
 
 void init_windows() {
@@ -658,6 +658,19 @@ void init_windows() {
   wnoutrefresh(stdscr);
 }
 
+void sendescseq(char *s) {
+  if (!config.layout.tui)
+    return;
+
+  putchar('\033');
+
+  unsigned i = 0;
+  while ('\0' != s[i])
+    putchar(s[i++]);
+
+  fflush(stdout);
+}
+
 bool termsize_changed() {
   const int width = getmaxx(stdscr);
   const int height = getmaxy(stdscr);
@@ -665,6 +678,9 @@ bool termsize_changed() {
   if (width != config.layout.width || height != config.layout.height) {
     config.layout.width = width;
     config.layout.height = height;
+
+    if (width < 40 || height < 12)
+      winddown(ES_OPER_ERROR, L"Terminal size too small");
 
     if (width > config.layout.sbar_width)
       config.layout.main_width = width - config.layout.sbar_width;
@@ -863,7 +879,8 @@ void draw_page(line_t *lines, unsigned lines_len, unsigned lines_top,
       if (bget(lines[ly].bold, lx))
         change_colour_attr(wmain, config.colours.text, WA_BOLD);
       if (bget(lines[ly].italic, lx))
-        change_colour_attr(wmain, config.colours.text, WA_STANDOUT);
+        change_colour_attr(wmain, config.colours.text,
+                           tcap.italics ? WA_ITALIC : WA_UNDERLINE);
       if (bget(lines[ly].uline, lx))
         change_colour_attr(wmain, config.colours.text, WA_UNDERLINE);
       if (bget(lines[ly].reg, lx))
@@ -1291,6 +1308,9 @@ void ctbeep() {
 }
 
 void entitle(wchar_t *src) {
+  if (!config.layout.tui)
+    return;
+
   // char* version of src
   unsigned srcs_len = 3 * wcslen(src); // length
   char *srcs = salloca(srcs_len);      // actual string
@@ -1357,8 +1377,7 @@ void winddown_tui() {
   reset_color_pairs();
 
   // Initialize terminal to disable drag-and-drop
-  char *term = getenv("TERM");
-  if (0 != strcmp(term, "xterm-1002")) {
+  if (NULL != tcap.term && 0 != strcmp(tcap.term, "xterm-1002")) {
     sendescseq("[?1002l");
   }
 
@@ -1489,10 +1508,10 @@ bool tui_right() {
   return true;
 }
 
-bool tui_pgup() {
-  if (page_top >= config.layout.main_height) {
-    // If there's space, scroll up one window height
-    page_top -= config.layout.main_height;
+bool tui_pgup(unsigned wh) {
+  if (page_top >= wh) {
+    // If there's space, scroll up `wh` lines
+    page_top -= wh;
   } else if (page_top > 0) {
     // If not, but we're still not at the very top, go there
     page_top = 0;
@@ -1519,10 +1538,10 @@ bool tui_pgup() {
   return true;
 }
 
-bool tui_pgdn() {
-  if (page_top + 2 * config.layout.main_height < page_len) {
-    // If there's space, scroll down one window height
-    page_top += config.layout.main_height;
+bool tui_pgdn(unsigned wh) {
+  if (page_top + config.layout.main_height + wh < page_len) {
+    // If there's space, scroll down `wh` lines
+    page_top += wh;
   } else if (page_top + config.layout.main_height < page_len &&
              config.layout.main_height <= page_len) {
     // If not, but we're still not at the very bottom, go there
@@ -2653,10 +2672,16 @@ void tui() {
       redraw = tui_right();
       break;
     case PA_PGUP:
-      redraw = tui_pgup();
+      redraw = tui_pgup(config.layout.main_height);
       break;
     case PA_PGDN:
-      redraw = tui_pgdn();
+      redraw = tui_pgdn(config.layout.main_height);
+      break;
+    case PA_HLFUP:
+      redraw = tui_pgup(config.layout.main_height / 2);
+      break;
+    case PA_HLFDN:
+      redraw = tui_pgdn(config.layout.main_height / 2);
       break;
     case PA_HOME:
       redraw = tui_home();

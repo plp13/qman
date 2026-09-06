@@ -85,12 +85,20 @@ The following optional arguments can be passed to `meson setup`:
 - `-Dman-pages=disabled`: do not install the manual page
 - `-Ddocs=disabled`: do not install any documentation
 - `-Dconfig=disabled`: do not install any configuration files
+- `-Dstaticexe=true`: try to build static executables
+- `-Dlibbsd=enabled`: enable `libbsd` support (see note above)
 - `-Dgzip=disabled`: disable support for manual pages compressed with `gzip`
 - `-Dbzip2=disabled`: disable support for manual pages compressed with `bzip2`
 - `-Dlzma=disabled`: disable support for manual pages compressed with `xz`
-- `-Dtests=enabled`: enable unit testing
+- `-Dtests=disabled`: disable unit testing
 - `-Dconfigdir=...`: where to install configuration files
 - `-Ddocdir=...`: where to install documentation
+
+> **:bulb: Note**
+>
+> `-Dstaticexe=true` requires static versions for `libc` and all other library
+> dependencies to be present. This is not true on certain operating systems,
+> notably Arch Linux and its derivatives.
 
 ## Configuration
 
