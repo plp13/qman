@@ -16,6 +16,7 @@ typedef struct {
   short colours;  // number of colors supported by the terminal, or 0 if the
                   // terminal is black and white
   bool rgb;       // true if terminal colors can be re-defined
+  bool italics;   // true if terminal supports italics
   bool unicode;   // true if the terminal supports Unicode
   bool clipboard; // true if the terminal supports clipboard operations (OSC 52)
   unsigned escdelay; // terminal escape delay
@@ -158,10 +159,6 @@ extern void init_tui_colours();
 // Initialize ncurses mouse support
 extern void init_tui_mouse();
 
-// Send escape secuense `s` to the terminal. This is done directly, bypassing
-// ncurses. `s` must not include the initial escape character.
-extern void sendescseq(char *s);
-
 // `init_windows()` and all `draw_...()` functions call `wnoutrefresh()` in
 // order to update the virtual screen before returning. It's your responsibility
 // to call `doupdate()` afterwards, to update the physical screen.
@@ -169,6 +166,10 @@ extern void sendescseq(char *s);
 // Delete and re-initialize all windows. After calling this function, you must
 // also call all `draw..()` functions as needed.
 extern void init_windows();
+
+// Send escape secuense `s` to the terminal. This is done directly, bypassing
+// ncurses. `s` must not include the initial escape character.
+extern void sendescseq(char *s);
 
 // If terminal width and/or height have changed, update `config.layout` and
 // return true. Otherwise, return false.
@@ -306,11 +307,11 @@ extern bool tui_left();
 // Handler for `PA_RIGHT`
 extern bool tui_right();
 
-// Handler for `PA_PGUP`
-extern bool tui_pgup();
+// Handler for `PA_PGUP` and `PA_HLFUP`. Scrolls up `wh` lines.
+extern bool tui_pgup(unsigned wh);
 
-// Handler for `PA_PGDN`
-extern bool tui_pgdn();
+// Handler for `PA_PGDN` and `PA_HLFDN``. Scrolls down `wh` lines.
+extern bool tui_pgdn(unsigned wh);
 
 // Handler for `PA_HOME`
 extern bool tui_home();

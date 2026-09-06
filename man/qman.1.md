@@ -2,7 +2,7 @@
 title: QMAN
 section: 1
 header: General Commands Manual
-footer: Qman 1.5.1-5-g972486b
+footer: Qman 1.5.1-68-g5f5e4be
 date: December 15, 2023
 ---
 
@@ -58,11 +58,13 @@ keyboard mappings:
 | Action name     | Description                           | Key mappings       |
 |-----------------|---------------------------------------|--------------------|
 | UP              | Scroll up one line and/or focus on the previous link | **UP**, **y**, **k** |
-| DOWN            | Scroll down one line and/or focus on the next link | **DOWN**, **e**, **j** |
+| DOWN            | Scroll down one line and/or focus on the next link | **DOWN**, **SPACE**, **e**, **j** |
 | LEFT            | Scroll left one tab stop              | **LEFT**, **<**    |
 | RIGHT           | Scroll right one tab stop             | **RIGHT**, **>**   |
 | PGUP            | Scroll up one page                    | **PGUP**, **b**    |
 | PGDN            | Scroll down one page                  | **PGDN**, **f**    |
+| HLFUP           | Scroll up half a page                 | **u**              |
+| HLFDN           | Scroll down half a page               | **d**              |
 | HOME            | Go to page top                        | **HOME**, **g**    |
 | END             | Go to page bottom                     | **END**, **G**     |
 | OPEN            | Open focused link                     | **ENTER**, **o**   |
@@ -198,6 +200,10 @@ The following locations are searched in sequence:
 
 The process stops once a configuration file has been found.
 
+Configuration files are not cumulative. If, for example, both
+_\${HOME}/.config/qman/qman.conf_ and _/etc/xdg/qman/qman.conf_ exist, only the
+former will be processed, according to the aforementioned search order.
+
 **Qman**'s configuration file uses the basic
 [INI file format](https://en.wikipedia.org/wiki/INI_file), extended with an
 **include** directive to allow for the configuration to be spread across
@@ -246,6 +252,7 @@ Options in this section specify the user interface colors:
 |-------------------|----------------------------------------------------------|
 | text              | page text                                                |
 | search            | matched search terms in page text                        |
+| mark              | text marked for copying to clipboard                     |
 | link_man          | links to manual pages                                    |
 | link_man_f        | links to manual pages (focused)                          |
 | link_http         | HTTP links                                               |
@@ -281,9 +288,11 @@ Each color is defined using three words separated by whitespace:
 _foreground_ _background_ _bold_
 
 _foreground_ and _background_ can be one of **black**, **red**, **green**,
-**yellow**, **blue**, **magenta**, **cyan**, or **white**. Alternatively, they
-can be a number between 0 and 255, or a hexadecimal RGB value using the #RRGGBB
-notation.
+**yellow**, **blue**, **magenta**, **cyan**, **white**, or **default**.
+Alternatively, they can be a number between 0 and 255, or a hexadecimal RGB
+value using the #RRGGBB notation. Setting a foreground or background color to
+**default** instructs **Qman** to use the terminal's default foreground or
+background color respectively.
 
 _bold_ is a boolean that signifies whether the foreground color will have a
 high (true) or low (false) intensity.
@@ -306,8 +315,9 @@ _key_1_ _key_2_ _key_3_ _key_4_ _key_5_ _key_6_ _key_7_ _key_8_
 
 The value of each _key_i_ can take one of the following values:
 
-- Any character, surch as **a**, **b**, **c**, etc.
-- Any ncurses(3x) keycode, such as **KEY_UP** or **KEY_HOME**
+- Any character, such as **a**, **b**, **c**, etc.
+- Any ncurses keycode, such as **KEY_UP** or **KEY_HOME**. A comprehensive list
+  of said keycodes can be found in getch(3x).
 - **F1** to **F12** (for the function keys)
 - **ESC** (for the ESC key)
 - **EXT** (for CTRL-C)
@@ -320,6 +330,18 @@ For reasons of compatibility with various terminals, mapping the ENTER key
 requires specifying both **KEY_ENTER** and **LF**. Similarly, mapping CTRL-C
 requires specifying both **KEY_BREAK** and **ETX**, and mapping BACKSPACE
 requires specifying both **KEY_BACKSPACE** and **BS**.
+
+For example:
+
+```
+[keys]
+
+; Associate the up arrow key and number 8 with the UP action
+UP = KEY_UP 8
+
+; Associate the down arrow key, space, and number 2 with the DOWN action
+DOWN = KEY_DOWN SPACE 2
+```
 
 ## Section [mouse]
 This section contains the following options that pertain to mouse support:
@@ -351,6 +373,7 @@ behavior:
 |----------|--------------|------------|---------------------------------------|
 | colours  | int          | -1         | Number of colors supported by the terminal, or -1 to auto-detect |
 | rgb      | ternary      | auto       | True if terminal can re-define colors, false if not, auto to auto-detect |
+| italics  | ternary      | auto       | True if terminal supports italics, false if not, auto to auto-detect |
 | unicode  | ternary      | auto       | True if terminal supports Unicode, false if not, auto to auto-detect |
 | clipboard| ternary      | auto       | True if terminal supports clipboard operations (OSC 52), false if not, auto to auto-detect |
 | escdelay | int          | 60         | Number of milliseconds to wait after receiving ESC from the keyboard before interpreting it as the escape key. Users with historical terminals or very unreliable network connections may want to increase this. |
@@ -387,6 +410,7 @@ This section contains various miscellaneous options:
 | Option       | Type         | Def. value | Description                       |
 |--------------|--------------|------------|-----------------------------------|
 | system_type  | string       | mandb      | Manual system type                |
+| legacy_mandb | bool         | false      | Enable workarounds for mandb version 2.10 or earlier | 
 | man_path     | string       | /usr/bin/man | Path to the **man(1)** command  |
 | groff_path   | string       | /usr/bin/groff | Path to the **groff(1)** command |
 | whatis_path  | string       | /usr/bin/whatis | Path to the **whatis(1)** command |
@@ -399,12 +423,16 @@ This section contains various miscellaneous options:
 | reset_after_viewer | boolean | true      | Re-initialize curses after opening a link to a local filesystem file |
 | terminfo_reset | boolean    | false      | Reset the terminal using the strings provided by **terminfo(5)** on shutdown |
 | history_size | unsigned int | 256k       | Maximum number of history entries |
+
 _system_type_ must match the Unix manual system used by your O/S:
 
 - **[mandb](https://gitlab.com/man-db/man-db)** - most Linux distributions
 - **[mandoc](https://mandoc.bsd.lv/)** - Void Linux, Haiku, others?
 - **[freebsd](https://www.freebsd.org/)** - FreeBSD
 - **[darwin](https://www.apple.com/macos/)** - macOS
+
+Users of **mandb** version 2.10 or earlier should set _legacy_madb_ to **true**,
+to resolve issues with opening manual page links.
 
 To avoid an annoying screen redraw, options _reset_after_http_,
 _reset_after_email_, or _reset_after_viewer_ can be set to **false** whenever
@@ -414,7 +442,7 @@ respectively.
 Setting _terminfo_reset_ to **true** will initiate a full terminal reset, using
 the strings provided by **terminfo(5)**, upon program shutdown. This may be
 necessary if your ncurses implementation doesn't completely restore terminal
-settings (e.g.  colors) upon exit, but will also clear the screen and erase your
+settings (e.g. colors) upon exit, but will also clear the screen and erase your
 scroll history as a side effect.
 
 When using a horizontally narrow terminal, setting _hyphenate_ to **true**
@@ -483,7 +511,9 @@ The above are similar to the exit values of **man(1)**.
 **man(1)**, **apropos(1)**, **whatis(1)**, **pinfo(1)**
 
 # AUTHOR
-Written by Pantelis Panayiotou / plp13 on GitHub
+Written and maintained by Pantelis Panayiotou (plp13) and others. The full list
+of contributors can be found at
+https://github.com/plp13/qman/graphs/contributors
 
 # BUGS
 Please report bugs at https://github.com/plp13/qman/issues

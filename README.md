@@ -1,17 +1,22 @@
 # Qman
 A more modern manual page viewer for our terminals
 
-Version 1.5.1-5-g972486b -- [see what's new](#new-in-this-version)
+Version 1.5.1-68-g5f5e4be -- [see what's new](#new-in-this-version)
 
-![Screenhot -- Viewing a Manual Page](/screenshots/qman_man.png)
+![Qman screenshot](screenshots/qman.png)
 
 ## Get started
 
+Qman [packages](doc/PACKAGES.md) are available for many different Linux
+distributions, FreeBSD, and macOS.
+
+How to build, install and configure the program from source:
 - [Generic build instructions](doc/BUILDING.md) (works for most Linux distros)
 - [O/S specific instructions](doc/OS_SPECIFIC.md)
-- [Manual](man/qman.1.md)
+
+In case you get stuck, or decide to delve deeper:
+- [Manual page](man/qman.1.md)
 - [Troubleshooting](doc/TROUBLESHOOTING.md)
-- [Packages](doc/PACKAGES.md)
 - [Configuration and themes](config/)
 - [Contributing](doc/CONTRIBUTING.md)
 
@@ -46,6 +51,7 @@ plain C and has only minimal dependencies.
 - Navigation history
 - On-line help
 - Fully configurable using INI-style config files
+- Themes
 - Manual page
 
 ## Project status 
@@ -57,26 +63,18 @@ you have found one, please open an
 
 ## New in this version
 
-Version 1.5.0 introduces the following:
-- Support for several different manual page systems. Historically Qman only
-  supported `mandb`, but this is no longer the case. The program now supports
-  the following manual page systems:
-  - **[mandb](https://gitlab.com/man-db/man-db)** - most Linux distributions
-  - **[mandoc](https://mandoc.bsd.lv/)** - Void Linux, Haiku, others?
-  - **[freebsd](https://www.freebsd.org/)** - FreeBSD
-  - **[darwin](https://www.apple.com/macos/)** - macOS
-- Hyperlinks to files or directories in the local filesystem (new config
-  option `viewer_path` can be used to specify the program for opening them)
-- New `[capabilities]` config file section enables users to disable several non-
-  core program features
-- Three new themes:
-  - `adwaita`, designed to match the colors of dark Adwaita desktops
-  - `adwaita-light`, designed to match the colors of light Adwaita desktops
-  - `modernity-light`, a generic light theme to complement `modernity`
-- Re-organized and extended documentation
-- Improved error messages, especially when it comes to errors caused by
-  misconfiguration or a missing manual pages database
-- Miscellaneous other bug fixes and minor features
+Version 1.6.0 introduces the following:
+- Static binaries, suitable for many Linux distributions. See
+  [PACKAGES.md](doc/PACKAGES.md).
+- *Italic text* support
+- Themes can now use the terminal's default colors
+- New themes:
+  - `minimal-16`, a theme that follows the host terminal's color scheme
+    contributed by @denn-moe
+  - `catppuccin_mocha`, an RGB theme contributed by @GavinShox
+- Space bar is now associated with DOWN, in order to conform with common UX
+  expectations
+- Miscellaneous bug fixes and documentation updates
 
 Version 1.5.1 fixes an issue with reporting errors in configuration files, and
 introduces a few updates to Qman's documentation.
@@ -86,26 +84,11 @@ introduces a few updates to Qman's documentation.
 > Users using custom config files may need to update them after a new release.
 > For more information, please refer to Qman's manual page and the documentation
 > in [config/README.md](config/README.md).
->
-> In version 1.5.0, config options `sections_on_top`, `hyphenate` and `justify`
-> have been moved to section `[capabilities]`.
 
-## More screenshots
+## Demonstration video
 
-Index page:
-![Index Page](/screenshots/qman_index.png)
+https://github.com/user-attachments/assets/4a6d86f5-d785-4c2a-ab22-3d015af9cb8c
 
-Opening a manual page using a pop-up:
-![Screenshot -- Opening a Manual Page](/screenshots/qman_open.png)
-
-Using the table of contents:
-![Using the Table of Contents](/screenshots/qman_toc.png)
-
-Searching incrementally:
-![Searching incrementally](/screenshots/qman_search.png)
-
-Performing apropos:
-![Performing Apropos](/screenshots/qman_apropos.png)
-
-Online help:
-![Online Help](/screenshots/qman_help.png)
+> **:tv: Permalink**
+> 
+> [https://www.youtube.com/watch?v=OAX2OW-v1Ls](https://www.youtube.com/watch?v=OAX2OW-v1Ls)

@@ -93,6 +93,15 @@ file_links=false   ; disable links to files or directories
 
 ---
 
+> **:question: Box-drawing characters (e.g. for the scrollbar or dialog boxes)
+> are not visible**
+
+Your character encoding doesn't support box-drawing characters. You should
+switch to one that does, preferably UTF-8. This is typically achieved by setting
+the `LANG` environment variable to something like `C.UTF-8`.
+
+---
+
 > **:question: I don't like the way Qman looks**
 
 Use a different one of the supplied [themes](../config/themes). Or build your
