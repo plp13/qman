@@ -47,9 +47,9 @@ Optional dependencies:
 
 > **:bulb: Note**
 >
-> All optional dependencies are enabled by default. The can be disabled by
-> passing the appropriate arguments to `meson setup build/`, as described
-> [below](#meson-options).
+> All optional dependencies except for `libbsd` are enabled by default. They can
+> be disabled by passing the appropriate arguments to `meson setup build/`, as
+> described [below](#meson-options).
 
 ## Building and installing
 
