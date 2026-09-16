@@ -912,7 +912,8 @@ void init() {
 
 void late_init() {
   // Initialize `aw_all`
-  if (ST_FREEBSD == config.misc.system_type ||
+  if (ST_MANDOC == config.misc.system_type ||
+      ST_FREEBSD == config.misc.system_type ||
       ST_DARWIN == config.misc.system_type)
     aw_all_len = aprowhat_exec(&aw_all, AW_APROPOS, L"'.'");
   else
